@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { DemoBanner } from './DemoBanner';
+import { TrialCountdownBanner } from '../subscription/TrialCountdownBanner';
+import { TrialExpiredLockScreen } from '../subscription/TrialExpiredLockScreen';
 import { ActionModalProvider, useActionModal } from '@/context/ActionModalContext';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 
 import { MobileBottomNavigation } from './MobileBottomNavigation';
@@ -16,6 +17,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const { openAction } = useActionModal();
+  const { activeBusiness, user } = useAuth();
 
   const isAuthPage =
     pathname === '/login' ||
@@ -26,6 +28,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return <main className="min-h-screen bg-slate-50 text-slate-900">{children}</main>;
   }
+
+  // Account lock calculation: when trial has expired and user has no active paid subscription
+  const sub = activeBusiness?.subscription;
+  const isSuperAdmin = user?.platformRole === 'SUPER_ADMIN';
+  const isFreeKhata = sub?.plan === 'FREE_KHATA';
+  const isTrial = Boolean(sub?.isTrial || sub?.status === 'TRIALING' || sub?.plan === 'FREE_TRIAL');
+  const isExpired = Boolean(sub?.isExpired || sub?.status === 'EXPIRED' || sub?.status === 'SUSPENDED');
+  const isLocked = !isSuperAdmin && !isFreeKhata && isTrial && isExpired && pathname !== '/subscription';
 
   return (
     <div className="min-h-screen bg-[#F6F9FC] flex flex-col font-sans text-slate-900 selection:bg-slate-200">
@@ -43,8 +53,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           desktopCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
-        {/* Demo Mode Top Banner */}
-        <DemoBanner />
+        {/* Trial Countdown Top Banner (appears prominently during last 72 hours) */}
+        <TrialCountdownBanner />
 
         {/* Top Header */}
         <Header
@@ -56,7 +66,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
         {/* Dynamic Page Container with bottom padding for mobile navigation bar */}
         <main className="flex-1 p-3.5 sm:p-5 lg:p-7 pb-24 sm:pb-28 lg:pb-8 max-w-7xl w-full mx-auto">
-          {children}
+          {isLocked ? (
+            <TrialExpiredLockScreen businessName={activeBusiness?.name} />
+          ) : (
+            children
+          )}
         </main>
 
         {/* Mobile-First Sticky Bottom Navigation Bar */}

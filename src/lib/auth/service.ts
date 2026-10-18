@@ -19,6 +19,7 @@ export interface RegisterBusinessOwnerInput {
   gstin?: string;
   city?: string;
   state?: string;
+  selectedPlan?: 'STARTER' | 'GROWTH' | 'SCALE';
 }
 
 export interface LoginInput {
@@ -104,20 +105,36 @@ export async function registerBusinessOwner(input: RegisterBusinessOwnerInput) {
       },
     });
 
-    // 4. Provision Initial Trial Subscription with permanent server-side timestamps
+    // 4. Provision Initial 7-Day Trial Subscription with permanent server-side timestamps
     const trialStartDate = new Date();
-    const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    let targetPlan: SubscriptionPlan = SubscriptionPlan.GROWTH_PRO;
+    if (input.selectedPlan === 'STARTER') {
+      targetPlan = SubscriptionPlan.STARTER;
+    } else if (input.selectedPlan === 'SCALE') {
+      targetPlan = SubscriptionPlan.ENTERPRISE;
+    } else if (input.selectedPlan === 'GROWTH') {
+      targetPlan = SubscriptionPlan.GROWTH_PRO;
+    }
+
+    const planLimits = {
+      [SubscriptionPlan.STARTER]: { maxInvoices: 999999, maxStaff: 1, whatsAppQuota: 150 },
+      [SubscriptionPlan.GROWTH_PRO]: { maxInvoices: 999999, maxStaff: 3, whatsAppQuota: 600 },
+      [SubscriptionPlan.ENTERPRISE]: { maxInvoices: 999999, maxStaff: 10, whatsAppQuota: 2500 },
+    }[targetPlan] || { maxInvoices: 999999, maxStaff: 3, whatsAppQuota: 600 };
+
     const subscription = await tx.subscription.create({
       data: {
         businessId: business.id,
-        plan: SubscriptionPlan.FREE_TRIAL,
+        plan: targetPlan,
         status: SubscriptionStatus.TRIALING,
         startDate: trialStartDate,
         endDate: trialEndDate,
-        trialDaysRemaining: 14,
-        maxMonthlyInvoices: 500,
-        maxStaffSeats: 3,
-        whatsAppQuota: 100,
+        trialDaysRemaining: 7,
+        maxMonthlyInvoices: planLimits.maxInvoices,
+        maxStaffSeats: planLimits.maxStaff,
+        whatsAppQuota: planLimits.whatsAppQuota,
       },
     });
 

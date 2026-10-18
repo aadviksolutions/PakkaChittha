@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+.vercel
+screenshots
+*.mp4
+pakkachittha login page.png
+.gemini
+.gradle
+build

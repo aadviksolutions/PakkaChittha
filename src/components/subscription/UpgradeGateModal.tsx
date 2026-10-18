@@ -120,52 +120,22 @@ export function UpgradeGateModal({
 
         {/* Actions */}
         <div className="mt-6 pt-2 space-y-2.5">
-          {isDemo ? (
-            <>
-              <button
-                type="button"
-                onClick={handleSwitchDemoTier}
-                disabled={switching}
-                className="w-full py-3 px-4 rounded-xl bg-[#00B887] hover:bg-[#009E74] text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {switching ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Switch to {planConfig.name} Demo</span>
-                  </>
-                )}
-              </button>
+          <Link
+            href="/subscription"
+            onClick={onClose}
+            className="w-full py-3 px-4 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 transition-all text-center flex items-center justify-center gap-2"
+          >
+            <span>Upgrade to {planConfig.name}</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
 
-              <Link
-                href="/pricing"
-                onClick={onClose}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-[#071F38] text-xs font-bold transition-all text-center block"
-              >
-                Compare All Plans
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/subscription"
-                onClick={onClose}
-                className="w-full py-3 px-4 rounded-xl bg-[#071F38] hover:bg-[#0D2C4D] text-white text-xs sm:text-sm font-bold shadow-xs transition-all text-center flex items-center justify-center gap-2"
-              >
-                <span>Explore Upgrade Options</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-
-              <Link
-                href="/pricing"
-                onClick={onClose}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-[#071F38] text-xs font-bold transition-all text-center block"
-              >
-                Compare All Plans
-              </Link>
-            </>
-          )}
+          <Link
+            href="/pricing"
+            onClick={onClose}
+            className="w-full py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-[#071F38] text-xs font-bold transition-all text-center block"
+          >
+            Compare All Plans
+          </Link>
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       gstin,
       city,
       state,
+      selectedPlan,
     } = body;
 
     const result = await registerBusinessOwner({
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
       gstin,
       city,
       state,
+      selectedPlan: selectedPlan === 'STARTER' || selectedPlan === 'SCALE' ? selectedPlan : 'GROWTH',
     });
 
     await setSessionCookie(result.sessionToken, result.expiresAt);

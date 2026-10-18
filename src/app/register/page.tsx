@@ -52,6 +52,9 @@ function RegisterForm() {
   const initialCategory = searchParams.get('plan') === 'free_khata' ? 'FREE_KHATA' : 'BUSINESS';
 
   const [category, setCategory] = useState<'FREE_KHATA' | 'BUSINESS'>(initialCategory);
+  const rawPlanParam = searchParams.get('plan')?.toUpperCase();
+  const initialSelectedPlan = rawPlanParam === 'STARTER' || rawPlanParam === 'SCALE' ? rawPlanParam : 'GROWTH';
+  const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'GROWTH' | 'SCALE'>(initialSelectedPlan);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -113,7 +116,7 @@ function RegisterForm() {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({ ...formData, selectedPlan }),
         });
 
         const data = await res.json();
@@ -288,6 +291,79 @@ function RegisterForm() {
                     </select>
                   </div>
                 </div>
+
+                {/* Package Selection */}
+                <div className="mt-4 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      2. Select 7-Day Trial Package
+                    </span>
+                    <span className="text-[10px] text-slate-400">No payment required for trial</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Starter */}
+                    <div
+                      onClick={() => setSelectedPlan('STARTER')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        selectedPlan === 'STARTER'
+                          ? 'bg-emerald-950/40 border-emerald-500 shadow-md ring-1 ring-emerald-500'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Starter</span>
+                        <span className="text-[10px] text-slate-400">1 User</span>
+                      </div>
+                      <div className="text-xs font-black text-emerald-400 mt-1">₹199 / mo</div>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                        Unlimited Invoices, Basic Udhaar &amp; Inventory
+                      </p>
+                    </div>
+
+                    {/* Growth (Recommended) */}
+                    <div
+                      onClick={() => setSelectedPlan('GROWTH')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all relative ${
+                        selectedPlan === 'GROWTH'
+                          ? 'bg-emerald-950/40 border-emerald-500 shadow-md ring-1 ring-emerald-500'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <span className="absolute -top-2 right-2 bg-emerald-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                        Popular
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Growth</span>
+                        <span className="text-[10px] text-slate-400">3 Users</span>
+                      </div>
+                      <div className="text-xs font-black text-emerald-400 mt-1">₹499 / mo</div>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                        Purchases, Low-Stock Alerts, Staff Roles
+                      </p>
+                    </div>
+
+                    {/* Scale */}
+                    <div
+                      onClick={() => setSelectedPlan('SCALE')}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        selectedPlan === 'SCALE'
+                          ? 'bg-emerald-950/40 border-emerald-500 shadow-md ring-1 ring-emerald-500'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Scale</span>
+                        <span className="text-[10px] text-slate-400">10 Users</span>
+                      </div>
+                      <div className="text-xs font-black text-emerald-400 mt-1">₹999 / mo</div>
+                      <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                        Multi-Branch Godowns, Stock Valuation
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -295,7 +371,7 @@ function RegisterForm() {
             <div className={!isFreeKhata ? 'pt-2 border-t border-slate-800' : ''}>
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2">
                 <User className="w-3.5 h-3.5" />
-                {isFreeKhata ? 'Your Personal Account' : '2. Business Owner Account'}
+                {isFreeKhata ? 'Your Personal Account' : '3. Business Owner Account'}
               </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -375,7 +451,7 @@ function RegisterForm() {
                     <span>
                       {isFreeKhata
                         ? 'Open Free Udhaar Khata (100% Free Forever)'
-                        : 'Create Business Workspace & Start Trial'}
+                        : `Create Workspace & Start 7-Day ${selectedPlan} Trial`}
                     </span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
@@ -442,7 +518,7 @@ function RegisterForm() {
             <span>
               {isFreeKhata
                 ? 'No subscription payment • Unlimited entries • Permanently free'
-                : 'Includes 14-day full feature trial • Dedicated Tenant Workspace'}
+                : 'Includes 7-day full feature trial • Dedicated Tenant Workspace'}
             </span>
           </div>
           <p className="text-xs text-slate-400 font-medium pt-1">

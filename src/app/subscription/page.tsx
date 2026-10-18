@@ -363,10 +363,6 @@ export default function SubscriptionPage() {
             (key) => TIER_RANKS[key] > currentRank
           );
 
-          const lowerPlans = (['FREE_KHATA', 'STARTER', 'GROWTH'] as PlanKey[]).filter(
-            (key) => TIER_RANKS[key] < currentRank && key !== activePlanKey
-          );
-
           if (currentRank >= 3) {
             // Already on highest plan (Scale)
             return (
@@ -382,45 +378,9 @@ export default function SubscriptionPage() {
                     You have unlocked all features: Unlimited Invoices, Multi-Branch godowns (up to 3 branches), 10 Staff seats, Advanced Stock Valuation, and Priority Support.
                   </p>
                   <span className="inline-block text-[11px] font-bold text-emerald-800 bg-emerald-100/70 border border-emerald-300 px-3 py-1 rounded-full uppercase tracking-wider">
-                    Full Platform Access
+                    Full Platform Access Active
                   </span>
                 </div>
-
-                {/* Separate Downgrade Flow */}
-                {lowerPlans.length > 0 && (
-                  <details className="group bg-white rounded-2xl border border-slate-200/90 p-5 text-xs">
-                    <summary className="font-semibold text-slate-600 cursor-pointer hover:text-slate-900 flex items-center justify-between">
-                      <span>Need to review or downgrade your tier?</span>
-                      <span className="text-[11px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-                    </summary>
-                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                      <p className="text-slate-500 text-[11px]">
-                        Downgrading will adjust staff seat limits and branch allowances at the end of your current billing period. Your existing customer records and past invoices will never be deleted.
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {lowerPlans.map((key) => {
-                          const p = OFFICIAL_PLANS[key];
-                          return (
-                            <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                              <div>
-                                <p className="font-bold text-slate-800">{p.name}</p>
-                                <p className="text-[10px] text-slate-500">Max users: {p.limits.maxUsers}</p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleUpgrade(key)}
-                                disabled={subscribing}
-                                className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-700 cursor-pointer"
-                              >
-                                Switch to {p.name}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </details>
-                )}
               </div>
             );
           }
@@ -522,42 +482,6 @@ export default function SubscriptionPage() {
                   );
                 })}
               </div>
-
-              {/* Discreet Downgrade Section if lower plans exist */}
-              {lowerPlans.length > 0 && (
-                <details className="group bg-white rounded-2xl border border-slate-200/90 p-5 text-xs">
-                  <summary className="font-semibold text-slate-600 cursor-pointer hover:text-slate-900 flex items-center justify-between">
-                    <span>Need to switch to a lower plan?</span>
-                    <span className="text-[11px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                    <p className="text-slate-500 text-[11px]">
-                      Downgrading will reduce feature limits at the end of your billing cycle. Your data and invoices remain safe and preserved.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {lowerPlans.map((key) => {
-                        const p = OFFICIAL_PLANS[key];
-                        return (
-                          <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                            <div>
-                              <p className="font-bold text-slate-800">{p.name}</p>
-                              <p className="text-[10px] text-slate-500">Max users: {p.limits.maxUsers}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleUpgrade(key)}
-                              disabled={subscribing}
-                              className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-700 cursor-pointer"
-                            >
-                              Downgrade to {p.name}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </details>
-              )}
             </div>
           );
         })()}

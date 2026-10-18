@@ -48,6 +48,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid billing interval is required' }, { status: 400 });
     }
 
+    // Strict upgrade-only validation: Active paid subscribers can ONLY purchase a higher tier
+    const currentSub = await prisma.subscription.findFirst({
+      where: { businessId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const TIER_RANKS: Record<string, number> = {
+      FREE_KHATA: 0,
+      FREE_TRIAL: 0,
+      STARTER: 1,
+      GROWTH: 2,
+      GROWTH_PRO: 2,
+      SCALE: 3,
+      ENTERPRISE: 3,
+    };
+
+    if (currentSub && currentSub.status === 'ACTIVE' && currentSub.plan !== 'FREE_KHATA') {
+      const currentRank = TIER_RANKS[currentSub.plan] ?? 0;
+      const targetRank = TIER_RANKS[planKey] ?? 0;
+      if (targetRank <= currentRank) {
+        return NextResponse.json(
+          {
+            error:
+              'Downgrades are not permitted. Active subscribers can only upgrade to higher-tier plans.',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const planConfig = OFFICIAL_PLANS[planKey];
     const pricing = planConfig.pricing[interval];
     const totalPriceInInr = pricing.totalPrice;

@@ -28,7 +28,7 @@ import {
   Play,
   LayoutDashboard,
 } from 'lucide-react';
-import { LendenFrameIntro } from '@/components/welcome/LendenFrameIntro';
+import { CinematicIntro } from '@/components/welcome/CinematicIntro';
 
 /* =====================================================================
    REALISTIC 3D DASHBOARD PREVIEW
@@ -488,10 +488,10 @@ function LoginForm() {
   };
 
   return (
-    <div className="h-screen max-h-screen w-full overflow-hidden bg-white font-sans selection:bg-[#EA580C] selection:text-white flex flex-col justify-between">
-      {/* Lenden JPG Frame Intro */}
+    <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden w-full overflow-x-hidden bg-white font-sans selection:bg-[#EA580C] selection:text-white flex flex-col justify-between">
+      {/* Cinematic Fullscreen MP4 Intro */}
       {showIntro && (
-        <LendenFrameIntro
+        <CinematicIntro
           forcePlay={isIntroForced}
           onComplete={() => {
             setShowIntro(false);
@@ -565,17 +565,17 @@ function LoginForm() {
           </nav>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               type="button"
               onClick={handleSignInFocus}
-              className="px-4 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-800 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
+              className="hidden sm:inline-flex px-3.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-800 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
             >
               Sign In
             </button>
             <Link
               href="/register"
-              className="px-4 py-1.5 rounded-lg bg-[#EA580C] hover:bg-[#D94E00] text-white font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
+              className="px-3 sm:px-4 py-1.5 rounded-lg bg-[#EA580C] hover:bg-[#D94E00] text-white font-bold text-xs transition-all shadow-sm flex items-center gap-1"
             >
               Get Started
             </Link>
@@ -594,6 +594,16 @@ function LoginForm() {
         {mobileMenuOpen && (
           <div className="lg:hidden absolute top-[50px] left-0 right-0 bg-white border-b border-slate-200 px-5 py-4 space-y-3 z-50 shadow-2xl animate-in fade-in slide-in-from-top-2">
             <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-700 pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignInFocus();
+                }}
+                className="text-left px-2 py-1.5 rounded-lg hover:bg-slate-50 font-bold text-[#EA580C]"
+              >
+                Sign In
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -657,26 +667,26 @@ function LoginForm() {
           2. MAIN HERO SECTION (Takes all remaining flex height, zero scroll)
           Three coordinated zones: Left Marketing, Center 3D Tablet, Right Login Card
           ========================================================= */}
-      <section className="flex-1 min-h-0 w-full relative overflow-hidden flex items-center justify-center">
+      <section className="flex-1 min-h-0 w-full relative overflow-hidden flex items-center justify-center py-6 sm:py-8 lg:py-0">
         {/* Glossy gradient background */}
         <GlossyHeroBackground />
 
-        {/* Hero Content Container */}
-        <div className="mx-auto px-4 sm:px-6 lg:px-10 h-full w-full max-w-[1580px] flex items-center justify-between relative z-10">
-          {/* ZONE 1: LEFT MARKETING CONTENT */}
-          <div className="shrink-0 relative z-20 flex flex-col justify-center text-left items-start py-2 max-w-[390px] xl:max-w-[430px]">
+        {/* Hero Content Container: Stacks vertically on mobile, side-by-side on desktop */}
+        <div className="mx-auto px-4 sm:px-6 lg:px-10 h-full w-full max-w-[1580px] flex flex-col lg:flex-row items-center justify-center lg:justify-between relative z-10 gap-6 lg:gap-8">
+          {/* ZONE 1: MARKETING CONTENT */}
+          <div className="shrink-0 relative z-20 flex flex-col justify-center text-center lg:text-left items-center lg:items-start py-2 max-w-[430px] w-full">
             {/* Tagline */}
             <div className="inline-flex items-center gap-2 mb-1.5">
               <span className="text-[10px] xl:text-[11px] font-bold tracking-[0.2em] text-slate-200 uppercase">
                 BUSINESS MANAGEMENT MADE SIMPLE
               </span>
-              <div className="h-[2px] w-10 bg-[#EA580C] rounded-full" />
+              <div className="h-[2px] w-10 bg-[#EA580C] rounded-full hidden lg:block" />
             </div>
 
             {/* Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-[42px] xl:text-[48px] font-black tracking-tight leading-[1.08] text-[#FA8223] drop-shadow-sm">
+            <h1 className="text-[34px] sm:text-4xl lg:text-[42px] xl:text-[48px] font-black tracking-tight leading-[1.08] text-[#FA8223] drop-shadow-sm">
               Har Hisab,
-              <br />
+              <br className="hidden lg:inline" />{' '}
               <span>Ab Aasaan.</span>
             </h1>
 
@@ -686,10 +696,10 @@ function LoginForm() {
               <br className="hidden sm:inline" /> sab ek jagah.
             </p>
 
-            {/* 4 Feature Badges (Matching mockup: Vibrant orange rounded boxes with white icons & labels) */}
-            <div className="flex items-center gap-2.5 sm:gap-3 xl:gap-3.5 mt-3.5 xl:mt-4.5">
+            {/* 4 Feature Badges (2x2 grid on mobile, horizontal row on desktop) */}
+            <div className="grid grid-cols-2 lg:flex items-center gap-2.5 sm:gap-3 xl:gap-3.5 mt-4 xl:mt-4.5 w-full max-w-[280px] sm:max-w-[320px] lg:max-w-none">
               {/* 1. Simple Billing */}
-              <div className="flex flex-col items-center text-center w-[68px] xl:w-[76px] shrink-0">
+              <div className="flex flex-col items-center text-center w-full lg:w-[68px] xl:w-[76px] p-2 lg:p-0 rounded-xl lg:rounded-none bg-black/15 lg:bg-transparent backdrop-blur-2xs lg:backdrop-blur-none border border-white/10 lg:border-none">
                 <div className="w-10 h-10 xl:w-11 xl:h-11 rounded-xl bg-[#EA580C] flex items-center justify-center text-white shadow-md transition-transform hover:scale-105">
                   <FileText className="w-5 h-5 xl:w-5.5 xl:h-5.5 stroke-[2.2]" />
                 </div>
@@ -701,7 +711,7 @@ function LoginForm() {
               </div>
 
               {/* 2. Inventory Control */}
-              <div className="flex flex-col items-center text-center w-[68px] xl:w-[76px] shrink-0">
+              <div className="flex flex-col items-center text-center w-full lg:w-[68px] xl:w-[76px] p-2 lg:p-0 rounded-xl lg:rounded-none bg-black/15 lg:bg-transparent backdrop-blur-2xs lg:backdrop-blur-none border border-white/10 lg:border-none">
                 <div className="w-10 h-10 xl:w-11 xl:h-11 rounded-xl bg-[#EA580C] flex items-center justify-center text-white shadow-md transition-transform hover:scale-105">
                   <Package className="w-5 h-5 xl:w-5.5 xl:h-5.5 stroke-[2.2]" />
                 </div>
@@ -713,7 +723,7 @@ function LoginForm() {
               </div>
 
               {/* 3. Udhaar & Payments */}
-              <div className="flex flex-col items-center text-center w-[68px] xl:w-[76px] shrink-0">
+              <div className="flex flex-col items-center text-center w-full lg:w-[68px] xl:w-[76px] p-2 lg:p-0 rounded-xl lg:rounded-none bg-black/15 lg:bg-transparent backdrop-blur-2xs lg:backdrop-blur-none border border-white/10 lg:border-none">
                 <div className="w-10 h-10 xl:w-11 xl:h-11 rounded-xl bg-[#EA580C] flex items-center justify-center text-white shadow-md transition-transform hover:scale-105">
                   <Users className="w-5 h-5 xl:w-5.5 xl:h-5.5 stroke-[2.2]" />
                 </div>
@@ -725,7 +735,7 @@ function LoginForm() {
               </div>
 
               {/* 4. Business Reports */}
-              <div className="flex flex-col items-center text-center w-[68px] xl:w-[76px] shrink-0">
+              <div className="flex flex-col items-center text-center w-full lg:w-[68px] xl:w-[76px] p-2 lg:p-0 rounded-xl lg:rounded-none bg-black/15 lg:bg-transparent backdrop-blur-2xs lg:backdrop-blur-none border border-white/10 lg:border-none">
                 <div className="w-10 h-10 xl:w-11 xl:h-11 rounded-xl bg-[#EA580C] flex items-center justify-center text-white shadow-md transition-transform hover:scale-105">
                   <BarChart3 className="w-5 h-5 xl:w-5.5 xl:h-5.5 stroke-[2.2]" />
                 </div>
@@ -738,7 +748,7 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ZONE 2: CENTER 3D DASHBOARD PREVIEW (Tucked behind login card, exact mockup angle) */}
+          {/* ZONE 2: CENTER 3D DASHBOARD PREVIEW (Desktop only, exact mockup angle) */}
           <div
             className="hidden lg:block absolute top-1/2 -translate-y-1/2 z-10 pointer-events-none"
             style={{
@@ -750,9 +760,9 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ZONE 3: RIGHT LOGIN CARD (Prominent White Card Layered in Front) */}
+          {/* ZONE 3: LOGIN CARD (Centered on mobile, right on desktop) */}
           <div
-            className="shrink-0 relative z-30 w-full max-w-[350px] sm:max-w-[365px] xl:max-w-[385px] my-auto"
+            className="shrink-0 relative z-30 w-full max-w-[350px] sm:max-w-[365px] xl:max-w-[385px] mx-auto lg:mx-0 my-auto"
           >
             <div className="bg-white rounded-2xl xl:rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.35)] border border-slate-100 text-slate-800">
               {/* Actual Pakka Chittha Logo Centered at Top */}
@@ -933,79 +943,79 @@ function LoginForm() {
       <footer className="w-full bg-white border-t border-slate-200/80 shrink-0 py-2 xl:py-2.5 z-30">
         <div className="mx-auto px-4 sm:px-6 lg:px-10 max-w-[1580px] w-full">
           {/* Section Divider with Headline */}
-          <div className="flex items-center justify-center gap-3 mb-1.5">
-            <div className="h-px bg-slate-200 w-12 sm:w-24 xl:w-32" />
-            <span className="text-[10px] xl:text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center whitespace-nowrap">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-1.5">
+            <div className="h-px bg-slate-200 w-8 sm:w-24 xl:w-32" />
+            <span className="text-[10px] xl:text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center">
               BUILT FOR GROWING INDIAN BUSINESSES
             </span>
-            <div className="h-px bg-slate-200 w-12 sm:w-24 xl:w-32" />
+            <div className="h-px bg-slate-200 w-8 sm:w-24 xl:w-32" />
           </div>
 
-          {/* SIX Category Cards in ONE Horizontal Row */}
+          {/* SIX Category Cards in 2 Columns on Mobile, 6 on Desktop */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 xl:gap-3 max-w-[1540px] mx-auto">
             {/* Card 1: Retail Stores */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#E6F8F3] text-[#00B887] flex items-center justify-center shrink-0">
                 <Store className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Retail Stores
               </span>
             </div>
 
             {/* Card 2: Restaurants & Cafes */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#FFF4E5] text-[#F97316] flex items-center justify-center shrink-0">
                 <UtensilsCrossed className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Restaurants &amp; Cafes
               </span>
             </div>
 
             {/* Card 3: Wholesalers */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#E8F4FD] text-[#0284C7] flex items-center justify-center shrink-0">
                 <Building2 className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Wholesalers
               </span>
             </div>
 
             {/* Card 4: Manufacturers */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#F3E8FF] text-[#9333EA] flex items-center justify-center shrink-0">
                 <Factory className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Manufacturers
               </span>
             </div>
 
             {/* Card 5: Distributors */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#E6F8F3] text-[#008F91] flex items-center justify-center shrink-0">
                 <Truck className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Distributors
               </span>
             </div>
 
             {/* Card 6: Service Businesses */}
-            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5">
+            <div className="bg-white rounded-xl py-1.5 px-2.5 xl:py-2 xl:px-3 border border-slate-200/90 shadow-2xs hover:border-[#EA580C] transition-all flex items-center gap-2 xl:gap-2.5 min-w-0">
               <div className="w-7 h-7 xl:w-8 xl:h-8 rounded-lg bg-[#E8F4FD] text-[#2563EB] flex items-center justify-center shrink-0">
                 <Briefcase className="w-4 h-4 xl:w-4.5 xl:h-4.5" />
               </div>
-              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight">
+              <span className="text-[11px] xl:text-xs font-bold text-slate-800 leading-tight truncate">
                 Service Businesses
               </span>
             </div>
           </div>
 
           {/* ATTRIBUTION — POWERED BY LAKSHYA STUDIOS & DEVELOPED BY AADVIK SOLUTIONS */}
-          <div className="flex items-center justify-center gap-4 sm:gap-8 mt-1.5 pt-1 border-t border-slate-100">
+          <div className="flex items-center justify-center gap-3 sm:gap-8 mt-2 pt-1 border-t border-slate-100 flex-wrap">
             {/* Powered by Lakshya Studios */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] xl:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
@@ -1021,7 +1031,7 @@ function LoginForm() {
             </div>
 
             {/* Subtle Vertical Divider */}
-            <div className="h-4 w-px bg-slate-200" />
+            <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
             {/* Developed by Aadvik Solutions */}
             <div className="flex items-center gap-2">

@@ -26,26 +26,6 @@ import {
 export default function PricingPage() {
   const router = useRouter();
   const [interval, setInterval] = useState<BillingInterval>('YEARLY');
-  const [demoLoadingPlan, setDemoLoadingPlan] = useState<PlanKey | null>(null);
-
-  const handleLaunchDemo = async (plan: PlanKey) => {
-    try {
-      setDemoLoadingPlan(plan);
-      const res = await fetch('/api/demo/enter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to start demo');
-      }
-      window.location.href = data.redirectUrl || '/';
-    } catch (err: any) {
-      alert(err.message || 'Error launching demo workspace');
-      setDemoLoadingPlan(null);
-    }
-  };
 
   const featureMatrix = [
     {
@@ -143,8 +123,7 @@ export default function PricingPage() {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            All plans include unlimited invoices, GST compliance, and secure cloud storage.
-            Evaluate any plan immediately with our interactive three-plan demo mode.
+            All plans include unlimited invoices, GST compliance, secure cloud storage, and a 7-day full feature free trial.
           </p>
 
           {/* Billing Interval Selector */}
@@ -316,26 +295,16 @@ export default function PricingPage() {
                         : 'bg-[#071F38] hover:bg-[#0D2C4D] text-white shadow-xs'
                     }`}
                   >
-                    <span>Choose {plan.name}</span>
+                    <span>Start 7-Day Free Trial</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
 
-                  {/* Try Demo Button for this Plan */}
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchDemo(key)}
-                    disabled={demoLoadingPlan !== null}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-[#071F38] text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent('/subscription')}`}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-[#071F38] text-xs font-bold transition-all text-center block"
                   >
-                    {demoLoadingPlan === key ? (
-                      <div className="w-3.5 h-3.5 border-2 border-[#071F38] border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Explore {key} Demo</span>
-                      </>
-                    )}
-                  </button>
+                    <span>Existing user? Upgrade</span>
+                  </Link>
                 </div>
               </div>
             );
@@ -438,42 +407,39 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Demo Experience Notice Banner */}
+        {/* 7-Day Free Trial Callout Banner */}
         <section className="mt-16 bg-gradient-to-r from-[#071F38] via-[#0D2C4D] to-[#071F38] rounded-3xl p-8 sm:p-10 text-white relative overflow-hidden shadow-xl">
           <div className="max-w-2xl relative z-10 space-y-3">
             <span className="px-3 py-1 rounded-full bg-[#EA580C] text-white font-extrabold text-[11px] uppercase tracking-wider">
-              100% Risk-Free Interactive Evaluation
+              100% Risk-Free 7-Day Free Trial
             </span>
             <h3 className="text-2xl sm:text-3xl font-black">
-              Try Any Plan in Live Demo Mode Right Now
+              Start Your 7-Day Full Feature Free Trial Today
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              No registration or credit card needed. Switch between Starter, Growth, and Scale demo
-              workspaces with pre-populated sample invoices, inventory, and ledgers.
+              No credit card required upfront. Get full access to GST invoicing, inventory tracking,
+              and customer ledgers for your business.
             </p>
 
             <div className="pt-2 flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleLaunchDemo('STARTER')}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all cursor-pointer"
+              <Link
+                href="/register?plan=STARTER"
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all"
               >
-                Try Starter (₹199)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLaunchDemo('GROWTH')}
-                className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                Start Starter (₹199/mo)
+              </Link>
+              <Link
+                href="/register?plan=GROWTH"
+                className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-bold shadow-md transition-all"
               >
-                Try Growth (₹499)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLaunchDemo('SCALE')}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                Start Growth (₹499/mo)
+              </Link>
+              <Link
+                href="/register?plan=SCALE"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition-all"
               >
-                Try Scale (₹999)
-              </button>
+                Start Scale (₹999/mo)
+              </Link>
             </div>
           </div>
         </section>

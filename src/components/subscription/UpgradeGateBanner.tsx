@@ -79,28 +79,13 @@ export function UpgradeGateBanner({
       </div>
 
       <div className="pt-2 flex items-center gap-3 flex-wrap">
-        {isDemo ? (
-          <button
-            type="button"
-            onClick={handleSwitchDemoTier}
-            disabled={switching}
-            className="px-5 py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-2"
-          >
-            {switching && (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            )}
-            <span>Switch Demo to {planConfig.name}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        ) : (
-          <Link
-            href="/subscription"
-            className="px-5 py-2.5 rounded-xl bg-[#071F38] hover:bg-[#0D2C4D] text-white text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center gap-2"
-          >
-            <span>Upgrade Subscription</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        )}
+        <Link
+          href="/subscription"
+          className="px-5 py-2.5 rounded-xl bg-[#071F38] hover:bg-[#0D2C4D] text-white text-xs sm:text-sm font-bold shadow-xs transition-all flex items-center gap-2"
+        >
+          <span>Upgrade to {planConfig.name}</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
 
         <Link
           href="/pricing"

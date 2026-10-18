@@ -28,8 +28,8 @@ export function calculateSubscriptionTrialInfo(sub: {
   const planConfig = OFFICIAL_PLANS[planKey];
   const startDate = new Date(sub.startDate);
   
-  // 14 calendar days trial by default
-  const defaultTrialEnd = new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+  // 7 calendar days trial strictly recorded from server activation
+  const defaultTrialEnd = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
   const endDate = sub.endDate ? new Date(sub.endDate) : defaultTrialEnd;
 
   const isTrial = sub.plan === SubscriptionPlan.FREE_TRIAL || sub.status === SubscriptionStatus.TRIALING;
