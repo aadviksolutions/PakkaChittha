@@ -22,13 +22,20 @@ const PUBLIC_PATHS = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static files, Next.js internal chunks, icons
+  // Allow static files, Next.js internal chunks, media assets, uploads, and icons
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
-    pathname === '/favicon.ico' ||
-    pathname === '/logo.png' ||
-    pathname === '/logo.jpg'
+    pathname.startsWith('/uploads') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.jpg') ||
+    pathname.endsWith('.jpeg') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.mp4') ||
+    pathname.endsWith('.webm') ||
+    pathname.endsWith('.json') ||
+    pathname.endsWith('.webp')
   ) {
     return NextResponse.next();
   }
