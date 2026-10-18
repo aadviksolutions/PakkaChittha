@@ -88,10 +88,31 @@ export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
     }
   }
 
+  // Auto-detect and heal swapped credentials:
+  // Google Client Secrets always start with "GOCSPX-"
+  // Google Client IDs end with ".apps.googleusercontent.com"
+  if (clientId && clientId.startsWith('GOCSPX-') && (!clientSecret || clientSecret === clientId)) {
+    clientSecret = clientId;
+    clientId = null;
+  } else if (clientSecret && clientSecret.endsWith('.apps.googleusercontent.com') && (!clientId || clientId === clientSecret)) {
+    clientId = clientSecret;
+    clientSecret = null;
+  } else if (
+    clientId &&
+    clientId.startsWith('GOCSPX-') &&
+    clientSecret &&
+    clientSecret.endsWith('.apps.googleusercontent.com')
+  ) {
+    // Both credentials were accidentally swapped
+    const temp = clientId;
+    clientId = clientSecret;
+    clientSecret = temp;
+  }
+
   return {
     clientId: clientId ? clientId.trim() : null,
     clientSecret: clientSecret ? clientSecret.trim() : null,
-    isConfigured: Boolean(clientId && clientId.trim().length > 0),
+    isConfigured: Boolean(clientId && clientId.trim().length > 0 && clientId.includes('.apps.googleusercontent.com')),
   };
 }
 
