@@ -195,6 +195,7 @@ export async function createInvoice(
         items: {
           create: calc.items.map((item) => ({
             productId: item.productId || null,
+            hsnCode: item.hsnCode || null,
             description: item.description,
             quantity: item.quantity,
             unit: item.unit,

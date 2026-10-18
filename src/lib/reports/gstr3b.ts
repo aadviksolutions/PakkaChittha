@@ -113,6 +113,10 @@ export interface PurchaseRecordForGstr3b {
   purchaseDate: Date | string;
   subtotal: number;
   taxTotal: number;
+  cgstTotal?: number;
+  sgstTotal?: number;
+  igstTotal?: number;
+  itcEligibility?: string | null;
   total: number;
   status: string;
   supplier?: {
@@ -230,26 +234,39 @@ export function buildGstr3bPayload(
   let itcIamt = 0;
   let itcCamt = 0;
   let itcSamt = 0;
+  let inelgIamt = 0;
+  let inelgCamt = 0;
+  let inelgSamt = 0;
 
   for (const p of activePurchases) {
+    const itcCategory = (p.itcEligibility || 'ELIGIBLE').toUpperCase();
+    const isEligible = itcCategory !== 'INELIGIBLE' && itcCategory !== 'BLOCKED_SEC_17_5';
+
     const supplierGstin = p.supplier?.gstin?.trim();
     const supplierStateCode = extractStateCodeFromGstin(supplierGstin, businessStateCode);
     const tax = p.taxTotal || 0;
 
-    if (supplierStateCode !== businessStateCode && supplierGstin) {
-      // Inter-state purchase -> IGST
-      itcIamt += tax;
+    const pIamt = p.igstTotal !== undefined ? p.igstTotal : (supplierStateCode !== businessStateCode && supplierGstin ? tax : 0);
+    const pCamt = p.cgstTotal !== undefined ? p.cgstTotal : (supplierStateCode === businessStateCode || !supplierGstin ? tax / 2 : 0);
+    const pSamt = p.sgstTotal !== undefined ? p.sgstTotal : (supplierStateCode === businessStateCode || !supplierGstin ? tax / 2 : 0);
+
+    if (isEligible) {
+      itcIamt += pIamt;
+      itcCamt += pCamt;
+      itcSamt += pSamt;
     } else {
-      // Intra-state purchase -> CGST 50% + SGST 50%
-      const half = tax / 2;
-      itcCamt += half;
-      itcSamt += half;
+      inelgIamt += pIamt;
+      inelgCamt += pCamt;
+      inelgSamt += pSamt;
     }
   }
 
   itcIamt = Math.round(itcIamt * 100) / 100;
   itcCamt = Math.round(itcCamt * 100) / 100;
   itcSamt = Math.round(itcSamt * 100) / 100;
+  inelgIamt = Math.round(inelgIamt * 100) / 100;
+  inelgCamt = Math.round(inelgCamt * 100) / 100;
+  inelgSamt = Math.round(inelgSamt * 100) / 100;
   const totalEligibleItc = Math.round((itcIamt + itcCamt + itcSamt) * 100) / 100;
 
   // Net Tax Payable (Output Tax minus ITC, bounded at zero)
@@ -351,7 +368,18 @@ export function buildGstr3bPayload(
         samt: itcSamt,
         csamt: 0.0,
       },
-      itc_inelg: [],
+      itc_inelg:
+        inelgIamt > 0 || inelgCamt > 0 || inelgSamt > 0
+          ? [
+              {
+                ty: 'RUL',
+                iamt: inelgIamt,
+                camt: inelgCamt,
+                samt: inelgSamt,
+                csamt: 0.0,
+              },
+            ]
+          : [],
     },
     inward_sup: {
       isup_details: [

@@ -2,6 +2,7 @@ export type GstType = 'CGST_SGST' | 'IGST' | 'EXEMPT';
 
 export interface LineItemInput {
   productId?: string | null;
+  hsnCode?: string | null;
   description: string;
   quantity: number;
   unit?: string;
@@ -13,6 +14,7 @@ export interface LineItemInput {
 
 export interface CalculatedLineItem {
   productId?: string | null;
+  hsnCode?: string | null;
   description: string;
   quantity: number;
   unit: string;
@@ -153,6 +155,7 @@ export function calculateInvoiceTotals(params: {
 
     return {
       productId: item.productId?.trim() || null,
+      hsnCode: item.hsnCode?.trim() || null,
       description: item.description?.trim() || 'Untitled Item',
       quantity: qty,
       unit,

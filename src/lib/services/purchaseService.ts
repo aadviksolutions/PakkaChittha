@@ -5,6 +5,7 @@ import { PurchaseStatus, PaymentMethod, StockMovementType } from '@prisma/client
 
 export interface PurchaseItemInput {
   productId?: string | null;
+  hsnCode?: string | null;
   description: string;
   quantity: number;
   unit?: string;
@@ -24,6 +25,9 @@ export interface CreatePurchaseInput {
   paymentMethod?: PaymentMethod;
   paymentReference?: string | null;
   notes?: string | null;
+  itcEligibility?: string; // ELIGIBLE, INELIGIBLE, BLOCKED_SEC_17_5, CAPITAL_GOODS, PENDING_VERIFICATION, RECONCILED
+  placeOfSupply?: string | null;
+  documentUrl?: string | null;
 }
 
 export interface RecordSupplierPaymentInput {
@@ -58,10 +62,29 @@ export async function createPurchase(
     throw new Error('Supplier not found or unauthorized.');
   }
 
+  // 1b. Determine place of supply and inter-state status
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { gstin: true, state: true },
+  });
+
+  const suppGstin = supplier.gstin?.trim().toUpperCase();
+  const bGstin = business?.gstin?.trim().toUpperCase();
+  const isInterState = Boolean(
+    suppGstin &&
+      bGstin &&
+      suppGstin.length >= 2 &&
+      bGstin.length >= 2 &&
+      suppGstin.slice(0, 2) !== bGstin.slice(0, 2)
+  );
+
   // 2. Calculate item totals and invoice figures
   let subtotal = 0;
   let discountTotal = 0;
   let taxTotal = 0;
+  let cgstTotal = 0;
+  let sgstTotal = 0;
+  let igstTotal = 0;
 
   const calculatedItems = input.items.map((item) => {
     const qty = Math.max(0.001, Number(item.quantity || 1));
@@ -71,29 +94,50 @@ export async function createPurchase(
 
     const lineGross = qty * rate;
     const lineTaxable = Math.max(0, lineGross - disc);
-    const lineTax = lineTaxable * (taxRate / 100);
-    const lineTotal = lineTaxable + lineTax;
+    const lineTax = round2(lineTaxable * (taxRate / 100));
+    const lineTotal = round2(lineTaxable + lineTax);
 
     subtotal += lineTaxable;
     discountTotal += disc;
     taxTotal += lineTax;
 
+    const cgstRate = isInterState ? 0 : taxRate / 2;
+    const cgstAmount = isInterState ? 0 : round2(lineTax / 2);
+    const sgstRate = isInterState ? 0 : taxRate / 2;
+    const sgstAmount = isInterState ? 0 : round2(lineTax / 2);
+    const igstRate = isInterState ? taxRate : 0;
+    const igstAmount = isInterState ? lineTax : 0;
+
+    cgstTotal += cgstAmount;
+    sgstTotal += sgstAmount;
+    igstTotal += igstAmount;
+
     return {
       productId: item.productId?.trim() || null,
+      hsnCode: item.hsnCode?.trim() || null,
       description: item.description.trim(),
       quantity: round2(qty),
       unit: item.unit?.trim() || 'Pcs',
       purchaseRate: round2(rate),
       discount: round2(disc),
       taxRate: round2(taxRate),
-      taxAmount: round2(lineTax),
-      lineTotal: round2(lineTotal),
+      taxAmount: lineTax,
+      cgstRate: round2(cgstRate),
+      cgstAmount,
+      sgstRate: round2(sgstRate),
+      sgstAmount,
+      igstRate: round2(igstRate),
+      igstAmount,
+      lineTotal,
     };
   });
 
   subtotal = round2(subtotal);
   discountTotal = round2(discountTotal);
   taxTotal = round2(taxTotal);
+  cgstTotal = round2(cgstTotal);
+  sgstTotal = round2(sgstTotal);
+  igstTotal = round2(igstTotal);
   const total = round2(subtotal + taxTotal);
 
   const initialPaid = Math.max(0, round2(Number(input.paidAmount || 0)));
@@ -121,6 +165,12 @@ export async function createPurchase(
         subtotal,
         discountTotal,
         taxTotal,
+        cgstTotal,
+        sgstTotal,
+        igstTotal,
+        itcEligibility: input.itcEligibility || 'ELIGIBLE',
+        placeOfSupply: input.placeOfSupply?.trim() || supplier.address?.trim() || null,
+        documentUrl: input.documentUrl?.trim() || null,
         total,
         paidAmount: initialPaid,
         balanceDue,

@@ -147,6 +147,8 @@ model Business {
   khataTransactions  KhataTransaction[]
   khataRepayments    KhataRepayment[]
   subscriptionPayments SubscriptionPayment[]
+  creditDebitNotes   CreditDebitNote[]
+  gstr2bImports      Gstr2bImport[]
 
   @@index([name])
 }
@@ -225,6 +227,7 @@ model Customer {
   invoices        Invoice[]
   payments        Payment[]
   whatsAppLogs    WhatsAppMessageLog[]
+  creditDebitNotes CreditDebitNote[]
 
   @@index([businessId])
   @@index([name])
@@ -294,6 +297,7 @@ model Invoice {
   items              InvoiceItem[]
   payments           Payment[]
   whatsAppLogs       WhatsAppMessageLog[]
+  creditDebitNotes   CreditDebitNote[]
 
   @@unique([businessId, invoiceNumber])
   @@index([businessId])
@@ -306,6 +310,7 @@ model InvoiceItem {
   id             String   @id @default(cuid())
   invoiceId      String
   productId      String?
+  hsnCode        String?
   description    String
   quantity       Float
   unit           String   @default("Pcs")
@@ -378,6 +383,7 @@ model Product {
   purchasePrice  Float           @default(0)
   sellingPrice   Float           @default(0)
   taxRate        Float           @default(0)
+  hsnCode        String?
   currentStock   Float           @default(0)
   openingStock   Float           @default(0)
   lowStockAlert  Float           @default(10)
@@ -439,6 +445,7 @@ model Supplier {
   business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   purchases       Purchase[]
   payments        SupplierPayment[]
+  creditDebitNotes CreditDebitNote[]
 
   @@index([businessId])
   @@index([name])
@@ -469,9 +476,17 @@ model Purchase {
   subtotal               Float             @default(0)
   discountTotal          Float             @default(0)
   taxTotal               Float             @default(0)
+  cgstTotal              Float             @default(0)
+  sgstTotal              Float             @default(0)
+  igstTotal              Float             @default(0)
   total                  Float             @default(0)
   paidAmount             Float             @default(0)
   balanceDue             Float             @default(0)
+
+  // GST & ITC Classification
+  itcEligibility         String            @default("ELIGIBLE") // ELIGIBLE, INELIGIBLE, BLOCKED_SEC_17_5, CAPITAL_GOODS, PENDING_VERIFICATION, RECONCILED
+  placeOfSupply          String?
+  documentUrl            String?
 
   notes                  String?
   receivedAt             DateTime?
@@ -499,6 +514,7 @@ model PurchaseItem {
   id           String    @id @default(cuid())
   purchaseId   String
   productId    String?
+  hsnCode      String?
   description  String
   quantity     Float
   unit         String    @default("Pcs")
@@ -506,6 +522,12 @@ model PurchaseItem {
   discount     Float     @default(0)
   taxRate      Float     @default(0)
   taxAmount    Float     @default(0)
+  cgstRate     Float     @default(0)
+  cgstAmount   Float     @default(0)
+  sgstRate     Float     @default(0)
+  sgstAmount   Float     @default(0)
+  igstRate     Float     @default(0)
+  igstAmount   Float     @default(0)
   lineTotal    Float
 
   purchase     Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
@@ -765,3 +787,96 @@ model PlatformSetting {
   @@index([key])
   @@index([category])
 }
+
+enum NoteType {
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+model CreditDebitNote {
+  id                    String        @id @default(cuid())
+  businessId            String
+  noteType              NoteType
+  noteNumber            String
+  noteDate              DateTime      @default(now())
+  originalInvoiceId     String?
+  originalInvoiceNumber String?
+  customerId            String?
+  supplierId            String?
+  partyName             String
+  partyGstin            String?
+  reason                String        // "SALES_RETURN", "DEFICIENT_SERVICE", "POST_SALE_DISCOUNT", "PRICE_CORRECTION", "PURCHASE_RETURN"
+  
+  taxableValue          Float         @default(0)
+  taxTotal              Float         @default(0)
+  cgstTotal             Float         @default(0)
+  sgstTotal             Float         @default(0)
+  igstTotal             Float         @default(0)
+  total                 Float         @default(0)
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  business              Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  originalInvoice       Invoice?      @relation(fields: [originalInvoiceId], references: [id], onDelete: SetNull)
+  customer              Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  supplier              Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@unique([businessId, noteNumber])
+  @@index([businessId])
+  @@index([noteType])
+  @@index([noteDate])
+}
+
+model Gstr2bImport {
+  id                  String        @id @default(cuid())
+  businessId          String
+  returnPeriod        String        // e.g. "102026" (MMYYYY)
+  financialYear       String        // e.g. "2026-2027"
+  sourceFileName      String?
+  totalInvoices       Int           @default(0)
+  totalTaxable        Float         @default(0)
+  totalCgst           Float         @default(0)
+  totalSgst           Float         @default(0)
+  totalIgst           Float         @default(0)
+  matchedCount        Int           @default(0)
+  mismatchCount       Int           @default(0)
+  missingInBooksCount Int           @default(0)
+  missingIn2bCount    Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  business            Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  entries             Gstr2bEntry[]
+
+  @@index([businessId])
+  @@index([returnPeriod])
+}
+
+model Gstr2bEntry {
+  id                   String        @id @default(cuid())
+  importId             String
+  supplierGstin        String
+  supplierName         String?
+  invoiceNumber        String
+  invoiceDate          DateTime
+  invoiceType          String        @default("R") // "R" (Regular), "C" (Credit Note), "D" (Debit Note)
+  placeOfSupply        String?
+  taxableValue         Float         @default(0)
+  cgstAmount           Float         @default(0)
+  sgstAmount           Float         @default(0)
+  igstAmount           Float         @default(0)
+  totalAmount          Float         @default(0)
+  itcAvailability      String        @default("Y") // "Y" (Eligible), "N" (Ineligible)
+  reconciliationStatus String        @default("UNRECONCILED") // "MATCHED", "MISMATCH_TAX", "MISSING_IN_PURCHASES", "DUPLICATE"
+  matchedPurchaseId    String?
+  matchNotes           String?
+  createdAt            DateTime      @default(now())
+
+  gstr2bImport         Gstr2bImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@index([supplierGstin])
+  @@index([reconciliationStatus])
+}
+

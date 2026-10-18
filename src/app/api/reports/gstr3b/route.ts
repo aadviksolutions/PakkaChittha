@@ -86,6 +86,10 @@ export async function GET(request: NextRequest) {
         purchaseDate: true,
         subtotal: true,
         taxTotal: true,
+        cgstTotal: true,
+        sgstTotal: true,
+        igstTotal: true,
+        itcEligibility: true,
         total: true,
         status: true,
         supplier: {
