@@ -104,12 +104,16 @@ export async function registerBusinessOwner(input: RegisterBusinessOwnerInput) {
       },
     });
 
-    // 4. Provision Initial Trial Subscription
+    // 4. Provision Initial Trial Subscription with permanent server-side timestamps
+    const trialStartDate = new Date();
+    const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
     const subscription = await tx.subscription.create({
       data: {
         businessId: business.id,
         plan: SubscriptionPlan.FREE_TRIAL,
         status: SubscriptionStatus.TRIALING,
+        startDate: trialStartDate,
+        endDate: trialEndDate,
         trialDaysRemaining: 14,
         maxMonthlyInvoices: 500,
         maxStaffSeats: 3,

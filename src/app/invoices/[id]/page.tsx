@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, use } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Printer,
@@ -95,6 +96,7 @@ function InvoiceDetailContent({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,6 +140,20 @@ function InvoiceDetailContent({
   useEffect(() => {
     fetchInvoice();
   }, [fetchInvoice]);
+
+  // Handle auto-action from query params (e.g. Save & Print or Save & Share)
+  useEffect(() => {
+    if (!invoice) return;
+    if (searchParams.get('print') === 'true') {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    if (searchParams.get('share') === 'true') {
+      setWhatsAppModalOpen(true);
+    }
+  }, [invoice, searchParams]);
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();

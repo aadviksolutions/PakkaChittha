@@ -73,11 +73,24 @@ export function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const pathname = usePathname();
-  const { user, activeBusiness } = useAuth();
-  const { isFreeKhata, isAllowed, planName, isSuperAdmin } = useEntitlements();
+  const { activeBusiness } = useAuth();
+  const {
+    isFreeKhata,
+    isAllowed,
+    planName,
+    isSuperAdmin,
+    isTrial,
+    isExpired,
+    displayText,
+    trialDaysRemaining,
+  } = useEntitlements();
 
   // Filter business items dynamically based on plan entitlements
   const filteredBusinessItems = BUSINESS_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
+    // Hide Free Udhaar Khata promotional link for customers on paid/commercial subscriptions
+    if (item.id === 'free-khata-link') {
+      return isFreeKhata;
+    }
     if (item.id === 'purchases') return isAllowed('canManagePurchases');
     if (item.id === 'suppliers') return isAllowed('canManageSuppliers');
     if (item.id === 'reports') return isAllowed('canAdvancedReports');
@@ -312,23 +325,25 @@ export function Sidebar({
                   <Crown className="w-3.5 h-3.5 text-amber-500" />
                   {planName}
                 </span>
-                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 uppercase">
-                  {planStatus}
+                <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${
+                  isExpired
+                    ? 'text-rose-700 bg-rose-50 border-rose-200'
+                    : isTrial
+                    ? 'text-blue-700 bg-blue-50 border-blue-200'
+                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                }`}>
+                  {isExpired ? 'EXPIRED' : planStatus}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 leading-tight mb-2">
-                {activeBusiness?.subscription
-                  ? `${activeBusiness.subscription.trialDaysRemaining} days remaining in trial`
-                  : isSuperAdmin
-                  ? 'Super Admin Privileges'
-                  : '14-Day Free Trial'}
+              <p className="text-[10px] text-slate-600 font-medium leading-tight mb-2">
+                {isSuperAdmin ? 'Super Admin Privileges' : displayText}
               </p>
               <Link
                 href={isSuperAdmin ? '/platform-admin/plans' : '/subscription'}
                 onClick={onCloseMobile}
                 className="text-[10px] font-semibold text-slate-800 hover:text-emerald-700 flex items-center gap-1 transition-colors"
               >
-                {isSuperAdmin ? 'View Platform Plans' : 'Subscription Details'}
+                {isSuperAdmin ? 'View Platform Plans' : isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
                 <ArrowRight className="w-3 h-3" />
               </Link>
 

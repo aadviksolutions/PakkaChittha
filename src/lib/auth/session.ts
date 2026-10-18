@@ -2,6 +2,7 @@ import { cookies, headers } from 'next/headers';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import { PlatformRole, BusinessRole, SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { calculateSubscriptionTrialInfo } from '@/lib/subscription/trial';
 
 export const SESSION_COOKIE_NAME = 'lenden_session_token';
 const SESSION_TTL_DAYS = 7;
@@ -32,6 +33,10 @@ export interface ActiveBusinessWorkspace {
     plan: SubscriptionPlan;
     status: SubscriptionStatus;
     trialDaysRemaining: number;
+    isTrial?: boolean;
+    isExpired?: boolean;
+    displayText?: string;
+    endDate?: Date | string | null;
   } | null;
 }
 
@@ -156,6 +161,29 @@ export async function validateSessionToken(
   if (targetMembership) {
     const biz = targetMembership.business;
     const latestSub = biz.subscriptions[0] || null;
+    let subInfo: ActiveBusinessWorkspace['subscription'] = null;
+    if (latestSub) {
+      const trial = calculateSubscriptionTrialInfo(latestSub);
+      subInfo = {
+        plan: latestSub.plan,
+        status: trial.status,
+        trialDaysRemaining: trial.trialDaysRemaining,
+        isTrial: trial.isTrial,
+        isExpired: trial.isExpired,
+        displayText: trial.displayText,
+        endDate: trial.endDate,
+      };
+
+      // If trial has just expired in calendar time, update DB status asynchronously
+      if (trial.isExpired && latestSub.status === SubscriptionStatus.TRIALING) {
+        prisma.subscription
+          .update({
+            where: { id: latestSub.id },
+            data: { status: SubscriptionStatus.EXPIRED, trialDaysRemaining: 0 },
+          })
+          .catch(() => null);
+      }
+    }
 
     activeBusiness = {
       id: biz.id,
@@ -169,13 +197,7 @@ export async function validateSessionToken(
       role: targetMembership.role,
       logoUrl: biz.logoUrl || null,
       isDemo: Boolean((biz as any).isDemo || biz.id.startsWith('demo_')),
-      subscription: latestSub
-        ? {
-            plan: latestSub.plan,
-            status: latestSub.status,
-            trialDaysRemaining: latestSub.trialDaysRemaining,
-          }
-        : null,
+      subscription: subInfo,
     };
   }
 

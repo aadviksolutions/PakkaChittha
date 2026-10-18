@@ -98,8 +98,17 @@ export async function GET(request: NextRequest) {
       where: { businessId },
     });
 
+    const { calculateSubscriptionTrialInfo } = await import('@/lib/subscription/trial');
+    const trial = calculateSubscriptionTrialInfo(subscription);
+
     return NextResponse.json({
-      subscription,
+      subscription: {
+        ...subscription,
+        status: trial.status,
+        trialDaysRemaining: trial.trialDaysRemaining,
+        endDate: trial.endDate,
+        displayText: trial.displayText,
+      },
       usage: {
         monthlyInvoicesCreated,
         maxMonthlyInvoices: subscription.maxMonthlyInvoices,

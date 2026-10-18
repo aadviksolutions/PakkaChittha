@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { OFFICIAL_PLANS, normalizePlanKey, PlanKey, OfficialPlan } from './plans';
 import { SubscriptionStatus } from '@prisma/client';
+import { calculateSubscriptionTrialInfo } from './trial';
 
 export interface BusinessEntitlementsResult {
   businessId: string;
@@ -47,20 +48,22 @@ export async function getBusinessEntitlements(
 
   const isDemo = Boolean(business.isDemo || business.id.startsWith('demo_'));
   const activeSub = business.subscriptions[0];
+  const trial = activeSub ? calculateSubscriptionTrialInfo(activeSub) : null;
   const planKey = normalizePlanKey(activeSub?.plan);
   const planConfig = OFFICIAL_PLANS[planKey];
-  const status = activeSub?.status || SubscriptionStatus.ACTIVE;
-  const isExpired =
-    status === SubscriptionStatus.EXPIRED || status === SubscriptionStatus.SUSPENDED;
+  const status = trial ? trial.status : SubscriptionStatus.ACTIVE;
+  const isExpired = trial ? trial.isExpired : (status === SubscriptionStatus.EXPIRED || status === SubscriptionStatus.SUSPENDED);
   const isPastDue = status === SubscriptionStatus.PAST_DUE;
 
-  // If a paid subscription is expired, suspended, or payment is unpaid/past_due, restrict paid write entitlements safely
+  // If a commercial subscription is expired (including expired trial), suspended, or unpaid/past_due, restrict write entitlements safely
   const effectiveEntitlements = { ...planConfig.entitlements };
   if ((isExpired || isPastDue) && planKey !== 'FREE_KHATA') {
-    // Expired or unpaid subscriptions cannot create new invoices, purchases, or add staff
+    // Expired or unpaid subscriptions cannot create new invoices, purchases, inventory items, or add staff
     effectiveEntitlements.canCreateInvoices = false;
     effectiveEntitlements.canManagePurchases = false;
     effectiveEntitlements.canManageStaff = false;
+    effectiveEntitlements.canManageInventoryBasic = false;
+    effectiveEntitlements.canAdvancedInventory = false;
   }
 
   return {

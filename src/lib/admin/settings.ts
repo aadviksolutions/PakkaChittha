@@ -13,6 +13,9 @@ export interface PlatformConfig {
   razorpayKeyIdStatus: string;
   razorpayKeySecretStatus: string;
   whatsappGatewayStatus: string;
+  googleClientIdStatus: string;
+  googleClientSecretStatus: string;
+  googleRedirectUri: string;
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
@@ -26,6 +29,9 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
   razorpayKeyIdStatus: 'CONFIGURED',
   razorpayKeySecretStatus: 'SECURED',
   whatsappGatewayStatus: 'READY',
+  googleClientIdStatus: 'CHECKING',
+  googleClientSecretStatus: 'CHECKING',
+  googleRedirectUri: 'https://lenden-pi.vercel.app/api/auth/callback/google',
 };
 
 /**
@@ -45,6 +51,39 @@ export async function getPlatformSettings(): Promise<PlatformConfig> {
         config[r.key] = r.value;
       }
     }
+
+    const hasEnvClientId = Boolean(
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      process.env.GOOGLE_OAUTH_CLIENT_ID
+    );
+    const hasEnvClientSecret = Boolean(
+      process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    );
+    const hasDbClientId = records.some(
+      (r: any) =>
+        (r.key === 'googleClientId' || r.key === 'GOOGLE_CLIENT_ID') &&
+        Boolean(r.value?.trim())
+    );
+    const hasDbClientSecret = records.some(
+      (r: any) =>
+        (r.key === 'googleClientSecret' || r.key === 'GOOGLE_CLIENT_SECRET') &&
+        Boolean(r.value?.trim())
+    );
+
+    config.googleClientIdStatus = hasEnvClientId
+      ? 'CONFIGURED (ENV)'
+      : hasDbClientId
+      ? 'CONFIGURED (DB)'
+      : 'NOT_CONFIGURED';
+
+    config.googleClientSecretStatus = hasEnvClientSecret
+      ? 'CONFIGURED (ENV)'
+      : hasDbClientSecret
+      ? 'CONFIGURED (DB)'
+      : 'NOT_CONFIGURED';
+
+    config.googleRedirectUri = 'https://lenden-pi.vercel.app/api/auth/callback/google';
 
     return config as PlatformConfig;
   } catch (error) {

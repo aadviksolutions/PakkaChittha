@@ -9,10 +9,14 @@ const PUBLIC_PATHS = [
   '/api/auth/register',
   '/api/auth/register-khata',
   '/api/auth/me',
+  '/api/auth/google',
+  '/api/auth/callback/google',
+  '/api/auth/google/config',
   '/api/demo/enter',
   '/api/demo/exit',
   '/api/subscription/plans',
   '/api/whatsapp/webhook',
+  '/api/webhooks/razorpay',
 ];
 
 export function middleware(request: NextRequest) {

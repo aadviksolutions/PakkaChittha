@@ -1,10 +1,11 @@
 import prisma from '@/lib/prisma';
 import { StockMovementType } from '@prisma/client';
 import { round2 } from '@/lib/billing/calculator';
+import { calculateSubscriptionTrialInfo } from '@/lib/subscription/trial';
 
 export interface CreateProductInput {
   name: string;
-  sku: string;
+  sku?: string;
   barcode?: string | null;
   category?: string;
   unit?: string;
@@ -125,8 +126,33 @@ export async function createProduct(
   data: CreateProductInput,
   actorName = 'System'
 ) {
+  // Subscription check
+  const subscription = await prisma.subscription.findFirst({
+    where: { businessId },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (subscription) {
+    const trial = calculateSubscriptionTrialInfo(subscription);
+    if (trial.status === 'SUSPENDED') {
+      throw new Error('Workspace subscription is currently suspended. Please contact support or renew.');
+    }
+    if (trial.isExpired || trial.status === 'EXPIRED') {
+      throw new Error('Workspace trial or subscription has expired. Please upgrade or renew your plan.');
+    }
+  }
+
   const name = data.name.trim();
-  const sku = data.sku.trim();
+  if (!name) throw new Error('Product name is required.');
+
+  // Auto-generate SKU if empty or omitted
+  const rawSku = data.sku?.trim();
+  let sku = rawSku;
+  if (!sku) {
+    const cleanPrefix = name.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'ITEM';
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    sku = `${cleanPrefix}-${rand}`;
+  }
+
   const barcode = data.barcode?.trim() || null;
   const category = data.category?.trim() || 'General';
   const unit = data.unit?.trim() || 'Pcs';
@@ -137,15 +163,15 @@ export async function createProduct(
   const lowStockAlert = Math.max(0, Number(data.lowStockAlert ?? 10));
   const description = data.description?.trim() || null;
 
-  if (!name) throw new Error('Product name is required.');
-  if (!sku) throw new Error('Product SKU is required.');
-
-  // Check unique SKU within business
-  const existingSku = await prisma.product.findUnique({
+  // Check unique SKU within business, retry with suffix if auto-generated
+  let existingSku = await prisma.product.findUnique({
     where: { businessId_sku: { businessId, sku } },
   });
   if (existingSku) {
-    throw new Error(`A product with SKU "${sku}" already exists in this business.`);
+    if (rawSku) {
+      throw new Error(`A product with SKU "${rawSku}" already exists in this business.`);
+    }
+    sku = `${sku}-${Date.now().toString().slice(-4)}`;
   }
 
   // Check unique barcode within business if provided

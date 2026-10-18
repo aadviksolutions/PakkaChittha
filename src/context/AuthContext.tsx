@@ -26,6 +26,10 @@ export interface ActiveBusiness {
     plan: string;
     status: string;
     trialDaysRemaining: number;
+    isTrial?: boolean;
+    isExpired?: boolean;
+    displayText?: string;
+    endDate?: Date | string | null;
   } | null;
 }
 

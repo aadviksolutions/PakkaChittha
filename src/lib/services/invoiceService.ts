@@ -7,6 +7,7 @@ import {
 } from '@/lib/billing/calculator';
 import { generateInvoiceNumber } from '@/lib/billing/sequence';
 import { InvoiceStatus, PaymentMethod, StockMovementType } from '@prisma/client';
+import { calculateSubscriptionTrialInfo } from '@/lib/subscription/trial';
 
 export interface CreateInvoiceInput {
   customerId: string;
@@ -72,11 +73,12 @@ export async function createInvoice(
   });
 
   if (subscription) {
-    if (subscription.status === 'SUSPENDED') {
+    const trial = calculateSubscriptionTrialInfo(subscription);
+    if (trial.status === 'SUSPENDED') {
       throw new Error('Workspace subscription is currently suspended. Please contact support or renew.');
     }
-    if (subscription.status === 'EXPIRED') {
-      throw new Error('Workspace subscription has expired. Please upgrade or renew your plan.');
+    if (trial.isExpired || trial.status === 'EXPIRED') {
+      throw new Error('Workspace trial or subscription has expired. Please upgrade or renew your plan.');
     }
 
     const now = new Date();

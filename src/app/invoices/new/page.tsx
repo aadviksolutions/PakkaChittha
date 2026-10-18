@@ -24,13 +24,16 @@ import {
   Clock,
   Sparkles,
   ChevronDown,
+  Printer,
+  Share2,
+  Zap,
+  Settings2,
 } from 'lucide-react';
 import { calculateInvoiceTotals, LineItemInput, GstType } from '@/lib/billing/calculator';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
-import { sanitizePhoneNumber } from '@/lib/whatsapp/formatters';
 
 interface CustomerOption {
   id: string;
@@ -39,6 +42,7 @@ interface CustomerOption {
   email?: string | null;
   gstin: string | null;
   billingAddress: string | null;
+  totalOutstanding?: number;
 }
 
 interface CatalogProductOption {
@@ -53,7 +57,7 @@ interface CatalogProductOption {
 }
 
 const COMMON_GST_RATES = [0, 5, 12, 18, 28];
-const UNITS = ['Pcs', 'Bags', 'Kg', 'Boxes', 'Nos', 'Mtr', 'Ltr', 'Hours', 'Set', 'Packet', 'Tin', 'Bottle'];
+const UNITS = ['Pcs', 'Kg', 'Gram', 'Litre', 'Ml', 'Box', 'Packet', 'Dozen', 'Nos', 'Bags', 'Mtr', 'Set', 'Bottle', 'Hours'];
 
 function InvoiceCreationForm() {
   const router = useRouter();
@@ -133,6 +137,7 @@ function InvoiceCreationForm() {
 
   // 7. Actions & Submission State
   const [loading, setLoading] = useState(false);
+  const [activeAction, setActiveAction] = useState<'save' | 'print' | 'share' | 'draft' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Initial Date Setup
@@ -427,7 +432,6 @@ function InvoiceCreationForm() {
       }
 
       const savedProduct = data.product;
-      // Append to catalogProducts state so future searches find it immediately
       setCatalogProducts((prev) => [
         {
           id: savedProduct.id,
@@ -442,7 +446,6 @@ function InvoiceCreationForm() {
         ...prev,
       ]);
 
-      // Add to current bill items with productId link
       setItems((prev) => {
         const newLineItem: LineItemInput = {
           productId: savedProduct.id,
@@ -471,6 +474,47 @@ function InvoiceCreationForm() {
     }
   };
 
+  // Quick 1-Click Walk-in / Cash Sale Selector
+  const handleSelectCashSale = async () => {
+    // Check if Cash Sale / Walk-in already exists in loaded customers
+    const existing = customers.find(
+      (c) =>
+        c.name.toLowerCase().includes('walk-in') ||
+        c.name.toLowerCase().includes('cash sale') ||
+        c.name.toLowerCase() === 'retail customer'
+    );
+
+    if (existing) {
+      setSelectedCustomerId(existing.id);
+      setIsCustomerDropdownOpen(false);
+      toast.success('Selected Cash Sale / Walk-in Customer');
+      return;
+    }
+
+    // Automatically create a Walk-in Customer without forcing manual registration
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Walk-in / Cash Sale',
+          mobile: '',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.customer) {
+        setCustomers((prev) => [data.customer, ...prev]);
+        setSelectedCustomerId(data.customer.id);
+        setIsCustomerDropdownOpen(false);
+        toast.success('Selected Walk-in / Cash Sale Customer');
+      } else {
+        throw new Error(data.error || 'Failed to create cash sale customer');
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error creating cash sale customer');
+    }
+  };
+
   // Quick Add Customer Handler (Never resets bill state)
   const handleQuickAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -494,14 +538,12 @@ function InvoiceCreationForm() {
         throw new Error(data.error || 'Failed to add customer.');
       }
 
-      // Add customer to state and immediately select them
       setCustomers((prev) => [data.customer, ...prev]);
       setSelectedCustomerId(data.customer.id);
       setCustomerSearchQuery('');
       setIsCustomerDropdownOpen(false);
       setAddCustomerOpen(false);
 
-      // Reset form
       setNewCustName('');
       setNewCustMobile('');
       setNewCustGstin('');
@@ -516,13 +558,13 @@ function InvoiceCreationForm() {
     }
   };
 
-  // Save / Finalize Invoice Handler
-  const handleFinalizeBill = async (isDraft = false) => {
+  // Save / Finalize Invoice Handler with Print & Share support
+  const handleFinalizeBill = async (isDraft = false, action: 'save' | 'print' | 'share' | 'draft' = 'save') => {
     setError(null);
 
     if (!selectedCustomerId) {
-      setError('Please select or add a customer.');
-      toast.error('Please select or add a customer.');
+      setError('Please select a customer or click "⚡ Cash Sale".');
+      toast.error('Please select a customer or click "⚡ Cash Sale".');
       return;
     }
 
@@ -534,6 +576,7 @@ function InvoiceCreationForm() {
     }
 
     setLoading(true);
+    setActiveAction(isDraft ? 'draft' : action);
 
     try {
       const res = await fetch('/api/invoices', {
@@ -549,7 +592,7 @@ function InvoiceCreationForm() {
           items: validItems,
           paidAmount: parseFloat(paidAmount) || 0,
           paymentMethod,
-          paymentReference,
+          paymentReference: paymentMethod === 'CASH' ? '' : paymentReference,
           notes,
           termsAndConditions: terms,
           isDraft,
@@ -567,14 +610,21 @@ function InvoiceCreationForm() {
           : `Invoice ${data.invoice.invoiceNumber} generated successfully!`
       );
 
-      // Redirect directly to the invoice details view where WhatsApp preview can be opened
-      router.push(`/invoices/${data.invoice.id}`);
+      // Handle direct print or share redirect
+      if (action === 'print') {
+        router.push(`/invoices/${data.invoice.id}?print=true`);
+      } else if (action === 'share') {
+        router.push(`/invoices/${data.invoice.id}?share=true`);
+      } else {
+        router.push(`/invoices/${data.invoice.id}`);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An error occurred while creating invoice.';
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
+      setActiveAction(null);
     }
   };
 
@@ -589,9 +639,9 @@ function InvoiceCreationForm() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24 md:pb-8">
-      {/* Top Breadcrumb & Running Total Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+    <div className="space-y-5 max-w-6xl mx-auto pb-36 md:pb-8">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <Link
             href="/invoices"
@@ -601,7 +651,7 @@ function InvoiceCreationForm() {
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Create New Tax Invoice
+              Create New Invoice
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Workspace: <strong>{activeBusiness?.name || 'My Store'}</strong> • GSTIN:{' '}
@@ -626,145 +676,195 @@ function InvoiceCreationForm() {
         </div>
       )}
 
-      {/* Main Billing Form Flow organized strictly in required order */}
-      <div className="space-y-6 text-xs">
+      {/* Main Billing Form Flow */}
+      <div className="space-y-4 text-xs">
         {/* =========================================================================
-            SECTION 1: Invoice Number & Date
+            SECTION 1: Invoice Details & Collapsible More Invoice Settings
            ========================================================================= */}
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <Receipt className="w-3.5 h-3.5 text-slate-500" />
-              1. Invoice Number & Dates
+              Invoice Details
             </span>
-            <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
-              {estimatedInvoiceNumber} (Sequential)
+            <span className="text-[11px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+              {estimatedInvoiceNumber}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Essential visible fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Invoice Number</label>
               <input
                 type="text"
                 disabled
                 value={estimatedInvoiceNumber}
-                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 font-mono font-bold cursor-not-allowed"
+                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 font-mono font-bold cursor-not-allowed text-xs"
                 title="Invoice number is automatically sequenced"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Conforms to Indian Fiscal Year rules</p>
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Invoice Date *</label>
+              <label className="block font-semibold text-slate-700 mb-1">Invoice Date</label>
               <input
                 type="date"
                 required
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 text-xs"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Due Date *</label>
+              <label className="block font-semibold text-slate-700 mb-1">
+                Due Date <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
               <input
                 type="date"
-                required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 text-xs"
               />
             </div>
           </div>
 
-          {/* Tax Configuration & Regime Options */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-100">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Tax Regime</label>
-              <select
-                value={gstType}
-                onChange={(e) => setGstType(e.target.value as GstType)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-              >
-                <option value="CGST_SGST">Intra-State (CGST + SGST)</option>
-                <option value="IGST">Inter-State (IGST)</option>
-                <option value="EXEMPT">Exempt / Non-GST</option>
-              </select>
-            </div>
+          {/* Collapsible "More Invoice Settings" */}
+          <details className="group pt-2 border-t border-slate-100">
+            <summary className="flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900 font-semibold text-xs py-1 select-none">
+              <Settings2 className="w-3.5 h-3.5 text-slate-400 group-open:text-emerald-600 transition-colors" />
+              <span>More Invoice Settings (Tax Regime, Pricing & Terms)</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-auto text-slate-400 group-open:rotate-180 transition-transform" />
+            </summary>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Price Calculation</label>
-              <div className="flex items-center gap-4 mt-2">
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                  <input
-                    type="radio"
-                    name="taxInclusive"
-                    checked={!isTaxInclusive}
-                    onChange={() => setIsTaxInclusive(false)}
-                    className="accent-slate-900"
+            <div className="mt-3 pt-3 border-t border-slate-100 space-y-4 animate-in fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Tax Regime</label>
+                  <select
+                    value={gstType}
+                    onChange={(e) => setGstType(e.target.value as GstType)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-medium focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 text-xs"
+                  >
+                    <option value="CGST_SGST">Intra-State (CGST + SGST)</option>
+                    <option value="IGST">Inter-State (IGST)</option>
+                    <option value="EXEMPT">Exempt / Non-GST</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Price Calculation</label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                      <input
+                        type="radio"
+                        name="taxInclusive"
+                        checked={!isTaxInclusive}
+                        onChange={() => setIsTaxInclusive(false)}
+                        className="accent-slate-900"
+                      />
+                      <span>Exclusive (Base + GST)</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                      <input
+                        type="radio"
+                        name="taxInclusive"
+                        checked={isTaxInclusive}
+                        onChange={() => setIsTaxInclusive(true)}
+                        className="accent-slate-900"
+                      />
+                      <span>Inclusive</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Invoice Standard</label>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="isGstCheckbox"
+                      checked={isGstInvoice}
+                      onChange={(e) => setIsGstInvoice(e.target.checked)}
+                      className="rounded accent-slate-900"
+                    />
+                    <label htmlFor="isGstCheckbox" className="cursor-pointer text-slate-700">
+                      Formal GST Tax Invoice
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes & Terms */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Invoice Notes</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Delivery remarks or special instructions..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 text-xs"
                   />
-                  <span>Tax Exclusive (Base + GST)</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                  <input
-                    type="radio"
-                    name="taxInclusive"
-                    checked={isTaxInclusive}
-                    onChange={() => setIsTaxInclusive(true)}
-                    className="accent-slate-900"
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Terms & Conditions</label>
+                  <textarea
+                    rows={2}
+                    value={terms}
+                    onChange={(e) => setTerms(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-[11px] focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                   />
-                  <span>Tax Inclusive</span>
-                </label>
+                </div>
               </div>
             </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Invoice Standard</label>
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="isGstCheckbox"
-                  checked={isGstInvoice}
-                  onChange={(e) => setIsGstInvoice(e.target.checked)}
-                  className="rounded accent-slate-900"
-                />
-                <label htmlFor="isGstCheckbox" className="cursor-pointer text-slate-700">
-                  Formal GST Tax Invoice
-                </label>
-              </div>
-            </div>
-          </div>
+          </details>
         </div>
 
         {/* =========================================================================
-            SECTION 2: Customer Selector with + Add New Customer
+            SECTION 2: Customer Selection & Fast Autofill
            ========================================================================= */}
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <Building className="w-3.5 h-3.5 text-slate-500" />
-              2. Customer / Party
+              Customer / Party
             </span>
 
-            <button
-              type="button"
-              onClick={() => {
-                setAddCustomerError(null);
-                setAddCustomerOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>+ Add New Customer</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Quick Cash Sale Button */}
+              <button
+                type="button"
+                onClick={handleSelectCashSale}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+                title="Quick 1-click cash sale without entering customer details"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-600" />
+                <span>⚡ Cash Sale / Walk-in</span>
+              </button>
+
+              {/* Add New Customer Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setNewCustName(customerSearchQuery);
+                  setAddCustomerError(null);
+                  setAddCustomerOpen(true);
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>+ Add Customer</span>
+              </button>
+            </div>
           </div>
 
           {/* Searchable Customer Dropdown */}
           <div ref={customerDropdownRef} className="relative">
             {selectedCustomer ? (
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-1">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-slate-900">{selectedCustomer.name}</span>
                     {selectedCustomer.gstin && (
@@ -772,13 +872,17 @@ function InvoiceCreationForm() {
                         GST: {selectedCustomer.gstin}
                       </span>
                     )}
+                    {selectedCustomer.totalOutstanding !== undefined && selectedCustomer.totalOutstanding > 0 && (
+                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        Udhaar: ₹{selectedCustomer.totalOutstanding.toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 text-[11px] font-mono">
+                  <div className="flex flex-wrap items-center gap-x-3 text-slate-500 text-[11px] font-mono">
                     <span>Mobile: {selectedCustomer.mobile || 'None'}</span>
-                    {selectedCustomer.email && <span>Email: {selectedCustomer.email}</span>}
                     {selectedCustomer.billingAddress && (
                       <span className="font-sans text-slate-600 truncate max-w-xs">
-                        Address: {selectedCustomer.billingAddress}
+                        • {selectedCustomer.billingAddress}
                       </span>
                     )}
                   </div>
@@ -791,7 +895,7 @@ function InvoiceCreationForm() {
                       setIsCustomerDropdownOpen(true);
                       setCustomerSearchQuery('');
                     }}
-                    className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
+                    className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded-lg transition-colors cursor-pointer"
                   >
                     Change Customer
                   </button>
@@ -808,8 +912,8 @@ function InvoiceCreationForm() {
                     setIsCustomerDropdownOpen(true);
                   }}
                   onFocus={() => setIsCustomerDropdownOpen(true)}
-                  placeholder="Search existing customer by name, mobile, or GSTIN..."
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition-all font-medium text-xs"
+                  placeholder="Type customer name or mobile number..."
+                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition-all font-medium text-xs"
                 />
               </div>
             )}
@@ -818,11 +922,12 @@ function InvoiceCreationForm() {
             {isCustomerDropdownOpen && (
               <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in duration-150">
                 <div className="p-2 border-b border-slate-100 bg-slate-50 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500 font-medium">Select a customer or add new:</span>
+                  <span className="text-slate-500 font-medium">Select a customer or click Cash Sale:</span>
                   <button
                     type="button"
                     onClick={() => {
                       setIsCustomerDropdownOpen(false);
+                      setNewCustName(customerSearchQuery);
                       setAddCustomerError(null);
                       setAddCustomerOpen(true);
                     }}
@@ -834,19 +939,28 @@ function InvoiceCreationForm() {
 
                 {filteredCustomers.length === 0 ? (
                   <div className="p-4 text-center text-slate-500 space-y-2">
-                    <p className="text-xs">No matching customers found.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomerDropdownOpen(false);
-                        setNewCustName(customerSearchQuery);
-                        setAddCustomerError(null);
-                        setAddCustomerOpen(true);
-                      }}
-                      className="px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-                    >
-                      + Add "{customerSearchQuery || 'New Customer'}"
-                    </button>
+                    <p className="text-xs">No matching customers found for "{customerSearchQuery}".</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectCashSale}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                      >
+                        ⚡ Walk-in / Cash Sale
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomerDropdownOpen(false);
+                          setNewCustName(customerSearchQuery);
+                          setAddCustomerError(null);
+                          setAddCustomerOpen(true);
+                        }}
+                        className="px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        + Add "{customerSearchQuery || 'Customer'}"
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -869,12 +983,19 @@ function InvoiceCreationForm() {
                           </p>
                           <p className="text-[11px] text-slate-500 font-mono mt-0.5">
                             {c.mobile ? `Mobile: ${c.mobile}` : 'No phone number'}
-                            {c.gstin && ` • GSTIN: ${c.gstin}`}
+                            {c.gstin && ` • GST: ${c.gstin}`}
                           </p>
                         </div>
-                        {selectedCustomerId === c.id && (
-                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        )}
+                        <div className="flex items-center gap-2">
+                          {c.totalOutstanding !== undefined && c.totalOutstanding > 0 && (
+                            <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                              Udhaar: ₹{c.totalOutstanding.toFixed(2)}
+                            </span>
+                          )}
+                          {selectedCustomerId === c.id && (
+                            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -885,22 +1006,22 @@ function InvoiceCreationForm() {
         </div>
 
         {/* =========================================================================
-            SECTION 3: Product / Service Search with + Add New Item
+            SECTION 3: Product Search & Fast Selection
            ========================================================================= */}
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <Package className="w-3.5 h-3.5 text-slate-500" />
-              3. Product / Service Search
+              Product Selection
             </span>
 
             <button
               type="button"
               onClick={() => handleOpenAddItemModal()}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-900 hover:text-white bg-slate-100 hover:bg-slate-900 border border-slate-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-900 hover:text-white bg-slate-100 hover:bg-slate-900 border border-slate-200 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add New Item</span>
+              <span>+ Add Item</span>
             </button>
           </div>
 
@@ -916,8 +1037,8 @@ function InvoiceCreationForm() {
                   setIsProductDropdownOpen(true);
                 }}
                 onFocus={() => setIsProductDropdownOpen(true)}
-                placeholder="Search products/services by name, SKU or barcode, or type new item..."
-                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition-all font-medium text-xs"
+                placeholder="Search products by name, SKU or barcode..."
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition-all font-medium text-xs"
               />
             </div>
 
@@ -935,20 +1056,17 @@ function InvoiceCreationForm() {
                         <Plus className="w-4 h-4 text-emerald-600" />
                         <span>+ Add "{productSearchQuery}" as a new item</span>
                       </span>
-                      <span className="text-[10px] font-normal text-emerald-700 bg-white/80 px-2 py-0.5 rounded border border-emerald-200">
-                        Catalogue or Bill only
-                      </span>
                     </button>
                   </div>
                 )}
 
                 {filteredProducts.length === 0 && !productSearchQuery.trim() ? (
                   <div className="p-4 text-center text-slate-400 text-xs">
-                    Start typing to search products or services.
+                    Start typing to search products from inventory.
                   </div>
                 ) : filteredProducts.length === 0 ? (
                   <div className="p-4 text-center text-slate-500 space-y-2">
-                    <p className="text-xs">No catalogue items match "{productSearchQuery}".</p>
+                    <p className="text-xs">No inventory items match "{productSearchQuery}".</p>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
@@ -985,26 +1103,163 @@ function InvoiceCreationForm() {
         </div>
 
         {/* =========================================================================
-            SECTION 4: Bill Line Items Table
+            SECTION 4: Invoice Items (Mobile Stacked Cards & Desktop Table)
            ========================================================================= */}
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <Receipt className="w-3.5 h-3.5 text-slate-500" />
-              4. Bill Line Items ({items.length})
+              Invoice Items ({items.length})
             </span>
 
             <button
               type="button"
               onClick={handleAddItemRow}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-900 hover:text-white bg-slate-100 hover:bg-slate-900 border border-slate-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-900 hover:text-white bg-slate-100 hover:bg-slate-900 border border-slate-200 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Add Line Row</span>
+              <span>+ Add Row</span>
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* MOBILE VIEW: Stacked Product Cards (No horizontal scroll) */}
+          <div className="md:hidden space-y-3">
+            {items.map((item, index) => {
+              const lineCalc = calc.items[index];
+              return (
+                <div
+                  key={index}
+                  className="bg-slate-50/80 border border-slate-200 rounded-xl p-3 space-y-2.5 relative"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase text-slate-500">
+                          Item #{index + 1}
+                        </span>
+                        {item.productId && (
+                          <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                            In Stock
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Item name / description..."
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-semibold text-xs focus:ring-1 focus:ring-slate-900"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(index)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors mt-4 cursor-pointer"
+                      title="Remove item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Quantity, Unit, Rate */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Quantity</label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0.01"
+                        required
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleItemChange(index, 'quantity', parseFloat(e.target.value) || 0)
+                        }
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-center text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Unit</label>
+                      <select
+                        value={item.unit}
+                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                        className="w-full px-1.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs"
+                      >
+                        {UNITS.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Rate (₹)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        required
+                        value={item.rate}
+                        onChange={(e) =>
+                          handleItemChange(index, 'rate', parseFloat(e.target.value) || 0)
+                        }
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-right text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Discount, Tax %, Line Total */}
+                  <div className="grid grid-cols-3 gap-2 items-center pt-2 border-t border-slate-200/60">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">Disc (₹)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={item.discount}
+                        onChange={(e) =>
+                          handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)
+                        }
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-right text-xs"
+                      />
+                    </div>
+                    {isGstInvoice ? (
+                      <div>
+                        <label className="block text-[10px] text-slate-500 mb-0.5">GST %</label>
+                        <select
+                          value={item.taxRate}
+                          onChange={(e) =>
+                            handleItemChange(index, 'taxRate', parseFloat(e.target.value) || 0)
+                          }
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-800 font-mono text-xs"
+                        >
+                          {COMMON_GST_RATES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}%
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
+                    <div className="text-right">
+                      <span className="block text-[10px] text-slate-500">Line Total</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs">
+                        ₹
+                        {lineCalc?.lineTotal.toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* DESKTOP VIEW: Clean Compact Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -1044,7 +1299,7 @@ function InvoiceCreationForm() {
                       <td className="py-2 px-2">
                         <input
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0.01"
                           required
                           value={item.quantity}
@@ -1072,7 +1327,7 @@ function InvoiceCreationForm() {
                       <td className="py-2 px-2">
                         <input
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0"
                           required
                           value={item.rate}
@@ -1086,7 +1341,7 @@ function InvoiceCreationForm() {
                       <td className="py-2 px-2">
                         <input
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0"
                           value={item.discount}
                           onChange={(e) =>
@@ -1140,47 +1395,74 @@ function InvoiceCreationForm() {
         </div>
 
         {/* =========================================================================
-            SECTION 5 & 6: Summary, Payments, Notes & Balance Due
+            SECTION 5 & 6: Summary, Payments & Actions
            ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Notes & Payment Recording (2 cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Payment Section (2 cols on lg) */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Payment at time of creation */}
-            <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                6. Payment Collection (Settlement / Udhaar)
+                Payment Collection
               </span>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Quick Actions: Full Payment, Partial, Credit/Udhaar */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount(calc.total.toFixed(2))}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                    parseFloat(paidAmount) === parseFloat(calc.total.toFixed(2)) && calc.total > 0
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                >
+                  Full Payment (₹{calc.total.toFixed(2)})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const half = (calc.total / 2).toFixed(2);
+                    setPaidAmount(half);
+                  }}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                    parseFloat(paidAmount) > 0 &&
+                    parseFloat(paidAmount) < parseFloat(calc.total.toFixed(2))
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                      : 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  Partial Payment
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaidAmount('0')}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                    parseFloat(paidAmount) === 0
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                      : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                  }`}
+                >
+                  Credit / Udhaar (₹0)
+                </button>
+              </div>
+
+              {/* Amount, Method, Reference */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     Amount Paid Now (₹)
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
                     min="0"
                     value={paidAmount}
                     onChange={(e) => setPaidAmount(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono font-bold focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                   />
-                  <div className="flex gap-2 mt-1.5 text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => setPaidAmount('0')}
-                      className="text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                    >
-                      Credit (₹0)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaidAmount(calc.total.toFixed(2))}
-                      className="text-emerald-700 font-semibold hover:underline cursor-pointer"
-                    >
-                      Full Pay (₹{calc.total.toFixed(2)})
-                    </button>
-                  </div>
                 </div>
 
                 <div>
@@ -1200,53 +1482,30 @@ function InvoiceCreationForm() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Reference / UTR #
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ref / Transaction ID"
-                    value={paymentReference}
-                    onChange={(e) => setPaymentReference(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes & Terms */}
-            <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Invoice Notes</label>
-                <textarea
-                  rows={2}
-                  placeholder="Delivery remarks or special instructions..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Terms & Conditions
-                </label>
-                <textarea
-                  rows={3}
-                  value={terms}
-                  onChange={(e) => setTerms(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-[11px] focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
+                {/* Reference shown only when relevant */}
+                {paymentMethod !== 'CASH' && (
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Reference / UTR #
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ref / Transaction ID"
+                      value={paymentReference}
+                      onChange={(e) => setPaymentReference(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Right Column: 5. Subtotal, Discount, Tax & Grand Total */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between space-y-4 h-fit sticky top-20">
-            <div className="space-y-2.5 text-xs">
+          {/* Right Column: Invoice Summary & Action Buttons */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between space-y-4 h-fit">
+            <div className="space-y-2 text-xs">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block pb-2 border-b border-slate-100">
-                5. Summary & Totals
+                Summary & Totals
               </span>
 
               <div className="flex justify-between text-slate-600">
@@ -1303,14 +1562,14 @@ function InvoiceCreationForm() {
               )}
 
               <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-sm text-slate-900">
-                <span>Total Amount:</span>
+                <span>Grand Total:</span>
                 <span className="font-mono text-base tabular-nums">
                   ₹{calc.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div className="flex justify-between text-emerald-700 font-semibold pt-1 border-t border-slate-100">
-                <span>Paid Now:</span>
+                <span>Amount Paid:</span>
                 <span className="font-mono tabular-nums">₹{calc.paidAmount.toFixed(2)}</span>
               </div>
 
@@ -1322,31 +1581,65 @@ function InvoiceCreationForm() {
               </div>
             </div>
 
-            {/* 7. Action Buttons */}
+            {/* Action Buttons: Save, Save & Print, Save & Share, Draft */}
             <div className="pt-3 border-t border-slate-100 space-y-2">
               <button
                 type="button"
-                onClick={() => handleFinalizeBill(false)}
+                onClick={() => handleFinalizeBill(false, 'save')}
                 disabled={loading}
                 className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
-                {loading ? (
+                {loading && activeAction === 'save' ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Receipt className="w-4 h-4 text-emerald-400" />
-                    <span>Save & Finalize Invoice</span>
+                    <Save className="w-4 h-4 text-emerald-400" />
+                    <span>Save Invoice</span>
                   </>
                 )}
               </button>
 
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleFinalizeBill(false, 'print')}
+                  disabled={loading}
+                  className="py-2 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {loading && activeAction === 'print' ? (
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-800 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Save & Print</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFinalizeBill(false, 'share')}
+                  disabled={loading}
+                  className="py-2 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {loading && activeAction === 'share' ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-white" />
+                      <span>Save & Share</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => handleFinalizeBill(true)}
+                onClick={() => handleFinalizeBill(true, 'draft')}
                 disabled={loading}
-                className="w-full py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-300 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-1.5 bg-white hover:bg-slate-50 text-slate-600 font-medium text-xs rounded-xl border border-slate-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
                 <span>Save as Draft</span>
               </button>
             </div>
@@ -1377,7 +1670,7 @@ function InvoiceCreationForm() {
               </button>
             </div>
 
-            <form onSubmit={handleQuickAddCustomer} className="p-6 space-y-3.5 text-xs">
+            <form onSubmit={handleQuickAddCustomer} className="p-6 space-y-3 text-xs">
               {addCustomerError && (
                 <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-2">
                   <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
@@ -1410,7 +1703,6 @@ function InvoiceCreationForm() {
                   onChange={(e) => setNewCustMobile(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                 />
-                <p className="text-[10px] text-slate-400 mt-0.5">Required only if sending bills via WhatsApp</p>
               </div>
 
               <div>
@@ -1424,19 +1716,6 @@ function InvoiceCreationForm() {
                   value={newCustGstin}
                   onChange={(e) => setNewCustGstin(e.target.value.toUpperCase())}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono uppercase focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Email <span className="text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="email"
-                  placeholder="customer@example.com"
-                  value={newCustEmail}
-                  onChange={(e) => setNewCustEmail(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
                 />
               </div>
 
@@ -1535,7 +1814,7 @@ function InvoiceCreationForm() {
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
                     min="0"
                     required
                     value={newItemRate}
@@ -1563,7 +1842,7 @@ function InvoiceCreationForm() {
                   <label className="block font-semibold text-slate-700 mb-1">Quantity</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
                     min="0.01"
                     value={newItemQty}
                     onChange={(e) => setNewItemQty(e.target.value)}
@@ -1629,7 +1908,7 @@ function InvoiceCreationForm() {
                     <span className="text-slate-600">Initial Opening Stock:</span>
                     <input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       value={newItemOpeningStock}
                       onChange={(e) => setNewItemOpeningStock(e.target.value)}
@@ -1682,24 +1961,42 @@ function InvoiceCreationForm() {
         </div>
       )}
 
-      {/* Mobile Sticky Bottom Summary Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-40 shadow-lg flex items-center justify-between">
+      {/* Mobile Sticky Bottom Summary & Action Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-40 shadow-lg flex items-center justify-between gap-3">
         <div>
           <span className="text-[10px] uppercase font-bold text-slate-500 block">Total Payable</span>
-          <span className="font-mono font-bold text-base text-slate-900">
-            ₹{calc.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-          </span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono font-bold text-base text-slate-900">
+              ₹{calc.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </span>
+            {calc.balanceDue > 0 && (
+              <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-1 rounded">
+                Due: ₹{calc.balanceDue.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => handleFinalizeBill(false)}
-          disabled={loading}
-          className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-        >
-          <Receipt className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Finalize Bill</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleFinalizeBill(false, 'print')}
+            disabled={loading}
+            className="p-2 bg-slate-100 text-slate-700 rounded-xl disabled:opacity-50 cursor-pointer"
+            title="Print"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFinalizeBill(false, 'save')}
+            disabled={loading}
+            className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+          >
+            <Save className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Save Invoice</span>
+          </button>
+        </div>
       </div>
     </div>
   );

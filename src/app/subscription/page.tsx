@@ -17,6 +17,7 @@ import {
   Users,
   Store,
   Layers,
+  Crown,
 } from 'lucide-react';
 import {
   OFFICIAL_PLANS,
@@ -37,6 +38,9 @@ interface SubscriptionData {
   whatsAppQuota: number;
   trialDaysRemaining: number;
   endDate?: string | null;
+  isTrial?: boolean;
+  isExpired?: boolean;
+  displayText?: string;
 }
 
 interface UsageData {
@@ -77,29 +81,133 @@ export default function SubscriptionPage() {
     }
   };
 
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleUpgrade = async (planKey: PlanKey) => {
     if (isDemo) {
       toast.info('This is a simulated demo workspace. Use the switcher in the top banner to test different plans.');
       return;
     }
 
+    // Free Khata is permanently free and does not require gateway checkout
+    if (planKey === 'FREE_KHATA') {
+      try {
+        setSubscribing(true);
+        const res = await fetch('/api/subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: 'FREE_KHATA' }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to switch to Free Khata');
+        toast.success(data.message || 'Switched to Free Khata!');
+        fetchSubscription();
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Error switching plan');
+      } finally {
+        setSubscribing(false);
+      }
+      return;
+    }
+
     try {
       setSubscribing(true);
-      const prismaPlan = OFFICIAL_PLANS[planKey].prismaEnum;
-      const res = await fetch('/api/subscription', {
+
+      // 1. Create Razorpay Order on server
+      const checkoutRes = await fetch('/api/subscription/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: prismaPlan }),
+        body: JSON.stringify({ planKey, interval }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update subscription');
+      const checkoutData = await checkoutRes.json();
+      if (!checkoutRes.ok) {
+        throw new Error(checkoutData.error || 'Failed to initialize payment checkout');
+      }
 
-      toast.success(data.message || 'Subscription updated successfully!');
-      fetchSubscription();
+      // 2. Load Razorpay Checkout Script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Could not load Razorpay payment SDK. Please check your internet connection.');
+      }
+
+      // 3. Launch Razorpay modal
+      const options = {
+        key: checkoutData.keyId,
+        amount: checkoutData.amount,
+        currency: checkoutData.currency,
+        name: 'LenDen Cloud Platform',
+        description: `${checkoutData.planName} (${interval})`,
+        order_id: checkoutData.orderId,
+        image: '/logo.png',
+        prefill: {
+          name: checkoutData.business?.name || '',
+          email: checkoutData.business?.email || '',
+          contact: checkoutData.business?.phone || '',
+        },
+        theme: {
+          color: '#00B887',
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info('Payment checkout dismissed');
+            setSubscribing(false);
+          },
+        },
+        handler: async (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            setSubscribing(true);
+            // 4. Cryptographically verify signature on server
+            const verifyRes = await fetch('/api/subscription/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planKey,
+                interval,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.error || 'Payment signature verification failed');
+            }
+
+            toast.success(verifyData.message || 'Subscription successfully upgraded!');
+            fetchSubscription();
+          } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Error verifying payment');
+          } finally {
+            setSubscribing(false);
+          }
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        toast.error(`Payment failed: ${resp.error?.description || 'Transaction unsuccessful'}`);
+        setSubscribing(false);
+      });
+      rzp.open();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error updating plan');
-    } finally {
+      toast.error(err instanceof Error ? err.message : 'Error starting checkout');
       setSubscribing(false);
     }
   };
@@ -244,112 +352,215 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        {/* 3 Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {(['STARTER', 'GROWTH', 'SCALE'] as PlanKey[]).map((key) => {
-            const plan = OFFICIAL_PLANS[key];
-            const pricing = plan.pricing[interval];
-            const isCurrent = activePlanKey === key;
-            const isGrowth = key === 'GROWTH';
+        {/* Available Upgrades Section */}
+        {(() => {
+          const TIER_RANKS: Record<PlanKey, number> = { FREE_KHATA: 0, STARTER: 1, GROWTH: 2, SCALE: 3 };
+          const isTrialActive = isTrial && subscription?.status === 'TRIALING' && !subscription?.isExpired;
+          // During evaluation trial, allow selecting any of the official commercial plans
+          const currentRank = isTrialActive ? 0 : TIER_RANKS[activePlanKey] ?? 1;
 
+          const upgradePlans = (['STARTER', 'GROWTH', 'SCALE'] as PlanKey[]).filter(
+            (key) => TIER_RANKS[key] > currentRank
+          );
+
+          const lowerPlans = (['FREE_KHATA', 'STARTER', 'GROWTH'] as PlanKey[]).filter(
+            (key) => TIER_RANKS[key] < currentRank && key !== activePlanKey
+          );
+
+          if (currentRank >= 3) {
+            // Already on highest plan (Scale)
             return (
-              <div
-                key={key}
-                className={`rounded-2xl p-6 border flex flex-col justify-between transition-all relative ${
-                  isCurrent
-                    ? 'bg-white border-2 border-[#071F38] shadow-md ring-2 ring-emerald-500/20'
-                    : isGrowth
-                    ? 'bg-white border-2 border-[#00B887] shadow-lg'
-                    : 'bg-white text-slate-800 border-slate-200/90 shadow-2xs hover:border-slate-300'
-                }`}
-              >
-                {isGrowth && !isCurrent && (
-                  <div className="absolute -top-3 right-5 bg-[#00B887] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
-                    Recommended
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-emerald-500/10 via-slate-900/5 to-emerald-500/10 border-2 border-[#00B887] rounded-2xl p-8 text-center space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#00B887] flex items-center justify-center mx-auto shadow-xs">
+                    <Crown className="w-6 h-6" />
                   </div>
-                )}
-
-                {isCurrent && (
-                  <div className="absolute -top-3 right-5 bg-[#071F38] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
-                    Active Plan
-                  </div>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-[#071F38]">
-                      {plan.name}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                      {plan.limits.maxUsers === 1 ? '1 User' : `${plan.limits.maxUsers} Users`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline gap-1 my-3">
-                    <span className="text-3xl font-black text-[#071F38]">
-                      ₹{pricing.totalPrice.toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-xs text-slate-500 font-semibold">
-                      / {pricing.durationMonths === 1 ? 'mo' : `${pricing.durationMonths} mo`}
-                    </span>
-                  </div>
-
-                  {/* Savings Pill */}
-                  <div className="text-xs text-slate-600 mb-3 flex items-center gap-1.5 flex-wrap">
-                    <span>Equiv: <strong>₹{pricing.monthlyEquivalent}/mo</strong></span>
-                    {pricing.savingsAmount > 0 && (
-                      <span className="bg-emerald-50 text-[#00B887] text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
-                        Save ₹{pricing.savingsAmount}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-500 mb-4 min-h-[32px]">
-                    {plan.tagline}
+                  <h3 className="font-black text-base sm:text-lg text-[#071F38]">
+                    You are on our highest plan: {OFFICIAL_PLANS.SCALE.name}
+                  </h3>
+                  <p className="text-xs text-slate-600 max-w-lg mx-auto">
+                    You have unlocked all features: Unlimited Invoices, Multi-Branch godowns (up to 3 branches), 10 Staff seats, Advanced Stock Valuation, and Priority Support.
                   </p>
+                  <span className="inline-block text-[11px] font-bold text-emerald-800 bg-emerald-100/70 border border-emerald-300 px-3 py-1 rounded-full uppercase tracking-wider">
+                    Full Platform Access
+                  </span>
+                </div>
 
-                  <div className="space-y-2 border-t pt-4 text-xs font-medium border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-700 font-semibold">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
-                      <span>Unlimited Invoices</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Max Users: {plan.limits.maxUsers}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>Locations: {plan.limits.maxLocations}</span>
-                    </div>
-                    {plan.features.slice(0, 4).map((f, i) => (
-                      <div key={i} className="flex items-center gap-2 text-slate-600">
-                        <Check className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
-                        <span>{f}</span>
+                {/* Separate Downgrade Flow */}
+                {lowerPlans.length > 0 && (
+                  <details className="group bg-white rounded-2xl border border-slate-200/90 p-5 text-xs">
+                    <summary className="font-semibold text-slate-600 cursor-pointer hover:text-slate-900 flex items-center justify-between">
+                      <span>Need to review or downgrade your tier?</span>
+                      <span className="text-[11px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                      <p className="text-slate-500 text-[11px]">
+                        Downgrading will adjust staff seat limits and branch allowances at the end of your current billing period. Your existing customer records and past invoices will never be deleted.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {lowerPlans.map((key) => {
+                          const p = OFFICIAL_PLANS[key];
+                          return (
+                            <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                              <div>
+                                <p className="font-bold text-slate-800">{p.name}</p>
+                                <p className="text-[10px] text-slate-500">Max users: {p.limits.maxUsers}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleUpgrade(key)}
+                                disabled={subscribing}
+                                className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-700 cursor-pointer"
+                              >
+                                Switch to {p.name}
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleUpgrade(key)}
-                    disabled={subscribing || isCurrent}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isCurrent
-                        ? 'bg-slate-100 text-slate-400 cursor-default'
-                        : isGrowth
-                        ? 'bg-[#00B887] hover:bg-[#009E74] text-white shadow-2xs'
-                        : 'bg-[#071F38] hover:bg-[#0D2C4D] text-white shadow-2xs'
-                    }`}
-                  >
-                    {isCurrent ? 'Current Plan' : `Select ${plan.name}`}
-                  </button>
-                </div>
+                    </div>
+                  </details>
+                )}
               </div>
             );
-          })}
-        </div>
+          }
+
+          return (
+            <div className="space-y-6">
+              {/* Upgrade Plans Grid */}
+              <div className={`grid grid-cols-1 ${upgradePlans.length === 1 ? 'max-w-md mx-auto' : upgradePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'} gap-6`}>
+                {upgradePlans.map((key) => {
+                  const plan = OFFICIAL_PLANS[key];
+                  const pricing = plan.pricing[interval];
+                  const isGrowth = key === 'GROWTH';
+
+                  return (
+                    <div
+                      key={key}
+                      className={`rounded-2xl p-6 border flex flex-col justify-between transition-all relative ${
+                        isGrowth
+                          ? 'bg-white border-2 border-[#00B887] shadow-lg'
+                          : 'bg-white text-slate-800 border-slate-200/90 shadow-2xs hover:border-slate-300'
+                      }`}
+                    >
+                      {isGrowth && (
+                        <div className="absolute -top-3 right-5 bg-[#00B887] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+                          Recommended Upgrade
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-extrabold uppercase tracking-wider text-[#071F38]">
+                            {plan.name}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            {plan.limits.maxUsers === 1 ? '1 User' : `${plan.limits.maxUsers} Users`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-baseline gap-1 my-3">
+                          <span className="text-3xl font-black text-[#071F38]">
+                            ₹{pricing.totalPrice.toLocaleString('en-IN')}
+                          </span>
+                          <span className="text-xs text-slate-500 font-semibold">
+                            / {pricing.durationMonths === 1 ? 'mo' : `${pricing.durationMonths} mo`}
+                          </span>
+                        </div>
+
+                        {/* Savings Pill */}
+                        <div className="text-xs text-slate-600 mb-3 flex items-center gap-1.5 flex-wrap">
+                          <span>Equiv: <strong>₹{pricing.monthlyEquivalent}/mo</strong></span>
+                          {pricing.savingsAmount > 0 && (
+                            <span className="bg-emerald-50 text-[#00B887] text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                              Save ₹{pricing.savingsAmount}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-slate-500 mb-4 min-h-[32px]">
+                          {plan.tagline}
+                        </p>
+
+                        <div className="space-y-2 border-t pt-4 text-xs font-medium border-slate-100">
+                          <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
+                            <span>Unlimited Invoices</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>Max Users: {plan.limits.maxUsers}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>Locations: {plan.limits.maxLocations}</span>
+                          </div>
+                          {plan.features.slice(0, 4).map((f, i) => (
+                            <div key={i} className="flex items-center gap-2 text-slate-600">
+                              <Check className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
+                              <span>{f}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-slate-100 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpgrade(key)}
+                          disabled={subscribing}
+                          className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            isGrowth
+                              ? 'bg-[#00B887] hover:bg-[#009E74] text-white shadow-2xs'
+                              : 'bg-[#071F38] hover:bg-[#0D2C4D] text-white shadow-2xs'
+                          }`}
+                        >
+                          Upgrade to {plan.name}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Discreet Downgrade Section if lower plans exist */}
+              {lowerPlans.length > 0 && (
+                <details className="group bg-white rounded-2xl border border-slate-200/90 p-5 text-xs">
+                  <summary className="font-semibold text-slate-600 cursor-pointer hover:text-slate-900 flex items-center justify-between">
+                    <span>Need to switch to a lower plan?</span>
+                    <span className="text-[11px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+                    <p className="text-slate-500 text-[11px]">
+                      Downgrading will reduce feature limits at the end of your billing cycle. Your data and invoices remain safe and preserved.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {lowerPlans.map((key) => {
+                        const p = OFFICIAL_PLANS[key];
+                        return (
+                          <div key={key} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <div>
+                              <p className="font-bold text-slate-800">{p.name}</p>
+                              <p className="text-[10px] text-slate-500">Max users: {p.limits.maxUsers}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleUpgrade(key)}
+                              disabled={subscribing}
+                              className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-[11px] font-semibold text-slate-700 cursor-pointer"
+                            >
+                              Downgrade to {p.name}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Feature Comparison Link */}
         <div className="p-4 bg-white rounded-2xl border border-slate-200 text-center">

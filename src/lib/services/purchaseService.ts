@@ -193,7 +193,7 @@ export async function createPurchase(
     }
 
     return purchase;
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
 
 /**
@@ -455,7 +455,7 @@ export async function recordSupplierPayment(
     });
 
     return { payment, updatedPurchase, isDuplicate: false };
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
 
 /**

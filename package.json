@@ -18,7 +18,9 @@
     "test:task2": "tsx scripts/test-task2-gstr3b.ts",
     "test:task3": "tsx scripts/test-task3-super-admin.ts",
     "test:fast-billing": "tsx scripts/test-fast-billing-and-whatsapp.ts",
-    "test:free-khata": "tsx scripts/test-free-khata.ts"
+    "test:free-khata": "tsx scripts/test-free-khata.ts",
+    "test:razorpay": "tsx scripts/test-razorpay-integration.ts",
+    "test:google-sso": "tsx scripts/test-google-sso.ts"
   },
   "dependencies": {
     "@neon/config": "^1.8.6",
@@ -28,6 +30,7 @@
     "lucide-react": "^1.55.0",
     "next": "16.4.0",
     "qrcode": "^1.5.4",
+    "razorpay": "^2.9.8",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
