@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 
 import { MobileBottomNavigation } from './MobileBottomNavigation';
+import { CinematicIntro } from '../welcome/CinematicIntro';
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,7 +27,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/view/invoice/');
 
   if (isAuthPage) {
-    return <main className="min-h-screen bg-slate-50 text-slate-900">{children}</main>;
+    return (
+      <>
+        <CinematicIntro />
+        <main className="min-h-screen bg-slate-50 text-slate-900">{children}</main>
+      </>
+    );
   }
 
   // Account lock calculation: when trial has expired and user has no active paid subscription
@@ -39,6 +45,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F6F9FC] flex flex-col font-sans text-slate-900 selection:bg-slate-200">
+      <CinematicIntro />
       {/* Sidebar Navigation */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}

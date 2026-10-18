@@ -28,7 +28,6 @@ import {
   Play,
   LayoutDashboard,
 } from 'lucide-react';
-import { CinematicIntro } from '@/components/welcome/CinematicIntro';
 
 /* =====================================================================
    REALISTIC 3D DASHBOARD PREVIEW
@@ -367,8 +366,6 @@ function LoginForm() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState(false);
-  const [isIntroForced, setIsIntroForced] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -378,22 +375,6 @@ function LoginForm() {
       if (savedEmail) {
         setEmail(savedEmail);
         setRememberMe(true);
-      }
-      const noIntroParam = searchParams.get('nointro');
-      const forceIntroParam =
-        searchParams.get('forceintro') === 'true' || searchParams.get('intro') === 'true';
-      const introAlreadySeen =
-        sessionStorage.getItem('lenden_intro_played') === 'true' ||
-        sessionStorage.getItem('lenden_intro_seen') === 'true';
-      const prefersReducedMotion =
-        typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (forceIntroParam) {
-        setIsIntroForced(true);
-        setShowIntro(true);
-      } else if (!noIntroParam && !introAlreadySeen && !prefersReducedMotion) {
-        setShowIntro(true);
       }
 
       // Handle OAuth callback errors
@@ -489,16 +470,6 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden w-full overflow-x-hidden bg-white font-sans selection:bg-[#EA580C] selection:text-white flex flex-col justify-between">
-      {/* Cinematic Fullscreen MP4 Intro */}
-      {showIntro && (
-        <CinematicIntro
-          forcePlay={isIntroForced}
-          onComplete={() => {
-            setShowIntro(false);
-            setIsIntroForced(false);
-          }}
-        />
-      )}
 
       {/* =========================================================
           1. HEADER NAVBAR (Compact, sleek height, full width)
@@ -553,8 +524,10 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => {
-                setIsIntroForced(true);
-                setShowIntro(true);
+                try {
+                  sessionStorage.removeItem('pc_intro_v4_seen');
+                } catch {}
+                window.location.href = '/login?intro=true';
               }}
               className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 text-[#EA580C] text-xs font-semibold transition-all cursor-pointer border border-[#EA580C]/25 shadow-2xs"
               title="Watch Pakka Chittha Intro"
