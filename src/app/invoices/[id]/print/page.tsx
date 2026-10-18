@@ -400,8 +400,8 @@ export default async function InvoicePrintPage({
         <div className="pt-6 mt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
           <span>Standard GST Tax Invoice Format (CBIC Compliant)</span>
           <div className="flex items-center gap-1.5">
-            <img src="/logo.png" alt="Lenden" className="w-3.5 h-3.5 object-contain" />
-            <span>Generated on Lenden Billing Platform</span>
+            <img src="/logo.png" alt="Pakka Chittha" className="w-3.5 h-3.5 object-contain" />
+            <span>Generated on Pakka Chittha Billing Platform</span>
           </div>
         </div>
       </div>

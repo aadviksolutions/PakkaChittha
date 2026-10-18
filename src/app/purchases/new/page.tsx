@@ -293,7 +293,7 @@ function PurchaseCreationForm() {
       <FeatureNotAvailable
         featureName="Record Inward Purchase Bill"
         requiredPlanName="Growth or Scale"
-        description="Supplier purchases and stock receiving are available on Lenden Growth and Scale plans."
+        description="Supplier purchases and stock receiving are available on Pakka Chittha Growth and Scale plans."
       />
     );
   }

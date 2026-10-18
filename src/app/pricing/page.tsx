@@ -102,26 +102,26 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC] text-slate-800 selection:bg-[#00B887]/20 selection:text-[#071F38]">
+    <div className="min-h-screen bg-[#F6F9FC] text-slate-800 selection:bg-[#EA580C]/20 selection:text-[#071F38]">
       {/* Top Navbar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="h-9 w-auto flex items-center">
-              <img src="/logo.png" alt="Lenden" className="h-9 w-auto object-contain" />
+              <img src="/pakka-chittha-logo.png" alt="Pakka Chittha" className="h-9 w-auto object-contain" />
             </div>
           </Link>
 
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-xs sm:text-sm font-semibold text-[#071F38] hover:text-[#00B887] px-3 py-1.5 transition-colors"
+              className="text-xs sm:text-sm font-semibold text-[#071F38] hover:text-[#EA580C] px-3 py-1.5 transition-colors"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#00B887] hover:bg-[#009E74] shadow-xs transition-all"
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#EA580C] hover:bg-[#D94E00] shadow-xs transition-all"
             >
               Start Free Trial
             </Link>
@@ -133,13 +133,13 @@ export default function PricingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
         {/* Page Hero */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-[#00B887] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-[#00B887]" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-xs font-bold text-[#EA580C] uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-[#EA580C]" />
             <span>Honest & Transparent Subscription Plans</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-[#071F38] tracking-tight leading-tight">
-            Plans Built for Every Stage of <span className="text-[#00B887]">Your Business</span>
+            Plans Built for Every Stage of <span className="text-[#EA580C]">Your Business</span>
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
@@ -165,7 +165,7 @@ export default function PricingPage() {
                   >
                     <span>{item.label}</span>
                     {item.key === 'YEARLY' && (
-                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#00B887] text-white uppercase tracking-wider">
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#EA580C] text-white uppercase tracking-wider">
                         Best Value
                       </span>
                     )}
@@ -188,15 +188,15 @@ export default function PricingPage() {
                 key={key}
                 className={`rounded-3xl flex flex-col justify-between transition-all duration-200 relative ${
                   isGrowth
-                    ? 'bg-white border-2 border-[#00B887] shadow-xl shadow-emerald-500/10 lg:-translate-y-2'
+                    ? 'bg-white border-2 border-[#EA580C] shadow-xl shadow-orange-500/10 lg:-translate-y-2'
                     : 'bg-white border border-slate-200/90 shadow-md hover:border-slate-300'
                 }`}
               >
                 {/* Recommended Badge on Growth */}
                 {isGrowth && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00B887] text-white px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#EA580C] text-white px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>RECOMMENDED BY LENDEN</span>
+                    <span>RECOMMENDED BY PAKKA CHITTHA</span>
                   </div>
                 )}
 
@@ -212,7 +212,7 @@ export default function PricingPage() {
                         key === 'STARTER'
                           ? 'bg-blue-50 text-blue-700 border border-blue-200'
                           : key === 'GROWTH'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          ? 'bg-orange-50 text-[#EA580C] border border-orange-200'
                           : 'bg-purple-50 text-purple-700 border border-purple-200'
                       }`}
                     >
@@ -245,7 +245,7 @@ export default function PricingPage() {
                       </span>
 
                       {pricing.savingsAmount > 0 && (
-                        <span className="bg-emerald-50 text-[#00B887] border border-emerald-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
+                        <span className="bg-orange-50 text-[#EA580C] border border-orange-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
                           Save ₹{pricing.savingsAmount.toLocaleString('en-IN')} ({pricing.savingsPercent}%)
                         </span>
                       )}
@@ -276,10 +276,10 @@ export default function PricingPage() {
 
                     <div className="flex items-center justify-between text-slate-700">
                       <span className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#00B887]" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#EA580C]" />
                         <span>Monthly Invoices:</span>
                       </span>
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-black text-[10px] uppercase">
+                      <span className="px-1.5 py-0.2 rounded bg-orange-100 text-[#EA580C] font-black text-[10px] uppercase">
                         UNLIMITED
                       </span>
                     </div>
@@ -298,7 +298,7 @@ export default function PricingPage() {
                     <ul className="space-y-2 text-xs text-slate-600">
                       {plan.features.slice(0, 7).map((feat, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <Check className="w-4 h-4 text-[#00B887] shrink-0 mt-0.5" />
+                          <Check className="w-4 h-4 text-[#EA580C] shrink-0 mt-0.5" />
                           <span className="leading-snug">{feat}</span>
                         </li>
                       ))}
@@ -312,7 +312,7 @@ export default function PricingPage() {
                     href={`/register?plan=${key}`}
                     className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all text-center ${
                       isGrowth
-                        ? 'bg-[#00B887] hover:bg-[#009E74] text-white shadow-md shadow-emerald-500/20'
+                        ? 'bg-[#EA580C] hover:bg-[#D94E00] text-white shadow-md shadow-orange-500/20'
                         : 'bg-[#071F38] hover:bg-[#0D2C4D] text-white shadow-xs'
                     }`}
                   >
@@ -362,15 +362,15 @@ export default function PricingPage() {
                       Feature / Capability
                     </th>
                     <th className="py-4 px-4 font-black text-center w-1/5">
-                      <div>Lenden Starter</div>
+                      <div>Pakka Chittha Starter</div>
                       <div className="text-[11px] font-normal text-slate-500">₹199 / mo</div>
                     </th>
-                    <th className="py-4 px-4 font-black text-center w-1/5 bg-emerald-50/50 text-[#008F91]">
-                      <div>Lenden Growth</div>
+                    <th className="py-4 px-4 font-black text-center w-1/5 bg-orange-50/50 text-[#EA580C]">
+                      <div>Pakka Chittha Growth</div>
                       <div className="text-[11px] font-normal text-slate-500">₹499 / mo</div>
                     </th>
                     <th className="py-4 px-4 font-black text-center w-1/5">
-                      <div>Lenden Scale</div>
+                      <div>Pakka Chittha Scale</div>
                       <div className="text-[11px] font-normal text-slate-500">₹999 / mo</div>
                     </th>
                   </tr>
@@ -394,7 +394,7 @@ export default function PricingPage() {
                           <td className="py-3 px-4 text-center">
                             {typeof item.starter === 'boolean' ? (
                               item.starter ? (
-                                <Check className="w-4 h-4 text-[#00B887] mx-auto" />
+                                <Check className="w-4 h-4 text-[#EA580C] mx-auto" />
                               ) : (
                                 <X className="w-4 h-4 text-slate-300 mx-auto" />
                               )
@@ -404,10 +404,10 @@ export default function PricingPage() {
                           </td>
 
                           {/* Growth Value */}
-                          <td className="py-3 px-4 text-center bg-emerald-50/20">
+                          <td className="py-3 px-4 text-center bg-orange-50/20">
                             {typeof item.growth === 'boolean' ? (
                               item.growth ? (
-                                <Check className="w-4 h-4 text-[#00B887] mx-auto" />
+                                <Check className="w-4 h-4 text-[#EA580C] mx-auto" />
                               ) : (
                                 <X className="w-4 h-4 text-slate-300 mx-auto" />
                               )
@@ -420,7 +420,7 @@ export default function PricingPage() {
                           <td className="py-3 px-4 text-center">
                             {typeof item.scale === 'boolean' ? (
                               item.scale ? (
-                                <Check className="w-4 h-4 text-[#00B887] mx-auto" />
+                                <Check className="w-4 h-4 text-[#EA580C] mx-auto" />
                               ) : (
                                 <X className="w-4 h-4 text-slate-300 mx-auto" />
                               )
@@ -441,7 +441,7 @@ export default function PricingPage() {
         {/* Demo Experience Notice Banner */}
         <section className="mt-16 bg-gradient-to-r from-[#071F38] via-[#0D2C4D] to-[#071F38] rounded-3xl p-8 sm:p-10 text-white relative overflow-hidden shadow-xl">
           <div className="max-w-2xl relative z-10 space-y-3">
-            <span className="px-3 py-1 rounded-full bg-[#00B887] text-white font-extrabold text-[11px] uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-[#EA580C] text-white font-extrabold text-[11px] uppercase tracking-wider">
               100% Risk-Free Interactive Evaluation
             </span>
             <h3 className="text-2xl sm:text-3xl font-black">
@@ -463,7 +463,7 @@ export default function PricingPage() {
               <button
                 type="button"
                 onClick={() => handleLaunchDemo('GROWTH')}
-                className="px-4 py-2 rounded-xl bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 Try Growth (₹499)
               </button>
@@ -482,12 +482,12 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-8 mt-16 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Lenden. Built for Indian Businesses. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Pakka Chittha. Built for Indian Businesses. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/login" className="hover:text-slate-800">
               Sign In
             </Link>
-            <Link href="/pricing" className="hover:text-slate-800 font-semibold text-[#00B887]">
+            <Link href="/pricing" className="hover:text-slate-800 font-semibold text-[#EA580C]">
               Pricing & Plans
             </Link>
             <Link href="/register" className="hover:text-slate-800">

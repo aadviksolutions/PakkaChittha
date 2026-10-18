@@ -144,7 +144,7 @@ function RegisterForm() {
           <div className="w-16 h-16 rounded-2xl bg-white p-1.5 shadow-xl shadow-black/40 border border-slate-700/60 flex items-center justify-center">
             <img
               src="/logo.png"
-              alt="Lenden"
+              alt="Pakka Chittha"
               className="w-full h-full object-contain"
             />
           </div>

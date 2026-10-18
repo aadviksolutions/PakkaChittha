@@ -79,7 +79,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
           {freeKhataItems.map((item, idx) => {
             const Icon = item.icon;
             const activeClasses = item.isActive
-              ? 'text-[#00B887] font-bold'
+              ? 'text-[#EA580C] font-bold'
               : 'text-slate-500 hover:text-slate-900 font-medium';
 
             return (
@@ -91,7 +91,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
               >
                 <div
                   className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                    item.isActive ? 'bg-emerald-50 text-[#00B887]' : 'text-slate-500'
+                    item.isActive ? 'bg-orange-50 text-[#EA580C]' : 'text-slate-500'
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" />
@@ -161,7 +161,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
         {commercialItems.map((item, idx) => {
           const Icon = item.icon;
           const activeClasses = item.isActive
-            ? 'text-[#00B887] font-bold'
+            ? 'text-[#EA580C] font-bold'
             : 'text-slate-500 hover:text-slate-900 font-medium';
 
           if (item.onClick) {
@@ -175,7 +175,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
               >
                 <div
                   className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                    item.isActive ? 'bg-emerald-50 text-[#00B887]' : 'text-slate-500'
+                    item.isActive ? 'bg-orange-50 text-[#EA580C]' : 'text-slate-500'
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" />
@@ -196,7 +196,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
             >
               <div
                 className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                  item.isActive ? 'bg-emerald-50 text-[#00B887]' : 'text-slate-500'
+                  item.isActive ? 'bg-orange-50 text-[#EA580C]' : 'text-slate-500'
                 }`}
               >
                 <Icon className="w-4.5 h-4.5" />

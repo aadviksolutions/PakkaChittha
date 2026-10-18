@@ -1,0 +1,16 @@
+{
+  "name": "Pakka Chittha",
+  "short_name": "Pakka Chittha",
+  "description": "Billing • Inventory • Udhari • Reports for Indian Businesses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071F38",
+  "theme_color": "#071F38",
+  "icons": [
+    {
+      "src": "/pakka-chittha-logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 /**
- * Lenden GST Return Generator — Official GSTN GSTR-3B Specification
+ * Pakka Chittha GST Return Generator — Official GSTN GSTR-3B Specification
  *
  * Implements the standard JSON schema accepted by the Goods and Services Tax Network (GSTN)
  * offline tool and portal for monthly/quarterly GSTR-3B filing.
@@ -379,7 +379,7 @@ export function buildGstr3bPayload(
       },
       grossTurnover: totalGrossTurnover,
       eligibleItcTotal: totalEligibleItc,
-      software: 'Lenden Cloud ERP v2.4 (GSTN Certified Engine)',
+      software: 'Pakka Chittha Cloud ERP v2.4 (GSTN Certified Engine)',
     },
   };
 }
@@ -396,7 +396,7 @@ export function buildGstr3bCsv(payload: Gstr3bPayload): string {
   lines.push(`"GSTIN:","${payload.gstin}"`);
   lines.push(`"Return Period:","${payload.ret_period}" ("${meta?.periodLabel || ''}")`);
   lines.push(`"Generated At:","${meta?.generatedAt || new Date().toISOString()}"`);
-  lines.push(`"Software:","${meta?.software || 'Lenden'}"`);
+  lines.push(`"Software:","${meta?.software || 'Pakka Chittha'}"`);
   lines.push('');
 
   // Table 3.1

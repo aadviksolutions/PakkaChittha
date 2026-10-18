@@ -397,7 +397,7 @@ export function WhatsAppShareModal({
                   <strong>Secure PDF link included:</strong> The URL in the message allows your customer to view, verify, and download their bill without needing an account.
                 </p>
                 <p className="text-slate-500 text-[10px]">
-                  Note: WhatsApp text links do not automatically attach files. To send the raw PDF file, download it from Lenden and attach it in the chat.
+                  Note: WhatsApp text links do not automatically attach files. To send the raw PDF file, download it from Pakka Chittha and attach it in the chat.
                 </p>
               </div>
             </div>
@@ -410,7 +410,7 @@ export function WhatsAppShareModal({
               <div className="space-y-0.5">
                 <p className="font-bold">WhatsApp opened on your device!</p>
                 <p className="text-[11px] text-emerald-800 leading-relaxed">
-                  Review the pre-filled message inside WhatsApp and press <strong>Send</strong>. (Lenden does not mark this bill as delivered until sent manually by you).
+                  Review the pre-filled message inside WhatsApp and press <strong>Send</strong>. (Pakka Chittha does not mark this bill as delivered until sent manually by you).
                 </p>
               </div>
             </div>

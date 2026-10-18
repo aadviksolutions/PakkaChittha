@@ -754,11 +754,11 @@ export function prepareWhatsAppReminder(params: {
   if (params.type === 'GAVE') {
     defaultMessage = `Namaste ${params.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedTxDate}${
       formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-    }.\n\nPlease arrange for the payment at your earliest convenience.\n\nThank you! 🙏\n- Sent via Lenden Khata`;
+    }.\n\nPlease arrange for the payment at your earliest convenience.\n\nThank you! 🙏\n- Sent via Pakka Chittha`;
   } else {
     defaultMessage = `Namaste ${params.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedTxDate}${
       formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-    }. I am preparing to arrange repayment soon.\n\nThank you! 🙏\n- Sent via Lenden Khata`;
+    }. I am preparing to arrange repayment soon.\n\nThank you! 🙏\n- Sent via Pakka Chittha`;
   }
 
   const finalMessage = params.customMessage?.trim() || defaultMessage;

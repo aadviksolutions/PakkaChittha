@@ -88,7 +88,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
   FREE_KHATA: {
     id: 'FREE_KHATA',
     prismaEnum: 'FREE_KHATA',
-    name: 'Lenden Free Khata',
+    name: 'Pakka Chittha Free Khata',
     tagline: 'Permanent 100% Free Udhaar Khata for Personal Lending & Borrowing',
     limits: {
       maxUsers: 1,
@@ -150,7 +150,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
   STARTER: {
     id: 'STARTER',
     prismaEnum: 'STARTER',
-    name: 'Lenden Starter',
+    name: 'Pakka Chittha Starter',
     tagline: 'Ideal for single-counter retail shops & solo merchants',
     limits: {
       maxUsers: 1,
@@ -220,7 +220,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
   GROWTH: {
     id: 'GROWTH',
     prismaEnum: 'GROWTH_PRO',
-    name: 'Lenden Growth',
+    name: 'Pakka Chittha Growth',
     tagline: 'Complete commercial billing, vendor management & team workflow',
     badge: 'Recommended',
     isPopular: true,
@@ -292,7 +292,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
   SCALE: {
     id: 'SCALE',
     prismaEnum: 'ENTERPRISE',
-    name: 'Lenden Scale',
+    name: 'Pakka Chittha Scale',
     tagline: 'Multi-location operations, advanced valuation & enterprise controls',
     limits: {
       maxUsers: 10,

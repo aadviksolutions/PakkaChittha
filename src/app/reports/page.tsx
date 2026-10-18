@@ -135,7 +135,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `lenden_sales_register_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `pakka_chittha_sales_register_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -153,7 +153,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `lenden_audit_report_${new Date().toISOString().split('T')[0]}.json`);
+    link.setAttribute('download', `pakka_chittha_audit_report_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -194,7 +194,7 @@ export default function ReportsPage() {
       <FeatureNotAvailable
         featureName="Advanced Reports & GST Tax Intelligence"
         requiredPlanName="Growth or Scale"
-        description="Official GSTR-3B portal JSON exports, input tax credit (ITC) reconciliation, and advanced profit analytics require a Lenden Growth or Scale subscription."
+        description="Official GSTR-3B portal JSON exports, input tax credit (ITC) reconciliation, and advanced profit analytics require a Pakka Chittha Growth or Scale subscription."
       />
     );
   }

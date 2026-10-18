@@ -55,11 +55,11 @@ export function WhatsAppReminderModal({
       if (isGave) {
         defaultMsg = `Namaste ${target.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedDate}${
           formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-        }.\n\nPlease arrange for the payment at your convenience. Thank you! 🙏\n- Sent via Lenden Khata`;
+        }.\n\nPlease arrange for the payment at your convenience. Thank you! 🙏\n- Sent via Pakka Chittha`;
       } else {
         defaultMsg = `Namaste ${target.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedDate}${
           formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-        }. I am arranging to return this soon. Thank you! 🙏\n- Sent via Lenden Khata`;
+        }. I am arranging to return this soon. Thank you! 🙏\n- Sent via Pakka Chittha`;
       }
 
       setMessage(defaultMsg);

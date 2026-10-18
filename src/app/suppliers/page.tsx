@@ -140,7 +140,7 @@ function SuppliersContent() {
       <FeatureNotAvailable
         featureName="Suppliers & Vendor Management"
         requiredPlanName="Growth or Scale"
-        description="Supplier directory, purchase orders, and vendor payable tracking require a Lenden Growth or Scale subscription."
+        description="Supplier directory, purchase orders, and vendor payable tracking require a Pakka Chittha Growth or Scale subscription."
       />
     );
   }

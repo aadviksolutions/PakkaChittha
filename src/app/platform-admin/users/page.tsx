@@ -497,10 +497,10 @@ export default function PlatformAdminUsersPage() {
                 onChange={(e) => setSelectedPlan(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
               >
-                <option value="FREE_KHATA">Free Khata (₹0 - Personal Ledger Only)</option>
-                <option value="STARTER">Lenden Starter (₹199/mo - Invoices, Basic Stock)</option>
-                <option value="GROWTH_PRO">Lenden Growth (₹499/mo - Purchases, Staff, GSTR-3B)</option>
-                <option value="ENTERPRISE">Lenden Scale (₹999/mo - Multi-Location, Advanced)</option>
+                <option value="FREE_KHATA">Pakka Chittha Free Khata (₹0 - Personal Ledger Only)</option>
+                <option value="STARTER">Pakka Chittha Starter (₹199/mo - Invoices, Basic Stock)</option>
+                <option value="GROWTH_PRO">Pakka Chittha Growth (₹499/mo - Purchases, Staff, GSTR-3B)</option>
+                <option value="ENTERPRISE">Pakka Chittha Scale (₹999/mo - Multi-Location, Advanced)</option>
               </select>
             </div>
 

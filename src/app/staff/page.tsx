@@ -152,7 +152,7 @@ export default function StaffPage() {
       <FeatureNotAvailable
         featureName="Staff Accounts & Roles"
         requiredPlanName="Growth or Scale"
-        description="Adding team members (billing operators, accountants, inventory managers) requires a Lenden Growth (up to 3 users) or Scale (up to 10 users) subscription."
+        description="Adding team members (billing operators, accountants, inventory managers) requires a Pakka Chittha Growth (up to 3 users) or Scale (up to 10 users) subscription."
       />
     );
   }

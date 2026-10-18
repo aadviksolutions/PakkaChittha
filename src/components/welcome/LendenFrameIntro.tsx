@@ -338,7 +338,7 @@ export function LendenFrameIntro({ onComplete, forcePlay = false }: LendenFrameI
   return (
     <div
       role="region"
-      aria-label="Lenden Introduction Animation"
+      aria-label="Pakka Chittha Introduction Animation"
       className={`fixed inset-0 flex items-center justify-center select-none overflow-hidden transition-opacity duration-500 ease-out ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}

@@ -160,7 +160,7 @@ function PurchasesContent() {
       <FeatureNotAvailable
         featureName="Purchases & Vendor Inward Bills"
         requiredPlanName="Growth or Scale"
-        description="Inward supplier purchases, vendor bills, and inventory receiving require a Lenden Growth or Scale subscription."
+        description="Inward supplier purchases, vendor bills, and inventory receiving require a Pakka Chittha Growth or Scale subscription."
       />
     );
   }

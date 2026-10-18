@@ -275,7 +275,7 @@ async function runFreeKhataTests() {
     assert(reminderData.cleanPhone === '919833344455', 'Phone sanitized with country code for WhatsApp standard');
     assert(reminderData.defaultMessage.includes('Amit Patel'), 'Preview message includes person name');
     assert(reminderData.defaultMessage.includes('7,500'), 'Preview message includes formatted amount');
-    assert(reminderData.defaultMessage.includes('Lenden'), 'Preview message maintains brand context');
+    assert(reminderData.defaultMessage.includes('Pakka Chittha') || reminderData.defaultMessage.includes('Lenden'), 'Preview message maintains brand context');
     assert(reminderData.waUrl.startsWith('https://wa.me/919833344455?text='), 'Generates valid wa.me direct URL');
 
     // Verify transaction was NOT marked sent or modified simply because reminder was prepared

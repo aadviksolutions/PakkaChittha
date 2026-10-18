@@ -21,7 +21,7 @@ export function PhaseNoticeBanner() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-sm text-white tracking-tight">
-                Lenden Phase 1: Foundation & Dashboard Shell
+                Pakka Chittha: Foundation & Business Dashboard
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 Verified Preview

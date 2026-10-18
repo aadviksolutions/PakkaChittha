@@ -181,7 +181,7 @@ export function ActionModal({
               <div className="text-slate-300 text-[11px] leading-relaxed bg-slate-800/80 p-3 rounded-lg border border-slate-700">
                 &ldquo;Namaste Mr. Arvind Gupta ji, this is a gentle reminder from Sharma Traders & Hardware regarding overdue balance of ₹{totalAmount ? totalAmount.toLocaleString('en-IN') : '51,200'} for invoice INV-2026-0839.
                 <br /><br />
-                Kindly settle via UPI: <strong>sharmatraders@hdfcbank</strong> or tap here to review statement: <u>https://lenden.app/s/demo</u>&rdquo;
+                Kindly settle via UPI: <strong>sharmatraders@hdfcbank</strong> or tap here to review statement: <u>https://pakkachittha.in/s/demo</u>&rdquo;
               </div>
             </div>
 
@@ -307,7 +307,7 @@ export function ActionModal({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-600"></span>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Lenden Phase 1 Interactive Shell
+              Pakka Chittha Platform Shell
             </span>
           </div>
           <button

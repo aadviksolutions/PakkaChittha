@@ -67,11 +67,11 @@ export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
       <div className="md:hidden bg-[#071F38] text-white p-4 flex items-center justify-between border-b border-slate-800 sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#008F91] to-[#00B887] flex items-center justify-center font-black text-white text-base shadow-sm">
-            L
+            P
           </div>
           <div>
-            <span className="font-extrabold text-sm tracking-tight text-white block">LENDEN</span>
-            <span className="text-[10px] font-bold text-[#00B887] uppercase tracking-wider block">Control Center</span>
+            <span className="font-extrabold text-sm tracking-tight text-white block">PAKKA CHITTHA</span>
+            <span className="text-[10px] font-bold text-[#F58220] uppercase tracking-wider block">Control Center</span>
           </div>
         </div>
 
@@ -89,13 +89,13 @@ export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#008F91] to-[#00B887] flex items-center justify-center font-black text-white text-lg shadow-md shadow-emerald-950/40">
-              L
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#071F38] to-[#F58220] flex items-center justify-center font-black text-white text-lg shadow-md border border-[#F58220]/30">
+              P
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-white">LENDEN</span>
-                <span className="text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-[#00B887] border border-[#00B887]/30">
+                <span className="font-extrabold text-base tracking-tight text-white">PAKKA CHITTHA</span>
+                <span className="text-[9px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-[#F58220] border border-[#F58220]/30">
                   ROOT
                 </span>
               </div>
@@ -180,12 +180,12 @@ export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
           <div className="w-72 bg-[#071F38] h-full flex flex-col p-4 text-slate-300">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#008F91] to-[#00B887] flex items-center justify-center font-black text-white text-base">
-                  L
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#071F38] to-[#F58220] flex items-center justify-center font-black text-white text-base">
+                  P
                 </div>
                 <div>
-                  <span className="font-extrabold text-sm text-white block">LENDEN</span>
-                  <span className="text-[10px] text-[#00B887] font-bold block uppercase">Control Center</span>
+                  <span className="font-extrabold text-sm text-white block">PAKKA CHITTHA</span>
+                  <span className="text-[10px] text-[#F58220] font-bold block uppercase">Control Center</span>
                 </div>
               </div>
               <button

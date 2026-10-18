@@ -65,7 +65,7 @@ export function Header({
     if (pathname.startsWith('/staff')) return 'Staff & RBAC';
     if (pathname.startsWith('/subscription')) return 'Subscription';
     if (pathname.startsWith('/platform-admin')) return 'Platform Administration';
-    return 'Lenden';
+    return 'Pakka Chittha';
   };
 
   return (
@@ -81,17 +81,17 @@ export function Header({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Business Branding with Lenden Logo */}
+        {/* Business Branding with Pakka Chittha Logo */}
         <div className="flex items-center gap-2 min-w-0 shrink">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
-            <img src="/logo.png" alt="Lenden" className="w-full h-full object-contain" />
+          <div className="h-8 w-auto rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
+            <img src="/pakka-chittha-logo.png" alt="Pakka Chittha" className="h-full w-auto object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight max-w-[100px] xs:max-w-[150px] sm:max-w-[200px]">
-                {activeBusiness?.name || 'Lenden'}
+                {activeBusiness?.name || 'Pakka Chittha'}
               </span>
-              <span className="hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-[#00B887] px-1.5 py-0.2 rounded border border-emerald-200 shrink-0">
+              <span className="hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider bg-orange-50 text-[#EA580C] px-1.5 py-0.2 rounded border border-orange-200 shrink-0">
                 Active
               </span>
             </div>
@@ -160,7 +160,7 @@ export function Header({
         {/* Quick Create Invoice Primary Action */}
         <Link
           href="/invoices/new"
-          className="flex items-center gap-1 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+          className="flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
         >
           <PlusCircle className="w-3.5 h-3.5 text-white" />
           <span className="hidden xs:inline">New Bill</span>
@@ -179,14 +179,14 @@ export function Header({
             aria-label="View notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#EA580C] ring-2 ring-white" />
           </button>
 
           {showNotifications && (
             <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 p-3 text-xs z-50 animate-in fade-in slide-in-from-top-1">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                 <span className="font-semibold text-slate-900">Notifications</span>
-                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium">
+                <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
                   2 Pending
                 </span>
               </div>

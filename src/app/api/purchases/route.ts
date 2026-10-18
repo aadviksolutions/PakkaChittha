@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: entitlement.message || 'Purchases require Lenden Growth or Scale plan.',
+          error: entitlement.message || 'Purchases require Pakka Chittha Growth or Scale plan.',
           upgradeRequired: true,
           requiredPlan: entitlement.requiredPlan,
           planName: entitlement.planName,

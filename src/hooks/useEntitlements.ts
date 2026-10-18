@@ -50,7 +50,7 @@ export function useEntitlements(): UseEntitlementsResult {
   let displayText = sub?.displayText;
   if (!displayText) {
     if (isFreeKhata) {
-      displayText = 'Lenden Free Khata · 100% Free';
+      displayText = 'Pakka Chittha Free Khata · 100% Free';
     } else if (isTrial) {
       displayText = isExpired
         ? `${planConfig.name} · Free Trial Expired`

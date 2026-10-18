@@ -153,26 +153,23 @@ export function Sidebar({
             onClick={onCloseMobile}
             className="flex items-center gap-2.5 min-w-0 group"
           >
-            {/* Lenden Official Logo Mark */}
-            <div className="w-8.5 h-8.5 rounded-lg overflow-hidden bg-white flex items-center justify-center shadow-xs border border-slate-200/90 shrink-0 p-0.5">
+            {/* Pakka Chittha Official Logo */}
+            <div className="h-9 w-auto rounded-lg overflow-hidden bg-white flex items-center justify-center shrink-0">
               <img
-                src="/logo.png"
-                alt="Lenden"
-                className="w-full h-full object-contain"
+                src="/pakka-chittha-logo.png"
+                alt="Pakka Chittha"
+                className="h-8 w-auto object-contain"
               />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-sm text-[#071F38] tracking-tight">
-                    Lenden
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-[#00B887] px-1.5 py-0.2 rounded border border-emerald-200">
-                    SaaS
+                    Pakka Chittha
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium truncate">
-                  Billing • Inventory • Udhaar
+                <p className="text-[9.5px] text-amber-700 font-semibold truncate">
+                  Billing • Inventory • Udhari • Reports
                 </p>
               </div>
             )}
@@ -263,14 +260,14 @@ export function Sidebar({
                         title={isCollapsed ? item.name : undefined}
                         className={`group flex items-center ${
                           isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
-                        } rounded-lg text-xs font-medium transition-all ${
+                        } rounded-xl text-xs font-medium transition-all ${
                           isActive
                             ? isPlatformAdminGroup
                               ? 'bg-purple-900 text-white shadow-xs font-semibold'
-                              : 'bg-[#071F38] text-white shadow-xs font-semibold border-l-3 border-[#00B887]'
+                              : 'bg-[#EA580C] text-white shadow-sm font-bold'
                             : isPlatformAdminGroup
                             ? 'text-slate-700 hover:text-purple-900 hover:bg-purple-50/70'
-                            : 'text-slate-600 hover:text-[#071F38] hover:bg-slate-100/80'
+                            : 'text-slate-600 hover:text-[#EA580C] hover:bg-orange-50/70'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -279,10 +276,10 @@ export function Sidebar({
                               isActive
                                 ? isPlatformAdminGroup
                                   ? 'text-purple-300'
-                                  : 'text-[#00B887]'
+                                  : 'text-white'
                                 : isPlatformAdminGroup
                                 ? 'text-purple-600 group-hover:text-purple-800'
-                                : 'text-slate-400 group-hover:text-[#071F38]'
+                                : 'text-slate-400 group-hover:text-[#EA580C]'
                             }`}
                           />
                           {!isCollapsed && <span className="truncate">{item.name}</span>}
@@ -300,7 +297,7 @@ export function Sidebar({
                                 : item.badgeColor === 'amber'
                                 ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                 : item.badgeColor === 'emerald'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-orange-50 text-[#EA580C] border border-orange-200'
                                 : 'bg-slate-100 text-slate-600 border border-slate-200'
                             }`}
                           >
@@ -341,14 +338,14 @@ export function Sidebar({
               <Link
                 href={isSuperAdmin ? '/platform-admin/plans' : '/subscription'}
                 onClick={onCloseMobile}
-                className="text-[10px] font-semibold text-slate-800 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                className="text-[10px] font-semibold text-slate-800 hover:text-[#EA580C] flex items-center gap-1 transition-colors"
               >
                 {isSuperAdmin ? 'View Platform Plans' : isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
                 <ArrowRight className="w-3 h-3" />
               </Link>
 
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[9px] text-slate-400">
-                <span>By Aadvik Solutions</span>
+                <span>Powered by Lakshya • Dev by Aadvik</span>
                 <span className="font-mono text-[8px] text-slate-300">v1.0</span>
               </div>
             </div>

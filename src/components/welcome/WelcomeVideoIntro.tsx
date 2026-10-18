@@ -140,9 +140,9 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
       {/* Top Header Bar */}
       <div className="absolute top-5 left-6 right-6 flex items-center justify-between z-20">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#00B887] animate-ping" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#EA580C] animate-ping" />
           <span className="text-[11px] font-bold tracking-[0.2em] text-slate-400 uppercase">
-            Lenden Welcome Intro
+            Pakka Chittha Welcome Intro
           </span>
         </div>
 
@@ -161,8 +161,8 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
               </>
             ) : (
               <>
-                <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-700">Sound On</span>
+                <Volume2 className="w-3.5 h-3.5 text-[#EA580C]" />
+                <span className="text-[#EA580C]">Sound On</span>
               </>
             )}
           </button>
@@ -171,7 +171,7 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
           <button
             type="button"
             onClick={handleSkip}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#071F38] hover:bg-[#00B887] text-white text-xs font-semibold transition-all shadow-md hover:shadow-lg cursor-pointer group"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#071F38] hover:bg-[#EA580C] text-white text-xs font-semibold transition-all shadow-md hover:shadow-lg cursor-pointer group"
           >
             <span>Skip Intro</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -193,11 +193,11 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
           />
         </div>
 
-        {/* Ambient emerald glow below video */}
+        {/* Ambient warm orange glow below video */}
         <div
           className="w-3/4 h-8 opacity-25 rounded-full pointer-events-none -mt-4"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(0, 184, 135, 0.45) 0%, transparent 75%)',
+            background: 'radial-gradient(ellipse at center, rgba(234, 88, 12, 0.45) 0%, transparent 75%)',
             filter: 'blur(16px)',
           }}
         />
@@ -207,7 +207,7 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
       <div className="absolute bottom-6 left-8 right-8 flex flex-col items-center z-20">
         {isMuted && (
           <p className="text-[11px] text-slate-400 font-medium mb-3 flex items-center gap-1.5 animate-pulse">
-            <Sparkles className="w-3 h-3 text-[#00B887]" />
+            <Sparkles className="w-3 h-3 text-[#EA580C]" />
             <span>Click anywhere to unmute sound</span>
           </p>
         )}
@@ -215,7 +215,7 @@ export function WelcomeVideoIntro({ onComplete, autoPlay = true }: WelcomeVideoI
         {/* Progress Bar Container */}
         <div className="w-full max-w-md h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
           <div
-            className="h-full bg-gradient-to-r from-[#008F91] via-[#00B887] to-[#00E5A3] transition-all duration-150 ease-linear rounded-full"
+            className="h-full bg-gradient-to-r from-[#071F38] via-[#EA580C] to-[#FA8223] transition-all duration-150 ease-linear rounded-full"
             style={{ width: `${progress}%` }}
           />
         </div>

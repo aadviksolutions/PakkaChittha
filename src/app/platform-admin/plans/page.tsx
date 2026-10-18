@@ -62,7 +62,7 @@ export default function PlatformAdminPlansPage() {
             <span>Package Matrix & Feature Gating Control</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Authoritative feature entitlements, database quotas, and active subscriber metrics across all Lenden tiers.
+            Authoritative feature entitlements, database quotas, and active subscriber metrics across all Pakka Chittha tiers.
           </p>
         </div>
 

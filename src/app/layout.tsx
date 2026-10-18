@@ -9,13 +9,21 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Lenden | Commercial Billing & Udhaar SaaS for Indian Businesses',
+  title: 'Pakka Chittha | Billing • Inventory • Udhari • Reports',
   description:
-    'Commercial, multi-tenant billing SaaS engineered for Indian businesses: GST invoicing, customer udhaar khata, and real-time ledger management.',
+    'Simple billing, inventory management, udhari tracking, and business reports for Indian businesses.',
   icons: {
     icon: '/logo.png',
     apple: '/logo.png',
   },
+  openGraph: {
+    title: 'Pakka Chittha | Billing • Inventory • Udhari • Reports',
+    description:
+      'Simple billing, inventory management, udhari tracking, and business reports for Indian businesses.',
+    siteName: 'Pakka Chittha',
+    images: [{ url: '/pakka-chittha-logo.png' }],
+  },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

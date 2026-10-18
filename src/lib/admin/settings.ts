@@ -19,8 +19,8 @@ export interface PlatformConfig {
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
-  platformName: 'LenDen Cloud Platform',
-  supportEmail: 'support@lenden.in',
+  platformName: 'Pakka Chittha Cloud Platform',
+  supportEmail: 'support@pakkachittha.in',
   supportPhone: '+91 98765 43210',
   defaultTrialDays: 14,
   gracePeriodDays: 3,

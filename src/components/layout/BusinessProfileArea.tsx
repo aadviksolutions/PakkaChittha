@@ -107,7 +107,7 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
                 Legal Entity
               </span>
               <p className="font-medium text-slate-800">
-                {activeBusiness?.legalName || activeBusiness?.name || 'Lenden Commercial Platform'}
+                {activeBusiness?.legalName || activeBusiness?.name || 'Pakka Chittha Commercial Platform'}
               </p>
             </div>
             <div>

@@ -10,11 +10,16 @@
     --border-strong: #cbd5e1;
     --brand-navy: #071F38;
     --brand-navy-secondary: #0D2C4D;
-    --brand-emerald: #00B887;
-    --brand-emerald-hover: #00A377;
-    --brand-emerald-subtle: #e6f8f3;
-    --brand-teal: #008F91;
-    --brand-teal-subtle: #e6f4f4;
+    --brand-orange: #EA580C;
+    --brand-orange-hover: #D94E00;
+    --brand-orange-subtle: #FFF4E5;
+    --brand-amber: #F58220;
+    --brand-amber-subtle: #FEF3C7;
+    --brand-emerald: #EA580C;
+    --brand-emerald-hover: #D94E00;
+    --brand-emerald-subtle: #FFF4E5;
+    --brand-teal: #071F38;
+    --brand-teal-subtle: #F1F5F9;
     --slate-muted: #64748b;
   }
 

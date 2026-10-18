@@ -147,7 +147,7 @@ export default function SubscriptionPage() {
         key: checkoutData.keyId,
         amount: checkoutData.amount,
         currency: checkoutData.currency,
-        name: 'LenDen Cloud Platform',
+        name: 'Pakka Chittha Cloud Platform',
         description: `${checkoutData.planName} (${interval})`,
         order_id: checkoutData.orderId,
         image: '/logo.png',
@@ -157,7 +157,7 @@ export default function SubscriptionPage() {
           contact: checkoutData.business?.phone || '',
         },
         theme: {
-          color: '#00B887',
+          color: '#071F38',
         },
         modal: {
           ondismiss: () => {
@@ -248,7 +248,7 @@ export default function SubscriptionPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#071F38] text-white">
-                <Sparkles className="w-5 h-5 text-[#00B887]" />
+                <Sparkles className="w-5 h-5 text-[#EA580C]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function SubscriptionPage() {
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                       subscription?.status === 'ACTIVE'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        ? 'bg-orange-50 text-[#EA580C] border-orange-200'
                         : subscription?.status === 'TRIALING'
                         ? 'bg-blue-50 text-blue-800 border-blue-200'
                         : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -297,12 +297,12 @@ export default function SubscriptionPage() {
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="font-semibold text-slate-700">Monthly Invoices Generated</span>
-                  <span className="font-mono font-bold text-emerald-700">
+                  <span className="font-mono font-bold text-[#EA580C]">
                     {usage.monthlyInvoicesCreated} Created / UNLIMITED
                   </span>
                 </div>
                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-[#00B887]" style={{ width: '100%' }} />
+                  <div className="h-full rounded-full bg-[#EA580C]" style={{ width: '100%' }} />
                 </div>
                 <p className="text-[11px] text-slate-500">
                   Unlimited invoice generation on all official plans. No monthly cap.
@@ -320,7 +320,7 @@ export default function SubscriptionPage() {
                   </p>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200 text-slate-700">
-                  <ShieldCheck className="w-6 h-6 text-[#00B887]" />
+                  <ShieldCheck className="w-6 h-6 text-[#EA580C]" />
                 </div>
               </div>
             </div>
@@ -371,8 +371,8 @@ export default function SubscriptionPage() {
             // Already on highest plan (Scale)
             return (
               <div className="space-y-6">
-                <div className="bg-gradient-to-r from-emerald-500/10 via-slate-900/5 to-emerald-500/10 border-2 border-[#00B887] rounded-2xl p-8 text-center space-y-3 shadow-2xs">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#00B887] flex items-center justify-center mx-auto shadow-xs">
+                <div className="bg-gradient-to-r from-orange-500/10 via-slate-900/5 to-orange-500/10 border-2 border-[#EA580C] rounded-2xl p-8 text-center space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 text-[#EA580C] flex items-center justify-center mx-auto shadow-xs">
                     <Crown className="w-6 h-6" />
                   </div>
                   <h3 className="font-black text-base sm:text-lg text-[#071F38]">
@@ -439,12 +439,12 @@ export default function SubscriptionPage() {
                       key={key}
                       className={`rounded-2xl p-6 border flex flex-col justify-between transition-all relative ${
                         isGrowth
-                          ? 'bg-white border-2 border-[#00B887] shadow-lg'
+                          ? 'bg-white border-2 border-[#EA580C] shadow-lg'
                           : 'bg-white text-slate-800 border-slate-200/90 shadow-2xs hover:border-slate-300'
                       }`}
                     >
                       {isGrowth && (
-                        <div className="absolute -top-3 right-5 bg-[#00B887] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+                        <div className="absolute -top-3 right-5 bg-[#EA580C] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
                           Recommended Upgrade
                         </div>
                       )}
@@ -472,7 +472,7 @@ export default function SubscriptionPage() {
                         <div className="text-xs text-slate-600 mb-3 flex items-center gap-1.5 flex-wrap">
                           <span>Equiv: <strong>₹{pricing.monthlyEquivalent}/mo</strong></span>
                           {pricing.savingsAmount > 0 && (
-                            <span className="bg-emerald-50 text-[#00B887] text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                            <span className="bg-orange-50 text-[#EA580C] text-[10px] font-bold px-1.5 py-0.2 rounded border border-orange-200">
                               Save ₹{pricing.savingsAmount}
                             </span>
                           )}
@@ -484,7 +484,7 @@ export default function SubscriptionPage() {
 
                         <div className="space-y-2 border-t pt-4 text-xs font-medium border-slate-100">
                           <div className="flex items-center gap-2 text-slate-700 font-semibold">
-                            <ShieldCheck className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
                             <span>Unlimited Invoices</span>
                           </div>
                           <div className="flex items-center gap-2 text-slate-700">
@@ -497,7 +497,7 @@ export default function SubscriptionPage() {
                           </div>
                           {plan.features.slice(0, 4).map((f, i) => (
                             <div key={i} className="flex items-center gap-2 text-slate-600">
-                              <Check className="w-3.5 h-3.5 text-[#00B887] shrink-0" />
+                              <Check className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
                               <span>{f}</span>
                             </div>
                           ))}
@@ -511,7 +511,7 @@ export default function SubscriptionPage() {
                           disabled={subscribing}
                           className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                             isGrowth
-                              ? 'bg-[#00B887] hover:bg-[#009E74] text-white shadow-2xs'
+                              ? 'bg-[#EA580C] hover:bg-[#D94E00] text-white shadow-2xs'
                               : 'bg-[#071F38] hover:bg-[#0D2C4D] text-white shadow-2xs'
                           }`}
                         >
@@ -566,7 +566,7 @@ export default function SubscriptionPage() {
         <div className="p-4 bg-white rounded-2xl border border-slate-200 text-center">
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008F91] hover:text-[#00B887] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#EA580C] hover:text-[#D94E00] transition-colors"
           >
             <span>Need a full side-by-side feature matrix comparison? View Pricing Page</span>
             <ArrowRight className="w-3.5 h-3.5" />

@@ -15,7 +15,7 @@ const PLAN_TIERS: Record<
   }
 > = {
   FREE_KHATA: {
-    name: 'Lenden Free Khata',
+    name: 'Pakka Chittha Free Khata',
     monthlyPrice: 0,
     maxMonthlyInvoices: 0,
     maxStaffSeats: 1,
@@ -31,7 +31,7 @@ const PLAN_TIERS: Record<
     whatsAppQuota: 50,
   },
   STARTER: {
-    name: 'Lenden Starter',
+    name: 'Pakka Chittha Starter',
     monthlyPrice: 199,
     maxMonthlyInvoices: 999999,
     maxStaffSeats: 1,
@@ -39,7 +39,7 @@ const PLAN_TIERS: Record<
     whatsAppQuota: 150,
   },
   GROWTH_PRO: {
-    name: 'Lenden Growth',
+    name: 'Pakka Chittha Growth',
     monthlyPrice: 499,
     maxMonthlyInvoices: 999999,
     maxStaffSeats: 3,
@@ -47,7 +47,7 @@ const PLAN_TIERS: Record<
     whatsAppQuota: 600,
   },
   ENTERPRISE: {
-    name: 'Lenden Scale',
+    name: 'Pakka Chittha Scale',
     monthlyPrice: 999,
     maxMonthlyInvoices: 999999,
     maxStaffSeats: 10,

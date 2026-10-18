@@ -101,7 +101,7 @@ export function DemoBanner() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5 font-black uppercase tracking-wider text-[11px] text-amber-300">
               <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>YOU ARE EXPLORING LENDEN {planKey} DEMO</span>
+              <span>YOU ARE EXPLORING PAKKA CHITTHA {planKey} DEMO</span>
             </div>
 
             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${planColor}`}>

@@ -46,11 +46,11 @@ export function UpgradeGateBanner({
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-emerald-500/30 shadow-lg text-slate-800 space-y-4 my-4">
+    <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-orange-500/30 shadow-lg text-slate-800 space-y-4 my-4">
       <div className="flex items-center gap-2">
-        <span className="px-3 py-1 rounded-full bg-emerald-50 text-[#00B887] border border-emerald-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+        <span className="px-3 py-1 rounded-full bg-orange-50 text-[#EA580C] border border-orange-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Lenden {planConfig.name} Feature</span>
+          <span>{planConfig.name} Feature</span>
         </span>
       </div>
 
@@ -65,15 +65,15 @@ export function UpgradeGateBanner({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2">
-          <Check className="w-4 h-4 text-[#00B887] shrink-0" />
+          <Check className="w-4 h-4 text-[#EA580C] shrink-0" />
           <span>Unlimited Invoices</span>
         </div>
         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2">
-          <Check className="w-4 h-4 text-[#00B887] shrink-0" />
+          <Check className="w-4 h-4 text-[#EA580C] shrink-0" />
           <span>Up to {planConfig.limits.maxUsers} Users</span>
         </div>
         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-2">
-          <Check className="w-4 h-4 text-[#00B887] shrink-0" />
+          <Check className="w-4 h-4 text-[#EA580C] shrink-0" />
           <span>{planConfig.limits.maxLocations} Active Location(s)</span>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function UpgradeGateBanner({
             type="button"
             onClick={handleSwitchDemoTier}
             disabled={switching}
-            className="px-5 py-2.5 rounded-xl bg-[#00B887] hover:bg-[#009E74] text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-2"
           >
             {switching && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -99,7 +99,7 @@ export default function PlatformAdminReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `lenden_financial_report_${data.period.range}.csv`);
+    link.setAttribute('download', `pakka_chittha_financial_report_${data.period.range}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -233,9 +233,9 @@ export default function PlatformAdminReportsPage() {
 
           <div className="space-y-3 text-xs">
             {[
-              { key: 'STARTER', label: 'Lenden Starter (₹199)', amount: f?.revenueByPlan?.STARTER || 0, color: 'bg-amber-500' },
-              { key: 'GROWTH_PRO', label: 'Lenden Growth (₹499)', amount: f?.revenueByPlan?.GROWTH_PRO || 0, color: 'bg-emerald-500' },
-              { key: 'ENTERPRISE', label: 'Lenden Scale (₹999)', amount: f?.revenueByPlan?.ENTERPRISE || 0, color: 'bg-purple-500' },
+              { key: 'STARTER', label: 'Pakka Chittha Starter (₹199)', amount: f?.revenueByPlan?.STARTER || 0, color: 'bg-amber-500' },
+              { key: 'GROWTH_PRO', label: 'Pakka Chittha Growth (₹499)', amount: f?.revenueByPlan?.GROWTH_PRO || 0, color: 'bg-emerald-500' },
+              { key: 'ENTERPRISE', label: 'Pakka Chittha Scale (₹999)', amount: f?.revenueByPlan?.ENTERPRISE || 0, color: 'bg-purple-500' },
             ].map((plan) => {
               const totalGross = f?.grossCollections || 1;
               const pct = ((plan.amount / totalGross) * 100).toFixed(1);

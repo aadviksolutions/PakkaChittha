@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (planKey === 'FREE_KHATA') {
       return NextResponse.json(
         {
-          error: 'Lenden Free Khata is permanently free and does not require payment processing.',
+          error: 'Pakka Chittha Free Khata is permanently free and does not require payment processing.',
         },
         { status: 400 }
       );
