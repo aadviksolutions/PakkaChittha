@@ -110,6 +110,15 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     description: 'Personal lending and borrowing ledger',
   },
   {
+    id: 'ghar-kharcha-link',
+    name: 'Ghar Kharcha',
+    href: '/ghar-kharcha',
+    iconName: 'Home',
+    badge: '100% Free',
+    badgeColor: 'emerald',
+    description: 'Family household budget and expense tracker',
+  },
+  {
     id: 'whatsapp',
     name: 'WhatsApp Automation',
     href: '/whatsapp',
@@ -117,6 +126,59 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     badge: 'API',
     badgeColor: 'emerald',
     description: 'Automated invoice PDFs, payment reminder broadcasts',
+  },
+];
+
+/**
+ * PakkaChittha Ghar Kharcha (Household Mode) Navigation:
+ * Dedicated navigation for users managing household finances, budgets, and family collaboration.
+ */
+export const HOUSEHOLD_NAVIGATION_ITEMS: NavigationItem[] = [
+  {
+    id: 'household-dashboard',
+    name: 'Ghar Dashboard',
+    href: '/ghar-kharcha',
+    iconName: 'LayoutDashboard',
+    badge: 'Free',
+    badgeColor: 'emerald',
+    description: 'Household income, expenses, cash flow & budget utilization',
+  },
+  {
+    id: 'household-transactions',
+    name: 'Kharcha Register',
+    href: '/ghar-kharcha/transactions',
+    iconName: 'Receipt',
+    description: 'Full transaction ledger, filters, search & CSV export',
+  },
+  {
+    id: 'household-budget',
+    name: 'Monthly Budget',
+    href: '/ghar-kharcha/budget',
+    iconName: 'Landmark',
+    description: 'Monthly spending budget and category tracking',
+  },
+  {
+    id: 'household-categories',
+    name: 'Categories',
+    href: '/ghar-kharcha/categories',
+    iconName: 'SlidersHorizontal',
+    description: 'Household income and expense categories',
+  },
+  {
+    id: 'household-members',
+    name: 'Family Members',
+    href: '/ghar-kharcha/members',
+    iconName: 'Users',
+    badge: 'Family',
+    badgeColor: 'blue',
+    description: 'Family collaboration, invitations & permissions',
+  },
+  {
+    id: 'business-workspace-switch',
+    name: 'Switch to Business Mode',
+    href: '/',
+    iconName: 'Building2',
+    description: 'Open commercial business billing & accounting workspace',
   },
 ];
 

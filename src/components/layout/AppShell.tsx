@@ -23,6 +23,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isAuthPage =
     pathname === '/login' ||
     pathname === '/register' ||
+    pathname === '/select-mode' ||
+    pathname === '/welcome' ||
     pathname.endsWith('/print') ||
     pathname.startsWith('/view/invoice/');
 
@@ -41,7 +43,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isFreeKhata = sub?.plan === 'FREE_KHATA';
   const isTrial = Boolean(sub?.isTrial || sub?.status === 'TRIALING' || sub?.plan === 'FREE_TRIAL');
   const isExpired = Boolean(sub?.isExpired || sub?.status === 'EXPIRED' || sub?.status === 'SUSPENDED');
-  const isLocked = !isSuperAdmin && !isFreeKhata && isTrial && isExpired && pathname !== '/subscription';
+  const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+  const isLocked = !isSuperAdmin && !isFreeKhata && !isGharKharcha && isTrial && isExpired && pathname !== '/subscription';
 
   return (
     <div className="min-h-screen bg-[#F6F9FC] flex flex-col font-sans text-slate-900 selection:bg-slate-200">

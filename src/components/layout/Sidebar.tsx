@@ -7,6 +7,7 @@ import {
   NAVIGATION_GROUPS,
   FREE_KHATA_NAVIGATION_ITEMS,
   BUSINESS_NAVIGATION_ITEMS,
+  HOUSEHOLD_NAVIGATION_ITEMS,
   NavigationItem,
 } from '@/data/navigation';
 import { BusinessProfileArea } from './BusinessProfileArea';
@@ -30,6 +31,8 @@ import {
   CreditCard,
   BookOpen,
   Store,
+  Home,
+  Landmark,
   X,
   ChevronLeft,
   ChevronRight,
@@ -62,6 +65,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   CreditCard,
   BookOpen,
   Store,
+  Home,
+  Landmark,
 };
 
 import { useEntitlements } from '@/hooks/useEntitlements';
@@ -98,34 +103,53 @@ export function Sidebar({
     return true;
   });
 
-  // Construct visible navigation groups based on plan and role
-  const visibleGroups = isFreeKhata
-    ? [
-        {
-          id: 'free_khata_group',
-          title: 'Free Udhaar Khata',
-          scope: 'BUSINESS_WORKSPACE' as const,
-          description: 'Personal ledger and WhatsApp reminders',
-          badge: '100% Free',
-          items: FREE_KHATA_NAVIGATION_ITEMS,
-        },
-        ...(isSuperAdmin
-          ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
-          : []),
-      ]
-    : [
-        {
-          id: 'business_workspace',
-          title: 'Business Workspace',
-          scope: 'BUSINESS_WORKSPACE' as const,
-          description: 'Client workspace operations',
-          badge: planName,
-          items: filteredBusinessItems,
-        },
-        ...(isSuperAdmin
-          ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
-          : []),
-      ];
+  // Construct visible navigation groups based on current path, plan and role
+  const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+
+  let visibleGroups;
+  if (isGharKharcha) {
+    visibleGroups = [
+      {
+        id: 'household_group',
+        title: 'PakkaChittha Ghar Kharcha',
+        scope: 'BUSINESS_WORKSPACE' as const,
+        description: 'Household budget and expense tracking',
+        badge: '100% Free',
+        items: HOUSEHOLD_NAVIGATION_ITEMS,
+      },
+      ...(isSuperAdmin
+        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
+        : []),
+    ];
+  } else if (isFreeKhata) {
+    visibleGroups = [
+      {
+        id: 'free_khata_group',
+        title: 'Free Udhaar Khata',
+        scope: 'BUSINESS_WORKSPACE' as const,
+        description: 'Personal ledger and WhatsApp reminders',
+        badge: '100% Free',
+        items: FREE_KHATA_NAVIGATION_ITEMS,
+      },
+      ...(isSuperAdmin
+        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
+        : []),
+    ];
+  } else {
+    visibleGroups = [
+      {
+        id: 'business_workspace',
+        title: 'Business Workspace',
+        scope: 'BUSINESS_WORKSPACE' as const,
+        description: 'Client workspace operations',
+        badge: planName,
+        items: filteredBusinessItems,
+      },
+      ...(isSuperAdmin
+        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
+        : []),
+    ];
+  }
 
   const planStatus = activeBusiness?.subscription?.status || (isSuperAdmin ? 'ACTIVE' : 'TRIAL');
 

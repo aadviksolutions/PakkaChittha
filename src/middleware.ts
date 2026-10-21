@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = [
+  '/select-mode',
+  '/welcome',
   '/login',
   '/register',
   '/pricing',
@@ -8,6 +10,9 @@ const PUBLIC_PATHS = [
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/register-khata',
+  '/api/auth/register-household',
+  '/ghar-kharcha/join',
+  '/api/household/invitations/validate',
   '/api/auth/me',
   '/api/auth/google',
   '/api/auth/callback/google',
@@ -45,19 +50,32 @@ export function middleware(request: NextRequest) {
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : authHeader?.trim();
   const sessionToken = request.cookies.get('lenden_session_token')?.value || bearerToken;
 
-  // Unauthenticated user attempting to access protected route -> redirect to /login or 401 for APIs
+  // Unauthenticated user attempting to access protected route:
+  // Root path '/' sends user to the mode selection entry page
+  // Subpaths send user to /login with redirect parameter preserved; APIs return 401
   if (!sessionToken && !isPublicPath) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (pathname === '/') {
+      return NextResponse.redirect(new URL('/select-mode', request.url));
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Already authenticated user visiting /login or /register -> redirect to /
-  if (sessionToken && (pathname === '/login' || pathname === '/register')) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Already authenticated user visiting public entry routes -> redirect to authorized workspace or requested redirect
+  if (
+    sessionToken &&
+    (pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/select-mode' ||
+      pathname === '/welcome')
+  ) {
+    const redirectParam = request.nextUrl.searchParams.get('redirect');
+    const destination = redirectParam && redirectParam.startsWith('/') ? redirectParam : '/';
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   const response = NextResponse.next();

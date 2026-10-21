@@ -19,16 +19,19 @@ import { Shield, AlertTriangle, PlusCircle } from 'lucide-react';
 function DashboardContent() {
   const router = useRouter();
   const { openAction } = useActionModal();
-  const { activeBusiness, user } = useAuth();
+  const { activeBusiness, user, loading } = useAuth();
   const { isFreeKhata, isAllowed, isSuperAdmin } = useEntitlements();
   const searchParams = useSearchParams();
   const hasForbiddenError = searchParams.get('error') === 'forbidden_admin_access';
 
   React.useEffect(() => {
+    if (loading) return;
     if (isFreeKhata) {
       router.replace('/free-khata');
+    } else if (!activeBusiness && user) {
+      router.replace('/ghar-kharcha');
     }
-  }, [isFreeKhata, router]);
+  }, [isFreeKhata, activeBusiness, user, loading, router]);
 
   // If user is on permanent Free Khata, strictly route them to the Free Khata ledger dashboard
   if (isFreeKhata) {

@@ -12,6 +12,7 @@ import {
   Sparkles,
   Check,
   BookOpen,
+  Home,
 } from 'lucide-react';
 
 const INDIAN_STATES = [
@@ -49,9 +50,15 @@ const TRADE_TYPES = [
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get('plan') === 'free_khata' ? 'FREE_KHATA' : 'BUSINESS';
+  const planParam = searchParams.get('plan');
+  const initialCategory =
+    planParam === 'ghar_kharcha'
+      ? 'GHAR_KHARCHA'
+      : planParam === 'free_khata'
+      ? 'FREE_KHATA'
+      : 'BUSINESS';
 
-  const [category, setCategory] = useState<'FREE_KHATA' | 'BUSINESS'>(initialCategory);
+  const [category, setCategory] = useState<'GHAR_KHARCHA' | 'FREE_KHATA' | 'BUSINESS'>(initialCategory);
   const rawPlanParam = searchParams.get('plan')?.toUpperCase();
   const initialSelectedPlan = rawPlanParam === 'STARTER' || rawPlanParam === 'SCALE' ? rawPlanParam : 'GROWTH';
   const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'GROWTH' | 'SCALE'>(initialSelectedPlan);
@@ -61,6 +68,8 @@ function RegisterForm() {
     email: '',
     phone: '',
     password: '',
+    householdName: '',
+    monthlyBudget: '',
     businessName: '',
     tradeType: 'Retail & Wholesale',
     city: 'Raipur',
@@ -93,7 +102,29 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      if (category === 'FREE_KHATA') {
+      if (category === 'GHAR_KHARCHA') {
+        const res = await fetch('/api/auth/register-household', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+            householdName: formData.householdName,
+            monthlyBudget: formData.monthlyBudget ? parseFloat(formData.monthlyBudget) : 0,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to register Ghar Kharcha account.');
+        }
+
+        const redirectParam = searchParams.get('redirect');
+        router.push(redirectParam || data.redirectUrl || '/ghar-kharcha');
+        router.refresh();
+      } else if (category === 'FREE_KHATA') {
         const res = await fetch('/api/auth/register-khata', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -134,7 +165,9 @@ function RegisterForm() {
     }
   };
 
+  const isGharKharcha = category === 'GHAR_KHARCHA';
   const isFreeKhata = category === 'FREE_KHATA';
+  const isBusiness = category === 'BUSINESS';
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-10 sm:px-6 lg:px-8 text-slate-100 relative overflow-hidden">
@@ -154,40 +187,59 @@ function RegisterForm() {
         </div>
 
         <h2 className="text-2xl font-extrabold tracking-tight text-white">
-          {isFreeKhata ? 'Open Permanent Free Khata' : 'Create Business Workspace'}
+          {isGharKharcha
+            ? 'PakkaChittha Ghar Kharcha (100% Free)'
+            : isFreeKhata
+            ? 'Open Permanent Free Khata'
+            : 'Create Business Workspace'}
         </h2>
         <p className="mt-1 text-xs text-slate-400">
-          {isFreeKhata
+          {isGharKharcha
+            ? 'Household budget & expense tracking • Unlimited Records • Family Collaboration • Permanently Free'
+            : isFreeKhata
             ? 'Simple personal lending and borrowing ledger • 100% Free Forever • No Card Needed'
             : 'Get started with automated GST invoicing, customer udhaar khata, and instant ledger'}
         </p>
 
         {/* Category Selector Tabs */}
-        <div className="mt-4 inline-flex p-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
+        <div className="mt-4 inline-flex p-1 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner max-w-full overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setCategory('GHAR_KHARCHA')}
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              isGharKharcha
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Ghar Kharcha (Free)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setCategory('FREE_KHATA')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               isFreeKhata
                 ? 'bg-[#00B887] text-white shadow-md shadow-emerald-600/30'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Personal Free Khata (100% Free)</span>
+            <span>Free Udhaar Khata</span>
           </button>
 
           <button
             type="button"
             onClick={() => setCategory('BUSINESS')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              !isFreeKhata
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              isBusiness
                 ? 'bg-slate-800 text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Building2 className="w-3.5 h-3.5 text-slate-400" />
-            <span>Business (Invoicing & GST)</span>
+            <span>Business (Invoicing)</span>
           </button>
         </div>
       </div>
@@ -202,8 +254,48 @@ function RegisterForm() {
           )}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* If Ghar Kharcha Selected: Show Optional Household Details */}
+            {isGharKharcha && (
+              <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2">
+                  <Home className="w-3.5 h-3.5" />
+                  Household Details (Optional)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Household / Family Name
+                    </label>
+                    <input
+                      name="householdName"
+                      type="text"
+                      value={formData.householdName}
+                      onChange={handleChange}
+                      placeholder="e.g. Sharma Family"
+                      className="block w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Monthly Budget Target (₹)
+                    </label>
+                    <input
+                      name="monthlyBudget"
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={formData.monthlyBudget}
+                      onChange={handleChange}
+                      placeholder="e.g. 45000 (Optional)"
+                      className="block w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* If Business Category Selected: Show Business Information */}
-            {!isFreeKhata && (
+            {isBusiness && (
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 mb-2">
                   <Building2 className="w-3.5 h-3.5" />

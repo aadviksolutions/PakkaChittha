@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Layers,
   Sparkles,
+  Home,
 } from 'lucide-react';
 
 interface OverviewData {
@@ -40,6 +41,10 @@ interface OverviewData {
     netCollections: number;
     totalInvoices: number;
     totalKhataTransactions: number;
+    totalHouseholds?: number;
+    activeHouseholds?: number;
+    totalHouseholdMembers?: number;
+    totalHouseholdTransactions?: number;
   };
   recentAuditLogs: Array<{
     id: string;
@@ -246,6 +251,61 @@ export default function PlatformAdminOverviewPage() {
                   100
                 ).toFixed(1)}%`}
           </span>
+        </div>
+      </div>
+
+      {/* Ghar Kharcha Household Telemetry Card (Platform Overview) */}
+      <div className="bg-gradient-to-r from-emerald-950 to-slate-900 text-white p-5 rounded-3xl border border-emerald-800/60 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center">
+              <Home className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold tracking-tight text-white flex items-center gap-2">
+                <span>PakkaChittha Ghar Kharcha • Platform Telemetry</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                  Free Household
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Aggregate adoption &amp; collaboration metrics (Zero private financial descriptions exposed)
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/ghar-kharcha"
+            className="text-xs font-bold text-emerald-400 hover:text-emerald-300 self-start sm:self-center"
+          >
+            Preview Household Mode →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-800 text-xs">
+          <div>
+            <span className="text-slate-400 block text-[11px]">Registered Households</span>
+            <span className="font-extrabold text-base sm:text-lg text-white">
+              {loading ? '...' : (kpis?.totalHouseholds || 0).toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[11px]">Active Family Ledgers</span>
+            <span className="font-extrabold text-base sm:text-lg text-emerald-400">
+              {loading ? '...' : (kpis?.activeHouseholds || 0).toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[11px]">Family Collaborators</span>
+            <span className="font-extrabold text-base sm:text-lg text-white">
+              {loading ? '...' : (kpis?.totalHouseholdMembers || 0).toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[11px]">Recorded Entries</span>
+            <span className="font-extrabold text-base sm:text-lg text-white">
+              {loading ? '...' : (kpis?.totalHouseholdTransactions || 0).toLocaleString('en-IN')}
+            </span>
+          </div>
         </div>
       </div>
 

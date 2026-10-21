@@ -98,6 +98,9 @@ model User {
   khataContacts     KhataContact[]
   khataTransactions KhataTransaction[]
   khataRepayments   KhataRepayment[]
+  householdMemberships HouseholdMember[]
+  createdHouseholdTransactions HouseholdTransaction[]
+  sentHouseholdInvitations HouseholdInvitation[]
 
   @@index([email])
   @@index([platformRole])
@@ -878,5 +881,144 @@ model Gstr2bEntry {
   @@index([importId])
   @@index([supplierGstin])
   @@index([reconciliationStatus])
+}
+
+// ============================================================================
+// PAKKACHITTHA GHAR KHARCHA — FREE HOUSEHOLD MODE
+// ============================================================================
+
+enum HouseholdRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum HouseholdTransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum HouseholdInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model Household {
+  id             String                 @id @default(cuid())
+  name           String
+  currency       String                 @default("INR")
+  monthlyBudget  Float?                 @default(0)
+  budgetStartDay Int                    @default(1)
+  isArchived     Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  members        HouseholdMember[]
+  transactions   HouseholdTransaction[]
+  categories     HouseholdCategory[]
+  invitations    HouseholdInvitation[]
+  budgets        HouseholdMonthlyBudget[]
+
+  @@index([name])
+}
+
+model HouseholdMember {
+  id          String        @id @default(cuid())
+  householdId String
+  userId      String
+  role        HouseholdRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId])
+  @@index([householdId])
+  @@index([userId])
+}
+
+model HouseholdInvitation {
+  id           String                @id @default(cuid())
+  householdId  String
+  inviterId    String
+  inviteeEmail String?
+  inviteToken  String                @unique
+  role         HouseholdRole         @default(MEMBER)
+  status       HouseholdInviteStatus @default(PENDING)
+  expiresAt    DateTime
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  household    Household             @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  inviter      User                  @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([inviteToken])
+  @@index([inviteeEmail])
+}
+
+model HouseholdCategory {
+  id            String                   @id @default(cuid())
+  householdId   String?                  // Nullable for default templates or scoped to household
+  name          String
+  type          HouseholdTransactionType
+  icon          String?
+  color         String?
+  monthlyBudget Float?
+  isDefault     Boolean                  @default(false)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  household     Household?               @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transactions  HouseholdTransaction[]
+
+  @@unique([householdId, name, type])
+  @@index([householdId])
+  @@index([type])
+}
+
+model HouseholdTransaction {
+  id            String                   @id @default(cuid())
+  householdId   String
+  createdById   String
+  type          HouseholdTransactionType
+  amount        Float
+  categoryId    String?
+  categoryName  String                   // Denormalized snapshot for audit integrity
+  date          DateTime                 @default(now())
+  paymentMethod PaymentMethod            @default(CASH)
+  description   String?
+  payeeMerchant String?
+  notes         String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  household     Household                @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy     User                     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  category      HouseholdCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([householdId, date])
+  @@index([householdId, type])
+  @@index([createdById])
+  @@index([categoryId])
+}
+
+model HouseholdMonthlyBudget {
+  id          String    @id @default(cuid())
+  householdId String
+  monthYear   String    // e.g. "2026-10"
+  amount      Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, monthYear])
+  @@index([householdId])
 }
 

@@ -292,6 +292,91 @@ export async function registerFreeKhataUser(input: RegisterFreeKhataInput) {
   };
 }
 
+export interface RegisterHouseholdInput {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  householdName?: string;
+  monthlyBudget?: number;
+}
+
+/**
+ * Registers a new user specifically under PakkaChittha Ghar Kharcha (Free Household Mode).
+ * Provisions a permanent free household with no business subscription, no trial expiration,
+ * and zero payment requirements.
+ */
+export async function registerHouseholdUser(input: RegisterHouseholdInput) {
+  const normalizedEmail = input.email?.trim().toLowerCase();
+  const trimmedName = input.name?.trim();
+
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    throw new Error('Please provide a valid email address.');
+  }
+
+  if (!trimmedName || trimmedName.length < 2) {
+    throw new Error('Full name must be at least 2 characters.');
+  }
+
+  if (!input.password || input.password.length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existingUser) {
+    throw new Error('An account with this email address already exists. Please log in.');
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const householdName = input.householdName?.trim() || `${trimmedName}'s Household`;
+
+  // 1. Create User
+  const user = await prisma.user.create({
+    data: {
+      name: trimmedName,
+      email: normalizedEmail,
+      phone: input.phone?.trim() || null,
+      passwordHash,
+      platformRole: PlatformRole.USER,
+    },
+  });
+
+  // 2. Create Household & seed categories
+  const { createHousehold } = await import('@/lib/household/householdService');
+  const household = await createHousehold(user.id, {
+    name: householdName,
+    currency: 'INR',
+    monthlyBudget: input.monthlyBudget || 0,
+  });
+
+  // 3. Create Session
+  const { sessionToken, expiresAt, sessionId } = await createSession(
+    user.id,
+    null // Household mode is independent of business workspaces
+  );
+
+  return {
+    sessionToken,
+    expiresAt,
+    sessionId,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      platformRole: user.platformRole,
+    },
+    household: {
+      id: household.id,
+      name: household.name,
+      role: 'OWNER',
+    },
+  };
+}
+
+
 /**
  * Validates user credentials and establishes a new session.
  */

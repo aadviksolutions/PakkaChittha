@@ -49,7 +49,16 @@ export function Header({
   const isSuperAdmin = user?.platformRole === 'SUPER_ADMIN';
 
   // Compute readable page title for top context
+  const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+
   const getPageTitle = () => {
+    if (pathname === '/ghar-kharcha') return 'Ghar Kharcha Dashboard';
+    if (pathname.startsWith('/ghar-kharcha/transactions')) return 'Household Transactions';
+    if (pathname.startsWith('/ghar-kharcha/budget')) return 'Household Budget';
+    if (pathname.startsWith('/ghar-kharcha/categories')) return 'Household Categories';
+    if (pathname.startsWith('/ghar-kharcha/members')) return 'Family Members';
+    if (pathname.startsWith('/ghar-kharcha/join')) return 'Join Household';
+    if (pathname.startsWith('/ghar-kharcha/setup')) return 'Create Household';
     if (pathname === '/') return 'Dashboard';
     if (pathname.startsWith('/free-khata/person')) return 'Person Ledger';
     if (pathname.startsWith('/free-khata')) return 'Free Udhaar Khata';
@@ -81,22 +90,26 @@ export function Header({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Business Branding with Pakka Chittha Logo */}
+        {/* Business or Household Branding with Pakka Chittha Logo */}
         <div className="flex items-center gap-2 min-w-0 shrink">
           <div className="h-8 w-auto rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
             <img src="/pakka-chittha-logo.png" alt="Pakka Chittha" className="h-full w-auto object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight max-w-[100px] xs:max-w-[150px] sm:max-w-[200px]">
-                {activeBusiness?.name || 'Pakka Chittha'}
+              <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight max-w-[120px] xs:max-w-[160px] sm:max-w-[220px]">
+                {isGharKharcha ? 'Ghar Kharcha' : (activeBusiness?.name || 'Pakka Chittha')}
               </span>
-              <span className="hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider bg-orange-50 text-[#EA580C] px-1.5 py-0.2 rounded border border-orange-200 shrink-0">
-                Active
+              <span className={`hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0 ${
+                isGharKharcha
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-orange-50 text-[#EA580C] border-orange-200'
+              }`}>
+                {isGharKharcha ? 'Free Household' : 'Active'}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium truncate hidden sm:block">
-              {activeBusiness?.gstin ? `GSTIN: ${activeBusiness.gstin}` : 'Smart Financial Billing'}
+              {isGharKharcha ? 'Har ghar ka pakka hisaab' : (activeBusiness?.gstin ? `GSTIN: ${activeBusiness.gstin}` : 'Smart Financial Billing')}
             </p>
           </div>
         </div>

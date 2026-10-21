@@ -27,6 +27,7 @@ import {
   Menu,
   Play,
   LayoutDashboard,
+  Home,
 } from 'lucide-react';
 
 /* =====================================================================
@@ -350,6 +351,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
+  const modeParam = searchParams.get('mode');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -445,6 +447,8 @@ function LoginForm() {
         router.push('/platform-admin');
       } else if (data.business?.plan === 'FREE_KHATA' && redirectUrl === '/') {
         router.push('/free-khata');
+      } else if (!data.business && redirectUrl === '/') {
+        router.push('/ghar-kharcha');
       } else {
         router.push(redirectUrl);
       }
@@ -494,8 +498,17 @@ function LoginForm() {
             >
               Features
             </button>
+            <Link href="/select-mode" className="hover:text-[#EA580C] transition-colors">
+              Mode Selection
+            </Link>
             <Link href="/pricing" className="hover:text-[#EA580C] transition-colors">
               Pricing
+            </Link>
+            <Link
+              href="/register?plan=ghar_kharcha"
+              className="text-emerald-400 font-bold hover:text-emerald-300 transition-colors"
+            >
+              Ghar Kharcha
             </Link>
             <Link
               href="/register?plan=free_khata"
@@ -593,6 +606,13 @@ function LoginForm() {
                 className="px-2 py-1.5 rounded-lg hover:bg-slate-50"
               >
                 Pricing
+              </Link>
+              <Link
+                href="/register?plan=ghar_kharcha"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-2 py-1.5 rounded-lg hover:bg-slate-50 text-emerald-600 font-bold"
+              >
+                Ghar Kharcha
               </Link>
               <Link
                 href="/register?plan=free_khata"
@@ -739,20 +759,47 @@ function LoginForm() {
           >
             <div className="bg-white rounded-2xl xl:rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.35)] border border-slate-100 text-slate-800">
               {/* Actual Pakka Chittha Logo Centered at Top */}
-              <div className="flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center">
                 <img
                   src="/pakka-chittha-logo.png"
                   alt="Pakka Chittha"
                   className="h-7 xl:h-8 w-auto object-contain"
                 />
+                <Link
+                  href="/select-mode"
+                  className="mt-1 text-[10px] text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center gap-1"
+                >
+                  <span>← Mode Badlein</span>
+                </Link>
               </div>
 
+              {/* Mode indicator badge if specified */}
+              {modeParam === 'household' ? (
+                <div className="flex items-center justify-center mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Home className="w-3 h-3 text-emerald-600" />
+                    Mera Ghar • Ghar Kharcha Login
+                  </span>
+                </div>
+              ) : modeParam === 'business' ? (
+                <div className="flex items-center justify-center mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-orange-50 text-[#EA580C] border border-orange-200">
+                    <Store className="w-3 h-3 text-[#EA580C]" />
+                    Mera Vyapaar • Business Login
+                  </span>
+                </div>
+              ) : null}
+
               {/* Welcome back Heading */}
-              <h2 className="text-xl xl:text-2xl font-bold text-[#071F38] text-center mt-1.5 tracking-tight">
+              <h2 className="text-xl xl:text-2xl font-bold text-[#071F38] text-center mt-1 tracking-tight">
                 Welcome back
               </h2>
               <p className="text-slate-500 text-[11px] xl:text-xs text-center mt-0.5">
-                Please enter your details to sign in
+                {modeParam === 'household'
+                  ? 'Sign in to access your Household expenses & family budget'
+                  : modeParam === 'business'
+                  ? 'Sign in to access your billing, inventory & business khata'
+                  : 'Please enter your details to sign in'}
               </p>
 
               {/* Error Banner */}
@@ -896,13 +943,27 @@ function LoginForm() {
 
               {/* Don't have an account? Sign up */}
               <p className="text-center text-[11px] text-slate-500 mt-2">
-                Don&apos;t have an account?{' '}
-                <Link
-                  href="/register"
-                  className="font-semibold text-[#EA580C] hover:underline"
-                >
-                  Sign up
-                </Link>
+                {modeParam === 'household' ? (
+                  <>
+                    Naya parivaar hisaab?{' '}
+                    <Link
+                      href="/register?plan=ghar_kharcha"
+                      className="font-semibold text-emerald-600 hover:underline"
+                    >
+                      Free Ghar Kharcha Banayein
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    Don&apos;t have an account?{' '}
+                    <Link
+                      href="/register"
+                      className="font-semibold text-[#EA580C] hover:underline"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
               </p>
             </div>
           </div>

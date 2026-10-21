@@ -92,6 +92,16 @@ export async function GET() {
       where: { business: realBizFilter },
     });
 
+    // 4b. Ghar Kharcha Household Telemetry (Platform Admin aggregate counts without private descriptions)
+    const totalHouseholds = await prisma.household.count();
+    const activeHouseholds = await prisma.household.count({ where: { isArchived: false } });
+    const archivedHouseholds = await prisma.household.count({ where: { isArchived: true } });
+    const totalHouseholdMembers = await prisma.householdMember.count();
+    const totalHouseholdTransactions = await prisma.householdTransaction.count();
+    const recentHouseholdRegistrations = await prisma.household.count({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+    });
+
     // 5. Recent Audit Activity
     const recentAuditLogs = await (prisma as any).platformAuditLog.findMany({
       take: 8,
@@ -133,6 +143,13 @@ export async function GET() {
         netCollections,
         totalInvoices,
         totalKhataTransactions,
+        // Ghar Kharcha Platform Metrics
+        totalHouseholds,
+        activeHouseholds,
+        archivedHouseholds,
+        totalHouseholdMembers,
+        totalHouseholdTransactions,
+        recentHouseholdRegistrations,
       },
       recentAuditLogs,
       recentUsers,
