@@ -45,20 +45,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isPublicPath = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(path + '/'));
+  const isPublicPath =
+    pathname === '/' ||
+    PUBLIC_PATHS.some((path) => path !== '/' && (pathname === path || pathname.startsWith(path + '/')));
   const authHeader = request.headers.get('authorization') || request.headers.get('x-session-token');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : authHeader?.trim();
   const sessionToken = request.cookies.get('lenden_session_token')?.value || bearerToken;
 
   // Unauthenticated user attempting to access protected route:
-  // Root path '/' sends user to the mode selection entry page
   // Subpaths send user to /login with redirect parameter preserved; APIs return 401
   if (!sessionToken && !isPublicPath) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (pathname === '/') {
-      return NextResponse.redirect(new URL('/select-mode', request.url));
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);

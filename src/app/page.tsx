@@ -15,6 +15,7 @@ import { useActionModal } from '@/context/ActionModalContext';
 import { useAuth } from '@/context/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { Shield, AlertTriangle, PlusCircle } from 'lucide-react';
+import ModeSelectionPage from './select-mode/page';
 
 function DashboardContent() {
   const router = useRouter();
@@ -186,10 +187,31 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
+function HomeRouteContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-[#FFF9F5] flex flex-col items-center justify-center text-slate-800 px-4">
+        <div className="w-10 h-10 border-3 border-[#EA580C] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-600">PakkaChittha khol rahe hain...</p>
+      </div>
+    );
+  }
+
+  // If unauthenticated: Home page is directly the Select Mode (Mera Ghar / Mera Vyapaar) page
+  if (!user) {
+    return <ModeSelectionPage />;
+  }
+
+  // If authenticated: Render the authorized workspace dashboard
+  return <DashboardContent />;
+}
+
+export default function HomePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading dashboard...</div>}>
-      <DashboardContent />
+    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading...</div>}>
+      <HomeRouteContent />
     </Suspense>
   );
 }

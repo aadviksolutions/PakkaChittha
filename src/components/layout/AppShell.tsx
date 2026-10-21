@@ -25,6 +25,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     pathname === '/register' ||
     pathname === '/select-mode' ||
     pathname === '/welcome' ||
+    (pathname === '/' && !user) ||
     pathname.endsWith('/print') ||
     pathname.startsWith('/view/invoice/');
 
