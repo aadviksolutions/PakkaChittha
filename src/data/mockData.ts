@@ -18,7 +18,7 @@ export const SAMPLE_BUSINESS: BusinessProfile = {
   email: 'contact@sharmatraders.sample',
   currency: '₹',
   plan: 'Growth Pro (Commercial)',
-  trialDaysRemaining: 14,
+  trialDaysRemaining: 7,
 };
 
 export const SAMPLE_TRANSACTIONS: Transaction[] = [

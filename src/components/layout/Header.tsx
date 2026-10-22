@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Menu,
   Search,
@@ -15,6 +15,8 @@ import {
   ChevronDown,
   User,
   PanelLeft,
+  ArrowLeft,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -31,6 +33,7 @@ export function Header({
   isSidebarCollapsed,
   onToggleSidebarCollapse,
 }: HeaderProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const isPlatformAdmin = pathname.startsWith('/platform-admin');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -51,38 +54,25 @@ export function Header({
   // Compute readable page title for top context
   const isGharKharcha = pathname.startsWith('/ghar-kharcha');
 
-  const getPageTitle = () => {
-    if (pathname === '/ghar-kharcha') return 'Ghar Kharcha Dashboard';
-    if (pathname.startsWith('/ghar-kharcha/transactions')) return 'Kharcha Register';
-    if (pathname.startsWith('/ghar-kharcha/splits')) return 'Family Splits & Settlements';
-    if (pathname.startsWith('/ghar-kharcha/reports')) return 'Household Reports & Analytics';
-    if (pathname.startsWith('/ghar-kharcha/budget')) return 'Household Budget';
-    if (pathname.startsWith('/ghar-kharcha/categories')) return 'Household Categories';
-    if (pathname.startsWith('/ghar-kharcha/members')) return 'Family Members';
-    if (pathname.startsWith('/ghar-kharcha/join')) return 'Join Household';
-    if (pathname.startsWith('/ghar-kharcha/setup')) return 'Create Household';
-    if (pathname === '/') return 'Dashboard';
-    if (pathname.startsWith('/free-khata/person')) return 'Person Ledger';
-    if (pathname.startsWith('/free-khata')) return 'Free Udhaar Khata';
-    if (pathname.startsWith('/invoices/new')) return 'New Tax Invoice';
-    if (pathname.startsWith('/invoices')) return 'Invoices';
-    if (pathname.startsWith('/customers')) return 'Customers & Udhaar';
-    if (pathname.startsWith('/inventory')) return 'Products & Stock';
-    if (pathname.startsWith('/purchases')) return 'Purchases & Vendors';
-    if (pathname.startsWith('/expenses')) return 'Expenses';
-    if (pathname.startsWith('/reports')) return 'Reports & Taxes';
-    if (pathname.startsWith('/whatsapp')) return 'WhatsApp Automation';
-    if (pathname.startsWith('/settings')) return 'Settings';
-    if (pathname.startsWith('/staff')) return 'Staff & RBAC';
-    if (pathname.startsWith('/subscription')) return 'Subscription';
-    if (pathname.startsWith('/platform-admin')) return 'Platform Administration';
-    return 'Pakka Chittha';
+  // Back navigation check: if not on root/primary home screens, allow going back
+  const canGoBack =
+    pathname !== '/' &&
+    pathname !== '/platform-admin' &&
+    pathname !== '/free-khata' &&
+    pathname !== '/ghar-kharcha';
+
+  const handleBackNavigation = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(isSuperAdmin ? '/platform-admin' : '/');
+    }
   };
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4">
       {/* Left: Mobile Toggle & Business Name with Logo */}
-      <div className="flex items-center gap-3 flex-1 max-w-xl min-w-0">
+      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-xl min-w-0">
         <button
           type="button"
           onClick={onOpenMobileSidebar}
@@ -92,6 +82,19 @@ export function Header({
           <Menu className="w-5 h-5" />
         </button>
 
+        {/* Back Button to previous screen */}
+        {canGoBack && (
+          <button
+            type="button"
+            onClick={handleBackNavigation}
+            className="p-1.5 sm:p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0 border border-slate-200/70"
+            title="Go back to previous screen"
+            aria-label="Go back to previous screen"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Business or Household Branding with Pakka Chittha Logo */}
         <div className="flex items-center gap-2 min-w-0 shrink">
           <div className="h-8 w-auto rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
@@ -100,18 +103,28 @@ export function Header({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight max-w-[120px] xs:max-w-[160px] sm:max-w-[220px]">
-                {isGharKharcha ? 'Ghar Kharcha' : (activeBusiness?.name || 'Pakka Chittha')}
+                {isSuperAdmin
+                  ? 'Platform Control Center'
+                  : isGharKharcha
+                  ? 'Ghar Kharcha'
+                  : (activeBusiness?.name || 'Pakka Chittha')}
               </span>
               <span className={`hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0 ${
-                isGharKharcha
+                isSuperAdmin
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : isGharKharcha
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-orange-50 text-[#EA580C] border-orange-200'
               }`}>
-                {isGharKharcha ? 'Free Household' : 'Active'}
+                {isSuperAdmin ? 'Super Admin' : isGharKharcha ? 'Free Household' : 'Active'}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium truncate hidden sm:block">
-              {isGharKharcha ? 'Har ghar ka pakka hisaab' : (activeBusiness?.gstin ? `GSTIN: ${activeBusiness.gstin}` : 'Smart Financial Billing')}
+              {isSuperAdmin
+                ? 'Authoritative SaaS Platform Administration'
+                : isGharKharcha
+                ? 'Har ghar ka pakka hisaab'
+                : (activeBusiness?.gstin ? `GSTIN: ${activeBusiness.gstin}` : 'Smart Financial Billing')}
             </p>
           </div>
         </div>
@@ -134,7 +147,7 @@ export function Header({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search bills, customers... (⌘K)"
+            placeholder={isSuperAdmin ? 'Search platform tenants... (⌘K)' : 'Search bills, customers... (⌘K)'}
             className="w-full pl-8 pr-10 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#071F38] focus:border-[#071F38] transition-all cursor-pointer"
             readOnly
             onClick={() => onOpenQuickActionModal('search')}
@@ -152,37 +165,41 @@ export function Header({
           type="button"
           onClick={() => onOpenQuickActionModal('search')}
           className="sm:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-          aria-label="Search bills and customers"
+          aria-label="Search"
         >
           <Search className="w-4 h-4" />
         </button>
 
-        {/* Date Filter selector */}
-        <div className="hidden lg:flex items-center gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+        {/* Date Filter selector (Only for business workspace users) */}
+        {!isSuperAdmin && (
+          <div className="hidden lg:flex items-center gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="Today">Today</option>
+              <option value="Week">This Week</option>
+              <option value="Month">This Month</option>
+              <option value="Quarter">This Quarter</option>
+            </select>
+          </div>
+        )}
+
+        {/* Quick Create Invoice Primary Action (Hidden for Super Admin) */}
+        {!isSuperAdmin && (
+          <Link
+            href="/invoices/new"
+            className="flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
           >
-            <option value="Today">Today</option>
-            <option value="Week">This Week</option>
-            <option value="Month">This Month</option>
-            <option value="Quarter">This Quarter</option>
-          </select>
-        </div>
+            <PlusCircle className="w-3.5 h-3.5 text-white" />
+            <span className="hidden xs:inline">New Bill</span>
+            <span className="xs:hidden">Bill</span>
+          </Link>
+        )}
 
-        {/* Quick Create Invoice Primary Action */}
-        <Link
-          href="/invoices/new"
-          className="flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
-        >
-          <PlusCircle className="w-3.5 h-3.5 text-white" />
-          <span className="hidden xs:inline">New Bill</span>
-          <span className="xs:hidden">Bill</span>
-        </Link>
-
-        {/* Notifications Popover */}
+        {/* Notifications Popover with Outside Click/Touch Dismissal */}
         <div className="relative">
           <button
             type="button"
@@ -198,36 +215,45 @@ export function Header({
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 p-3 text-xs z-50 animate-in fade-in slide-in-from-top-1">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                <span className="font-semibold text-slate-900">Notifications</span>
-                <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
-                  2 Pending
-                </span>
-              </div>
-              <div className="space-y-2">
-                <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="font-semibold text-slate-800 text-[11px]">
-                    Udhaar Payment Due
-                  </p>
-                  <p className="text-slate-500 text-[10px] mt-0.5">
-                    Metro Electricals has ₹38,200 overdue since 3 days.
-                  </p>
+            <>
+              {/* Invisible touch/click outside backdrop */}
+              <div
+                className="fixed inset-0 z-40 bg-transparent cursor-default"
+                onClick={() => setShowNotifications(false)}
+                onTouchStart={() => setShowNotifications(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 p-3 text-xs z-50 animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                  <span className="font-semibold text-slate-900">Notifications</span>
+                  <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
+                    2 Pending
+                  </span>
                 </div>
-                <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="font-semibold text-slate-800 text-[11px]">
-                    GST Return Filing Notice
-                  </p>
-                  <p className="text-slate-500 text-[10px] mt-0.5">
-                    GSTR-1 return filing window closes on the 11th of this month.
-                  </p>
+                <div className="space-y-2">
+                  <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="font-semibold text-slate-800 text-[11px]">
+                      Udhaar Payment Due
+                    </p>
+                    <p className="text-slate-500 text-[10px] mt-0.5">
+                      Metro Electricals has ₹38,200 overdue since 3 days.
+                    </p>
+                  </div>
+                  <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="font-semibold text-slate-800 text-[11px]">
+                      GST Return Filing Notice
+                    </p>
+                    <p className="text-slate-500 text-[10px] mt-0.5">
+                      GSTR-1 return filing window closes on the 11th of this month.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* User Account Menu */}
+        {/* User Account Menu with Outside Click/Touch Dismissal */}
         <div className="relative">
           <button
             type="button"
@@ -238,8 +264,10 @@ export function Header({
             className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-lg hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
             aria-label="User account menu"
           >
-            <div className="w-7.5 h-7.5 rounded-lg bg-[#071F38] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-              {getMonogram()}
+            <div className={`w-7.5 h-7.5 rounded-lg text-white flex items-center justify-center font-bold text-xs shadow-2xs ${
+              isSuperAdmin ? 'bg-purple-950 text-purple-200 border border-purple-800' : 'bg-[#071F38]'
+            }`}>
+              {isSuperAdmin ? 'SA' : getMonogram()}
             </div>
             <div className="hidden md:block text-left">
               <p className="text-xs font-semibold text-slate-900 leading-tight truncate max-w-[100px]">
@@ -253,52 +281,71 @@ export function Header({
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 p-2 text-xs z-50 animate-in fade-in slide-in-from-top-1">
-              <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                <p className="font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <Building className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] font-medium text-slate-700 truncate">
-                    {activeBusiness?.name || 'Workspace'}
-                  </span>
+            <>
+              {/* Invisible touch/click outside backdrop */}
+              <div
+                className="fixed inset-0 z-40 bg-transparent cursor-default"
+                onClick={() => setShowUserMenu(false)}
+                onTouchStart={() => setShowUserMenu(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 p-2 text-xs z-50 animate-in fade-in slide-in-from-top-1">
+                <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                  <p className="font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <Building className="w-3 h-3 text-slate-400" />
+                    <span className="text-[10px] font-medium text-slate-700 truncate">
+                      {isSuperAdmin ? 'Platform Management (Super Admin)' : activeBusiness?.name || 'Workspace'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-0.5">
+                  {isSuperAdmin ? (
+                    <>
+                      <Link
+                        href="/platform-admin"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors font-medium"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Platform Admin</span>
+                      </Link>
+                      <Link
+                        href="/platform-admin/settings"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Platform Settings</span>
+                      </Link>
+                    </>
+                  ) : (
+                    <Link
+                      href="/settings"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Business Settings</span>
+                    </Link>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      logout();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-left font-medium cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Sign Out</span>
+                  </button>
                 </div>
               </div>
-
-              <div className="space-y-0.5">
-                <Link
-                  href="/settings"
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
-                >
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Business Settings</span>
-                </Link>
-
-                {isSuperAdmin && (
-                  <Link
-                    href="/platform-admin"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-purple-700 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors font-medium"
-                  >
-                    <Shield className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Platform Admin</span>
-                  </Link>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    logout();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-left font-medium"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
+            </>
           )}
         </div>
       </div>

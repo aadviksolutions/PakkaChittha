@@ -210,13 +210,20 @@ export default function PersonLedgerPage({
     <div className="space-y-5 pb-24 md:pb-12 max-w-4xl mx-auto">
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
-        <Link
-          href="/free-khata"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/free-khata');
+            }
+          }}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard</span>
-        </Link>
+          <span>Back to Previous Screen</span>
+        </button>
 
         <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
           <Sparkles className="w-3 h-3 text-[#00B887]" />

@@ -23,7 +23,7 @@ const PLAN_TIERS: Record<
     whatsAppQuota: 999999,
   },
   FREE_TRIAL: {
-    name: '14-Day Free Trial',
+    name: '7-Day Free Trial',
     monthlyPrice: 0,
     maxMonthlyInvoices: 999999,
     maxStaffSeats: 2,
@@ -78,9 +78,9 @@ export async function GET(request: NextRequest) {
           maxStaffSeats: 2,
           maxBranches: 1,
           whatsAppQuota: 50,
-          trialDaysRemaining: 14,
+          trialDaysRemaining: 7,
           startDate: new Date(),
-          endDate: new Date(Date.now() + 14 * 86400000),
+          endDate: new Date(Date.now() + 7 * 86400000),
         },
       });
     }

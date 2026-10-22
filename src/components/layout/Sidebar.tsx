@@ -107,7 +107,10 @@ export function Sidebar({
   const isGharKharcha = pathname.startsWith('/ghar-kharcha');
 
   let visibleGroups;
-  if (isGharKharcha) {
+  if (isSuperAdmin) {
+    // Strictly show only Super Admin platform options (no billing, no stock, no store items)
+    visibleGroups = NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN');
+  } else if (isGharKharcha) {
     visibleGroups = [
       {
         id: 'household_group',
@@ -117,9 +120,6 @@ export function Sidebar({
         badge: '100% Free',
         items: HOUSEHOLD_NAVIGATION_ITEMS,
       },
-      ...(isSuperAdmin
-        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
-        : []),
     ];
   } else if (isFreeKhata) {
     visibleGroups = [
@@ -131,9 +131,6 @@ export function Sidebar({
         badge: '100% Free',
         items: FREE_KHATA_NAVIGATION_ITEMS,
       },
-      ...(isSuperAdmin
-        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
-        : []),
     ];
   } else {
     visibleGroups = [
@@ -145,9 +142,6 @@ export function Sidebar({
         badge: planName,
         items: filteredBusinessItems,
       },
-      ...(isSuperAdmin
-        ? NAVIGATION_GROUPS.filter((g) => g.scope === 'PLATFORM_ADMIN')
-        : []),
     ];
   }
 
@@ -155,11 +149,12 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile Backdrop - clicking or touching outside closes the side menu */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity cursor-pointer"
           onClick={onCloseMobile}
+          onTouchStart={onCloseMobile}
           aria-hidden="true"
         />
       )}
@@ -173,7 +168,7 @@ export function Sidebar({
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200/80 bg-white shrink-0">
           <Link
-            href="/"
+            href={isSuperAdmin ? '/platform-admin' : '/'}
             onClick={onCloseMobile}
             className="flex items-center gap-2.5 min-w-0 group"
           >
@@ -193,7 +188,7 @@ export function Sidebar({
                   </span>
                 </div>
                 <p className="text-[9.5px] text-amber-700 font-semibold truncate">
-                  Billing • Inventory • Udhari • Reports
+                  {isSuperAdmin ? 'Platform Control Center' : 'Billing • Inventory • Udhari • Reports'}
                 </p>
               </div>
             )}
@@ -343,28 +338,34 @@ export function Sidebar({
             <div className="p-2.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                  <Crown className="w-3.5 h-3.5 text-amber-500" />
-                  {planName}
+                  {isSuperAdmin ? (
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                  ) : (
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  )}
+                  {isSuperAdmin ? 'Super Admin' : planName}
                 </span>
                 <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${
-                  isExpired
+                  isSuperAdmin
+                    ? 'text-purple-700 bg-purple-50 border-purple-200'
+                    : isExpired
                     ? 'text-rose-700 bg-rose-50 border-rose-200'
                     : isTrial
                     ? 'text-blue-700 bg-blue-50 border-blue-200'
                     : 'text-emerald-700 bg-emerald-50 border-emerald-200'
                 }`}>
-                  {isExpired ? 'EXPIRED' : planStatus}
+                  {isSuperAdmin ? 'ROOT ACCESS' : isExpired ? 'EXPIRED' : planStatus}
                 </span>
               </div>
               <p className="text-[10px] text-slate-600 font-medium leading-tight mb-2">
-                {isSuperAdmin ? 'Super Admin Privileges' : displayText}
+                {isSuperAdmin ? 'Platform Management & System Controls' : displayText}
               </p>
               <Link
-                href={isSuperAdmin ? '/platform-admin/plans' : '/subscription'}
+                href={isSuperAdmin ? '/platform-admin' : '/subscription'}
                 onClick={onCloseMobile}
-                className="text-[10px] font-semibold text-slate-800 hover:text-[#EA580C] flex items-center gap-1 transition-colors"
+                className="text-[10px] font-semibold text-slate-800 hover:text-purple-700 flex items-center gap-1 transition-colors"
               >
-                {isSuperAdmin ? 'View Platform Plans' : isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
+                {isSuperAdmin ? 'Open Control Center' : isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
                 <ArrowRight className="w-3 h-3" />
               </Link>
 

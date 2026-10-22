@@ -78,9 +78,17 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
         )}
       </button>
 
-      {/* Info Popover / Switcher Drawer */}
+      {/* Info Popover / Switcher Drawer with Outside Touch/Click Dismissal */}
       {isOpen && (
-        <div className="absolute left-2 right-2 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-slate-200 p-3 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
+        <>
+          {/* Transparent full-screen touch/click backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-transparent cursor-default"
+            onClick={() => setIsOpen(false)}
+            onTouchStart={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute left-2 right-2 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-slate-200 p-3 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
             <span className="font-semibold text-slate-800 flex items-center gap-1.5">
               {isSuperAdmin ? (
@@ -141,7 +149,8 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
             </span>
           </div>
         </div>
-      )}
+      </>
+    )}
     </div>
   );
 }

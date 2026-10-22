@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useActionModal } from '@/context/ActionModalContext';
 
@@ -24,19 +25,29 @@ export function ModulePageShell({
   actionButtonText,
   actionButtonType,
 }: ModulePageShellProps) {
+  const router = useRouter();
   const { openAction } = useActionModal();
+
+  const handleBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Breadcrumb & Navigation Back */}
       <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Dashboard
-        </Link>
+          <span>Back to Previous Screen</span>
+        </button>
         <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
           {targetPhase}
         </span>

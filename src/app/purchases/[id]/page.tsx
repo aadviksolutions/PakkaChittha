@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, use, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Truck,
@@ -81,6 +82,7 @@ interface PurchaseDetail {
 
 function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const toast = useToast();
   const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,12 +236,21 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link
-            href="/purchases"
-            className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors"
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/purchases');
+              }
+            }}
+            className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
+            title="Back to previous screen"
+            aria-label="Back to previous screen"
           >
             <ArrowLeft className="w-4 h-4" />
-          </Link>
+          </button>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs text-slate-500">

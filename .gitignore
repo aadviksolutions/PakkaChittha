@@ -41,6 +41,14 @@ yarn-error.log*
 next-env.d.ts
 .neon
 
+# sqlite & secrets
+*.sqlite*
+*.db*
+.secrets/
+**/data/*.sqlite*
+**/data/.secrets/
+YouPI-PG-main/
+
 # android & gradle
 .gradle/
 build/

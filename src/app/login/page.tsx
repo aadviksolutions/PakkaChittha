@@ -1138,7 +1138,7 @@ function LoginForm() {
                 <p className="font-semibold text-slate-800">Workspace Administrator Support</p>
                 <p className="text-[11px] text-slate-500">
                   Email support at:{' '}
-                  <span className="font-mono font-medium text-[#071F38]">admin@lenden.local</span>
+                  <span className="font-mono font-medium text-[#071F38]">admin@pakkachittha.com</span>
                 </p>
                 <p className="text-[11px] text-slate-500">
                   Or contact your business owner to generate an administrative password reset.
@@ -1283,7 +1283,7 @@ function LoginForm() {
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-[#EA580C]" />
-                  <span>support@lenden.local / admin@lenden.local</span>
+                  <span>support@pakkachittha.com / admin@pakkachittha.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-[#EA580C]" />

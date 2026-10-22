@@ -38,7 +38,7 @@ export function useEntitlements(): UseEntitlementsResult {
   const status = sub?.status || 'TRIALING';
   const isTrial = Boolean(sub?.isTrial || status === 'TRIALING' || rawPlan === 'FREE_TRIAL');
   const isExpired = Boolean(sub?.isExpired || status === 'EXPIRED');
-  const trialDaysRemaining = typeof sub?.trialDaysRemaining === 'number' ? sub.trialDaysRemaining : 14;
+  const trialDaysRemaining = typeof sub?.trialDaysRemaining === 'number' ? sub.trialDaysRemaining : 7;
 
   const isFreeKhata = planKey === 'FREE_KHATA';
   const isStarter = planKey === 'STARTER';

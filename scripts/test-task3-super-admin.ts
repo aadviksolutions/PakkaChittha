@@ -8,8 +8,8 @@ async function runTask3Tests() {
   console.log('--- TASK 3 VERIFICATION: SUPER ADMIN PLATFORM AUDIT ---');
   console.log('======================================================\n');
 
-  const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@lenden.local';
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'SuperAdmin@Lenden2026!';
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL || 'admin@pakkachittha.com';
+  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@Pakkachittha@2026';
 
   // Step 1: Security Gating Verification (Unauthenticated / Regular Tenant Rejection)
   console.log('[Step 1] Verifying RBAC Security Gating on Super Admin Endpoints...');

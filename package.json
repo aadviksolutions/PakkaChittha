@@ -20,6 +20,7 @@
     "test:fast-billing": "tsx scripts/test-fast-billing-and-whatsapp.ts",
     "test:free-khata": "tsx scripts/test-free-khata.ts",
     "test:razorpay": "tsx scripts/test-razorpay-integration.ts",
+    "test:youpi": "tsx scripts/test-youpi-isolated-integration.ts",
     "test:google-sso": "tsx scripts/test-google-sso.ts"
   },
   "dependencies": {

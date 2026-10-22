@@ -643,12 +643,21 @@ function InvoiceCreationForm() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <Link
-            href="/invoices"
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/invoices');
+              }
+            }}
             className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            title="Back to previous screen"
+            aria-label="Back to previous screen"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Link>
+          </button>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Create New Invoice

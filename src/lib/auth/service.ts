@@ -32,7 +32,7 @@ export interface LoginInput {
  * 1. A new User with strictly forced platformRole: USER (preventing any escalation).
  * 2. A new Business workspace tenant.
  * 3. A BusinessMembership making the user the BUSINESS_OWNER.
- * 4. A 14-day Free Trial Subscription for the business.
+ * 4. A 7-day Free Trial Subscription for the business.
  * 5. An active Session.
  * All in an atomic ACID database transaction.
  */

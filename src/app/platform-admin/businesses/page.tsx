@@ -56,7 +56,7 @@ export default function PlatformAdminBusinessesPage() {
   const [selectedTenant, setSelectedTenant] = useState<TenantBusiness | null>(null);
   const [modalType, setModalType] = useState<'STATUS' | 'PLAN' | 'EXTEND' | 'VIEW' | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('GROWTH_PRO');
-  const [extensionDays, setExtensionDays] = useState('14');
+  const [extensionDays, setExtensionDays] = useState('7');
   const [actionReason, setActionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -606,8 +606,8 @@ export default function PlatformAdminBusinessesPage() {
                 onChange={(e) => setExtensionDays(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
               >
-                <option value="7">+7 Days</option>
-                <option value="14">+14 Days (Standard Extension)</option>
+                <option value="7">+7 Days (Standard Extension)</option>
+                <option value="14">+14 Days</option>
                 <option value="30">+30 Days (1 Month Complimentary)</option>
                 <option value="60">+60 Days</option>
                 <option value="90">+90 Days (Quarterly Extension)</option>

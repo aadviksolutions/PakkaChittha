@@ -269,7 +269,7 @@ export default function SubscriptionPage() {
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {isTrial
-                    ? `14-Day Free Evaluation Period (${subscription?.trialDaysRemaining || 14} days remaining)`
+                    ? `7-Day Free Evaluation Period (${subscription?.trialDaysRemaining || 7} days remaining)`
                     : `Active subscription valid until ${
                         subscription?.endDate
                           ? new Date(subscription.endDate).toLocaleDateString('en-IN', {

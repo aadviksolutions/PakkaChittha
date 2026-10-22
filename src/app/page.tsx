@@ -27,12 +27,27 @@ function DashboardContent() {
 
   React.useEffect(() => {
     if (loading) return;
+    if (isSuperAdmin) {
+      router.replace('/platform-admin');
+      return;
+    }
     if (isFreeKhata) {
       router.replace('/free-khata');
     } else if (!activeBusiness && user) {
       router.replace('/ghar-kharcha');
     }
-  }, [isFreeKhata, activeBusiness, user, loading, router]);
+  }, [isFreeKhata, activeBusiness, user, loading, router, isSuperAdmin]);
+
+  // If user is Super Admin, strictly route them to the Platform Admin panel (no store billing/stock)
+  if (isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center text-slate-500 text-xs">
+        <div className="w-6 h-6 border-2 border-[#00B887] border-t-transparent rounded-full animate-spin mb-3" />
+        <span className="font-semibold text-slate-700">Opening Platform Administration...</span>
+        <p className="text-[11px] text-slate-400 mt-1">Taking you to the Super Admin control center.</p>
+      </div>
+    );
+  }
 
   // If user is on permanent Free Khata, strictly route them to the Free Khata ledger dashboard
   if (isFreeKhata) {

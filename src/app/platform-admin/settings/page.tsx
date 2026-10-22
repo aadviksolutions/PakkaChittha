@@ -39,7 +39,7 @@ export default function PlatformAdminSettingsPage() {
   const [platformName, setPlatformName] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportPhone, setSupportPhone] = useState('');
-  const [defaultTrialDays, setDefaultTrialDays] = useState(14);
+  const [defaultTrialDays, setDefaultTrialDays] = useState(7);
   const [gracePeriodDays, setGracePeriodDays] = useState(3);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [allowPublicRegistration, setAllowPublicRegistration] = useState(true);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Users,
@@ -34,6 +35,7 @@ interface ContactItem {
 }
 
 function ContactsContent() {
+  const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,12 +147,21 @@ function ContactsContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/free-khata"
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/free-khata');
+                }
+              }}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="Back to previous screen"
+              aria-label="Back to previous screen"
             >
               <ArrowLeft className="w-4 h-4" />
-            </Link>
+            </button>
             <h1 className="text-xl sm:text-2xl font-black text-[#071F38]">
               All People & Contacts
             </h1>

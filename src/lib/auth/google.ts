@@ -460,7 +460,7 @@ export async function authenticateGoogleUser(
           },
         });
         const trialStartDate = new Date();
-        const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000);
         const sub = await prisma.subscription.create({
           data: {
             businessId: newBiz.id,
@@ -468,7 +468,7 @@ export async function authenticateGoogleUser(
             status: SubscriptionStatus.TRIALING,
             startDate: trialStartDate,
             endDate: trialEndDate,
-            trialDaysRemaining: 14,
+            trialDaysRemaining: 7,
             maxMonthlyInvoices: 500,
             maxStaffSeats: 3,
             whatsAppQuota: 100,
@@ -644,7 +644,7 @@ export async function authenticateGoogleUser(
       household: null,
     };
   } else {
-    // 3. Provision standard Business Workspace Tenant with 14-day Free Trial
+    // 3. Provision standard Business Workspace Tenant with 7-day Free Trial
     const defaultBizName = `${cleanName}'s Business`;
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -679,7 +679,7 @@ export async function authenticateGoogleUser(
       });
 
       const trialStartDate = new Date();
-      const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000);
       const subscription = await tx.subscription.create({
         data: {
           businessId: business.id,
@@ -687,7 +687,7 @@ export async function authenticateGoogleUser(
           status: SubscriptionStatus.TRIALING,
           startDate: trialStartDate,
           endDate: trialEndDate,
-          trialDaysRemaining: 14,
+          trialDaysRemaining: 7,
           maxMonthlyInvoices: 500,
           maxStaffSeats: 3,
           whatsAppQuota: 100,
