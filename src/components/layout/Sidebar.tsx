@@ -369,8 +369,8 @@ export function Sidebar({
               </Link>
 
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[9px] text-slate-400">
-                <span title="Powered by Lakshya Studios • Co-Powered by Lionor Digital • Developed by Aadvik Solutions">
-                  Powered by Lakshya • Co-Powered by Lionor • Dev by Aadvik
+                <span title="Powered by Lakshya Studios • Co-Powered by Lionoar Digital • Developed by Aadvik Solutions">
+                  Powered by Lakshya • Co-Powered by Lionoar • Dev by Aadvik
                 </span>
                 <span className="font-mono text-[8px] text-slate-300">v1.0</span>
               </div>

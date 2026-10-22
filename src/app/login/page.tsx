@@ -1054,7 +1054,7 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ATTRIBUTION — POWERED BY LAKSHYA STUDIOS, CO-POWERED BY LIONOR DIGITAL & DEVELOPED BY AADVIK SOLUTIONS */}
+          {/* ATTRIBUTION — POWERED BY LAKSHYA STUDIOS, CO-POWERED BY LIONOAR DIGITAL & DEVELOPED BY AADVIK SOLUTIONS */}
           <div className="flex items-center justify-center gap-3 sm:gap-6 mt-2 pt-1 border-t border-slate-100 flex-wrap">
             {/* Powered by Lakshya Studios */}
             <div className="flex items-center gap-2">
@@ -1073,18 +1073,18 @@ function LoginForm() {
             {/* Subtle Vertical Divider */}
             <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
-            {/* Co-Powered by Lionor Digital */}
+            {/* Co-Powered by Lionoar Digital */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] xl:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Co-Powered by
               </span>
               <div className="flex items-center gap-1.5 transition-transform hover:scale-105">
                 <img
-                  src="/lionor-digital-logo.png"
-                  alt="Lionor Digital"
+                  src="/lionoar-digital-logo.png"
+                  alt="Lionoar Digital"
                   className="h-5 xl:h-5.5 w-auto object-contain rounded-full shadow-2xs"
                 />
-                <span className="text-[11px] xl:text-xs font-bold text-slate-800 tracking-tight">Lionor Digital</span>
+                <span className="text-[11px] xl:text-xs font-bold text-slate-800 tracking-tight">Lionoar Digital</span>
               </div>
             </div>
 
@@ -1241,7 +1241,7 @@ function LoginForm() {
                 From professional GST invoicing to permanent Free Udhaar Khata, Pakka Chittha streamlines your entire business bookkeeping.
               </p>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-                Powered by <strong>Lakshya Studios</strong> • Co-Powered by <strong>Lionor Digital</strong> • Developed by <strong>Aadvik Solutions</strong>.
+                Powered by <strong>Lakshya Studios</strong> • Co-Powered by <strong>Lionoar Digital</strong> • Developed by <strong>Aadvik Solutions</strong>.
               </div>
             </div>
 

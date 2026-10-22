@@ -663,11 +663,11 @@ function RegisterForm() {
             <span className="inline-flex items-center gap-1">
               Co-Powered by
               <img
-                src="/lionor-digital-logo.png"
-                alt="Lionor Digital"
+                src="/lionoar-digital-logo.png"
+                alt="Lionoar Digital"
                 className="h-3.5 w-3.5 object-contain rounded-full inline"
               />
-              <strong className="text-slate-200">Lionor Digital</strong>
+              <strong className="text-slate-200">Lionoar Digital</strong>
             </span>
             <span className="text-slate-600 hidden sm:inline">•</span>
             <span>Developed by <span className="text-emerald-400 font-semibold tracking-wide">Aadvik Solutions</span></span>
