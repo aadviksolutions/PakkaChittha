@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   Building2,
   User,
@@ -50,6 +51,7 @@ const TRADE_TYPES = [
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user: loggedInUser, activeBusiness: loggedInBusiness, loading: authLoading } = useAuth();
   const planParam = searchParams.get('plan');
   const initialCategory =
     planParam === 'ghar_kharcha'
@@ -80,6 +82,21 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-redirect if user is already logged in
+  React.useEffect(() => {
+    if (!authLoading && loggedInUser) {
+      if (loggedInUser.platformRole === 'SUPER_ADMIN') {
+        window.location.href = '/platform-admin';
+      } else if (loggedInBusiness?.subscription?.plan === 'FREE_KHATA') {
+        window.location.href = '/free-khata';
+      } else if (!loggedInBusiness) {
+        window.location.href = '/ghar-kharcha';
+      } else {
+        window.location.href = '/';
+      }
+    }
+  }, [loggedInUser, loggedInBusiness, authLoading]);
 
   React.useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -158,8 +175,7 @@ function RegisterForm() {
         }
 
         const redirectParam = searchParams.get('redirect');
-        router.push(redirectParam || data.redirectUrl || '/ghar-kharcha');
-        router.refresh();
+        window.location.href = redirectParam || data.redirectUrl || '/ghar-kharcha';
       } else if (category === 'FREE_KHATA') {
         const res = await fetch('/api/auth/register-khata', {
           method: 'POST',
@@ -177,8 +193,7 @@ function RegisterForm() {
           throw new Error(data.error || 'Failed to register Free Khata account.');
         }
 
-        router.push(data.redirectUrl || '/free-khata');
-        router.refresh();
+        window.location.href = data.redirectUrl || '/free-khata';
       } else {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
@@ -191,8 +206,7 @@ function RegisterForm() {
           throw new Error(data.error || 'Failed to register business workspace.');
         }
 
-        router.push('/');
-        router.refresh();
+        window.location.href = '/';
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred during registration.');

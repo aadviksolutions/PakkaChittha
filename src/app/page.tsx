@@ -60,6 +60,17 @@ function DashboardContent() {
     );
   }
 
+  // If user has no active business (e.g. Household Ghar Kharcha user), route to Ghar Kharcha
+  if (!activeBusiness && user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center text-slate-500 text-xs">
+        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <span className="font-semibold text-slate-700">Opening Ghar Kharcha...</span>
+        <p className="text-[11px] text-slate-400 mt-1">Taking you to your household expenses and budget.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5 pb-8">
       {/* Forbidden access notice if redirected from platform admin */}

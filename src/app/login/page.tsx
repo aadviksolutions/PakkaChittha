@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   Lock,
   Mail,
@@ -353,6 +354,7 @@ function LoginForm() {
   const redirectUrl = searchParams.get('redirect') || '/';
   const modeParam = searchParams.get('mode');
 
+  const { user: loggedInUser, activeBusiness: loggedInBusiness, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -370,6 +372,25 @@ function LoginForm() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-redirect if user is already logged in
+  useEffect(() => {
+    if (!authLoading && loggedInUser) {
+      let target = redirectUrl;
+      if (!target || target === '/login' || target === '/select-mode' || target === '/') {
+        if (loggedInUser.platformRole === 'SUPER_ADMIN') {
+          target = '/platform-admin';
+        } else if (loggedInBusiness?.subscription?.plan === 'FREE_KHATA') {
+          target = '/free-khata';
+        } else if (!loggedInBusiness) {
+          target = '/ghar-kharcha';
+        } else {
+          target = '/';
+        }
+      }
+      window.location.href = target;
+    }
+  }, [loggedInUser, loggedInBusiness, authLoading, redirectUrl]);
 
   useEffect(() => {
     try {
@@ -445,16 +466,21 @@ function LoginForm() {
         );
       }
 
-      if (data.user?.platformRole === 'SUPER_ADMIN' && redirectUrl === '/') {
-        router.push('/platform-admin');
-      } else if (data.business?.plan === 'FREE_KHATA' && redirectUrl === '/') {
-        router.push('/free-khata');
-      } else if (!data.business && redirectUrl === '/') {
-        router.push('/ghar-kharcha');
-      } else {
-        router.push(redirectUrl);
+      // Hard redirect guarantees complete session cookie transmission and fresh AuthProvider hydration
+      let destination = redirectUrl;
+      if (!destination || destination === '/login' || destination === '/select-mode' || destination === '/') {
+        if (data.user?.platformRole === 'SUPER_ADMIN') {
+          destination = '/platform-admin';
+        } else if (data.business?.plan === 'FREE_KHATA') {
+          destination = '/free-khata';
+        } else if (!data.business) {
+          destination = '/ghar-kharcha';
+        } else {
+          destination = '/';
+        }
       }
-      router.refresh();
+
+      window.location.href = destination;
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'An error occurred during login. Please try again.'

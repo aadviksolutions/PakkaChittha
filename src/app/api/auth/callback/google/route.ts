@@ -135,8 +135,10 @@ export async function GET(request: NextRequest) {
 
     // Determine final destination based on requested mode, user type, and redirect path
     let finalDestination = targetRedirect;
-    if (finalDestination === '/') {
-      if (authResult.household && !authResult.business) {
+    if (!finalDestination || finalDestination === '/' || finalDestination === '/select-mode' || finalDestination === '/login') {
+      if (authResult.user.platformRole === 'SUPER_ADMIN') {
+        finalDestination = '/platform-admin';
+      } else if (authResult.household && !authResult.business) {
         finalDestination = '/ghar-kharcha';
       } else if (authResult.business?.plan === SubscriptionPlan.FREE_KHATA) {
         finalDestination = '/free-khata';

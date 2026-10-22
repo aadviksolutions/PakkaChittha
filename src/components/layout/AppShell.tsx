@@ -18,14 +18,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const { openAction } = useActionModal();
-  const { activeBusiness, user } = useAuth();
+  const { activeBusiness, user, loading: authLoading } = useAuth();
 
   const isAuthPage =
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/select-mode' ||
     pathname === '/welcome' ||
-    (pathname === '/' && !user) ||
+    (pathname === '/' && !user && !authLoading) ||
     pathname.endsWith('/print') ||
     pathname.startsWith('/view/invoice/');
 

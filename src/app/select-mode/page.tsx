@@ -28,28 +28,24 @@ function ModeSelectionContent() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        if (redirectParam && redirectParam.startsWith('/')) {
-          router.replace(redirectParam);
-          return;
+        let dest = redirectParam && redirectParam.startsWith('/') && redirectParam !== '/select-mode' && redirectParam !== '/login' ? redirectParam : null;
+        if (!dest) {
+          if (user.platformRole === 'SUPER_ADMIN') {
+            dest = '/platform-admin';
+          } else if (activeBusiness?.subscription?.plan === 'FREE_KHATA') {
+            dest = '/free-khata';
+          } else if (!activeBusiness) {
+            dest = '/ghar-kharcha';
+          } else {
+            dest = '/';
+          }
         }
-        if (user.platformRole === 'SUPER_ADMIN') {
-          router.replace('/platform-admin');
-          return;
-        }
-        if (activeBusiness?.subscription?.plan === 'FREE_KHATA') {
-          router.replace('/free-khata');
-          return;
-        }
-        if (!activeBusiness) {
-          router.replace('/ghar-kharcha');
-          return;
-        }
-        router.replace('/');
+        window.location.href = dest;
         return;
       }
       setCheckingAuth(false);
     }
-  }, [user, activeBusiness, loading, redirectParam, router]);
+  }, [user, activeBusiness, loading, redirectParam]);
 
   if (loading || (checkingAuth && user)) {
     return (

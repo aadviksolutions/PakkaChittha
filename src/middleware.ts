@@ -72,7 +72,14 @@ export function middleware(request: NextRequest) {
       pathname === '/welcome')
   ) {
     const redirectParam = request.nextUrl.searchParams.get('redirect');
-    const destination = redirectParam && redirectParam.startsWith('/') ? redirectParam : '/';
+    const destination =
+      redirectParam &&
+      redirectParam.startsWith('/') &&
+      redirectParam !== '/login' &&
+      redirectParam !== '/register' &&
+      redirectParam !== '/select-mode'
+        ? redirectParam
+        : '/';
     return NextResponse.redirect(new URL(destination, request.url));
   }
 
