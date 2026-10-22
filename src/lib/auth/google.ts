@@ -131,6 +131,10 @@ export async function getGoogleOAuthConfig(): Promise<GoogleOAuthConfig> {
  * Computes standard redirect URI dynamically based on request headers or APP_URL.
  */
 export function getGoogleRedirectUri(req?: Request): string {
+  if (process.env.GOOGLE_REDIRECT_URI && process.env.GOOGLE_REDIRECT_URI.trim()) {
+    return process.env.GOOGLE_REDIRECT_URI.trim();
+  }
+
   if (req) {
     const proto =
       req.headers.get('x-forwarded-proto') ||
@@ -138,14 +142,14 @@ export function getGoogleRedirectUri(req?: Request): string {
     const host =
       req.headers.get('x-forwarded-host') ||
       req.headers.get('host') ||
-      'lenden-pi.vercel.app';
+      'www.pakkachittha.com';
     return `${proto}://${host}/api/auth/callback/google`;
   }
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://lenden-pi.vercel.app');
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.pakkachittha.com');
 
   return `${appUrl.replace(/\/$/, '')}/api/auth/callback/google`;
 }
