@@ -81,10 +81,46 @@ function RegisterForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      if (errorParam === 'cancelled') {
+        setError('Google sign-up was cancelled. You can try again or register using email and password below.');
+      } else if (errorParam === 'invalid_state') {
+        setError('Google sign-up session expired or security verification failed. Please try again.');
+      } else if (errorParam === 'config_missing') {
+        setError('Google Sign-Up is not configured yet. GOOGLE_CLIENT_ID is missing in environment variables or platform settings.');
+      } else if (errorParam === 'google_secret_missing') {
+        setError('Google Client Secret is not configured. Please set GOOGLE_CLIENT_SECRET in Vercel or environment variables.');
+      } else if (errorParam === 'unverified_email') {
+        setError('Your Google account email is not verified by Google. For security reasons, please verify your email on Google or register with email and password.');
+      } else if (errorParam === 'account_suspended') {
+        setError('Your account has been administratively suspended. Please contact platform support.');
+      } else {
+        setError('Google sign-up failed. Please try again or complete registration using the form below.');
+      }
+    }
+  }, [searchParams]);
+
   const handleGoogleSignUp = () => {
     setError(null);
     setGoogleLoading(true);
-    window.location.href = '/api/auth/google';
+    const params = new URLSearchParams();
+    if (category === 'GHAR_KHARCHA') {
+      params.set('mode', 'household');
+      params.set('plan', 'ghar_kharcha');
+      params.set('redirect', '/ghar-kharcha');
+    } else if (category === 'FREE_KHATA') {
+      params.set('mode', 'free_khata');
+      params.set('plan', 'free_khata');
+      params.set('redirect', '/free-khata');
+    } else {
+      params.set('mode', 'business');
+      params.set('plan', selectedPlan.toLowerCase());
+      params.set('redirect', '/');
+    }
+    params.set('origin', 'register');
+    window.location.href = `/api/auth/google?${params.toString()}`;
   };
 
   const handleChange = (
@@ -589,7 +625,15 @@ function RegisterForm() {
                 />
               </svg>
             )}
-            <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+            <span>
+              {googleLoading
+                ? 'Connecting to Google...'
+                : isGharKharcha
+                ? 'Sign up with Google (Ghar Kharcha)'
+                : isFreeKhata
+                ? 'Sign up with Google (Free Khata)'
+                : 'Sign up with Google'}
+            </span>
           </button>
 
           <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
@@ -613,9 +657,21 @@ function RegisterForm() {
                 : 'Includes 7-day full feature trial • Dedicated Tenant Workspace'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-medium pt-1">
-            Developed by <span className="text-emerald-400 font-semibold tracking-wide">Aadvik Solutions</span>
-          </p>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 pt-2 text-[11px] text-slate-400 font-medium flex-wrap">
+            <span>Powered by <strong className="text-slate-200">Lakshya Studios</strong></span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="inline-flex items-center gap-1">
+              Co-Powered by
+              <img
+                src="/lionor-digital-logo.png"
+                alt="Lionor Digital"
+                className="h-3.5 w-3.5 object-contain rounded-full inline"
+              />
+              <strong className="text-slate-200">Lionor Digital</strong>
+            </span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span>Developed by <span className="text-emerald-400 font-semibold tracking-wide">Aadvik Solutions</span></span>
+          </div>
         </div>
       </div>
     </div>

@@ -23,6 +23,11 @@ export interface GoogleUserProfile {
   emailVerified: boolean;
 }
 
+export interface GoogleAuthOptions {
+  mode?: 'household' | 'business' | 'free_khata';
+  plan?: string;
+}
+
 export interface GoogleAuthResult {
   isNewUser: boolean;
   sessionToken: string;
@@ -33,12 +38,18 @@ export interface GoogleAuthResult {
     name: string;
     email: string;
     platformRole: PlatformRole;
+    avatarUrl?: string | null;
   };
   business: {
     id: string;
     name: string;
     role?: BusinessRole;
     plan?: SubscriptionPlan | null;
+  } | null;
+  household?: {
+    id: string;
+    name: string;
+    role: string;
   } | null;
 }
 
@@ -276,13 +287,16 @@ export async function verifyGoogleIdToken(
 
 /**
  * Core authentication handler for verified Google profiles:
- * - If user exists: Securely creates session for existing account, keeping workspace,
- *   invoices, customers, subscriptions, and free-trial dates completely preserved.
- * - If user is new: Automatically executes registration transaction, provisions business
- *   workspace, establishes business ownership, and grants standard 14-day Free Trial.
+ * - Validates verified email status from Google.
+ * - Matches by stable Google subject identifier (sub) or verified email.
+ * - Links googleId and avatar to existing accounts without duplication.
+ * - Respects requested mode ('household' for Mera Ghar, 'free_khata', or 'business').
+ * - Preserves existing workspace, invoices, subscriptions, and member data.
+ * - Keeps platformRole strictly USER on registration (never grants SUPER_ADMIN).
  */
 export async function authenticateGoogleUser(
-  profile: GoogleUserProfile
+  profile: GoogleUserProfile,
+  options?: GoogleAuthOptions
 ): Promise<GoogleAuthResult> {
   const normalizedEmail = profile.email.trim().toLowerCase();
 
@@ -290,9 +304,16 @@ export async function authenticateGoogleUser(
     throw new Error('Invalid email address provided by Google.');
   }
 
-  // Find existing user by verified email
-  const existingUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+  // Security check: never automatically merge or authenticate unverified email
+  if (!profile.emailVerified) {
+    throw new Error(
+      'Google account email is not verified by Google. Please verify your email with Google or sign in using password.'
+    );
+  }
+
+  // 1. Search for existing user by stable Google subject ID (sub)
+  let existingUser = await prisma.user.findFirst({
+    where: { googleId: profile.id },
     include: {
       memberships: {
         include: {
@@ -306,11 +327,53 @@ export async function authenticateGoogleUser(
           },
         },
       },
+      householdMemberships: {
+        include: {
+          household: true,
+        },
+      },
     },
   });
 
+  // 2. If not found by googleId, search by normalized email
+  if (!existingUser) {
+    existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      include: {
+        memberships: {
+          include: {
+            business: {
+              include: {
+                subscriptions: {
+                  orderBy: { createdAt: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+          },
+        },
+        householdMemberships: {
+          include: {
+            household: true,
+          },
+        },
+      },
+    });
+
+    // If account found by verified email, associate stable googleId
+    if (existingUser) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          googleId: profile.id,
+          avatarUrl: profile.picture || existingUser.avatarUrl,
+        },
+      });
+    }
+  }
+
+  // EXISTING USER LOGIN FLOW
   if (existingUser) {
-    // Check suspension
     if ((existingUser as any).isSuspended) {
       const reason =
         (existingUser as any).suspendedReason ||
@@ -319,13 +382,110 @@ export async function authenticateGoogleUser(
     }
 
     const primaryMembership = existingUser.memberships[0] || null;
-    const primaryBusiness = primaryMembership?.business || null;
-    const latestSubscription = primaryBusiness?.subscriptions?.[0] || null;
+    const existingBusiness = primaryMembership?.business || null;
+    let activeBusinessId: string | null = existingBusiness?.id || null;
+    let activeBusinessName: string | null = existingBusiness?.name || null;
+    let activeBusinessRole: BusinessRole | undefined = primaryMembership?.role;
+    let activeBusinessPlan: SubscriptionPlan | null = existingBusiness?.subscriptions?.[0]?.plan || null;
 
-    // Create a new session in PostgreSQL for the existing account
+    const primaryHouseholdMembership = existingUser.householdMemberships[0] || null;
+    let primaryHousehold = primaryHouseholdMembership?.household || null;
+
+    const wantsHousehold = options?.mode === 'household' || options?.plan === 'ghar_kharcha';
+    const wantsFreeKhata = options?.mode === 'free_khata' || options?.plan === 'free_khata';
+
+    // If user explicitly signed in for Household mode and doesn't have a household yet, create one
+    if (wantsHousehold && !primaryHousehold) {
+      const { createHousehold } = await import('@/lib/household/householdService');
+      primaryHousehold = await createHousehold(existingUser.id, {
+        name: `${existingUser.name}'s Household`,
+        currency: 'INR',
+      });
+    }
+
+    // If user explicitly signed in for Business/Khata mode and has no business, provision it
+    if (!wantsHousehold && !existingBusiness) {
+      if (wantsFreeKhata) {
+        const defaultBizName = `${existingUser.name}'s Khata`;
+        const newBiz = await prisma.business.create({
+          data: {
+            name: defaultBizName,
+            email: normalizedEmail,
+            currency: 'INR',
+          },
+        });
+        await prisma.businessMembership.create({
+          data: {
+            userId: existingUser.id,
+            businessId: newBiz.id,
+            role: BusinessRole.BUSINESS_OWNER,
+          },
+        });
+        const sub = await prisma.subscription.create({
+          data: {
+            businessId: newBiz.id,
+            plan: SubscriptionPlan.FREE_KHATA,
+            status: SubscriptionStatus.ACTIVE,
+            trialDaysRemaining: 999999,
+            monthlyPrice: 0,
+            maxMonthlyInvoices: 0,
+            maxStaffSeats: 1,
+            whatsAppQuota: 999999,
+          },
+        });
+        activeBusinessId = newBiz.id;
+        activeBusinessName = newBiz.name;
+        activeBusinessRole = BusinessRole.BUSINESS_OWNER;
+        activeBusinessPlan = sub.plan;
+      } else if (options?.mode === 'business') {
+        const defaultBizName = `${existingUser.name}'s Business`;
+        const newBiz = await prisma.business.create({
+          data: {
+            name: defaultBizName,
+            legalName: defaultBizName,
+            tradeType: 'Retail & Wholesale',
+            email: normalizedEmail,
+            currency: 'INR',
+          },
+        });
+        await prisma.businessMembership.create({
+          data: {
+            userId: existingUser.id,
+            businessId: newBiz.id,
+            role: BusinessRole.BUSINESS_OWNER,
+          },
+        });
+        const trialStartDate = new Date();
+        const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const sub = await prisma.subscription.create({
+          data: {
+            businessId: newBiz.id,
+            plan: SubscriptionPlan.FREE_TRIAL,
+            status: SubscriptionStatus.TRIALING,
+            startDate: trialStartDate,
+            endDate: trialEndDate,
+            trialDaysRemaining: 14,
+            maxMonthlyInvoices: 500,
+            maxStaffSeats: 3,
+            whatsAppQuota: 100,
+          },
+        });
+        activeBusinessId = newBiz.id;
+        activeBusinessName = newBiz.name;
+        activeBusinessRole = BusinessRole.BUSINESS_OWNER;
+        activeBusinessPlan = sub.plan;
+      }
+    }
+
+    // Determine session active business:
+    // If user requested Household mode or only has household, session is scoped without business (null)
+    const sessionBusinessId = wantsHousehold
+      ? null
+      : activeBusinessId;
+
     const { sessionToken, expiresAt, sessionId } = await createSession(
       existingUser.id,
-      primaryBusiness ? primaryBusiness.id : null
+      sessionBusinessId
     );
 
     return {
@@ -338,100 +498,225 @@ export async function authenticateGoogleUser(
         name: existingUser.name,
         email: existingUser.email,
         platformRole: existingUser.platformRole,
+        avatarUrl: existingUser.avatarUrl || profile.picture || null,
       },
-      business: primaryBusiness
+      business: activeBusinessId && activeBusinessName
         ? {
-            id: primaryBusiness.id,
-            name: primaryBusiness.name,
-            role: primaryMembership?.role,
-            plan: latestSubscription?.plan || null,
+            id: activeBusinessId,
+            name: activeBusinessName,
+            role: activeBusinessRole || BusinessRole.BUSINESS_OWNER,
+            plan: activeBusinessPlan,
+          }
+        : null,
+      household: primaryHousehold
+        ? {
+            id: primaryHousehold.id,
+            name: primaryHousehold.name,
+            role: primaryHouseholdMembership?.role || 'OWNER',
           }
         : null,
     };
   }
 
   // NEW USER REGISTRATION FLOW
-  // Generate random dummy password to satisfy the non-null passwordHash constraint
+  const cleanName = profile.name.trim() || normalizedEmail.split('@')[0];
+  const wantsHousehold = options?.mode === 'household' || options?.plan === 'ghar_kharcha';
+  const wantsFreeKhata = options?.mode === 'free_khata' || options?.plan === 'free_khata';
+
   const randomDummyPassword = crypto.randomBytes(32).toString('hex');
   const dummyPasswordHash = await hashPassword(randomDummyPassword);
 
-  const cleanName = profile.name.trim() || normalizedEmail.split('@')[0];
-  const defaultBizName = `${cleanName}'s Business`;
-
-  const result = await prisma.$transaction(async (tx) => {
-    // 1. Create User
-    const user = await tx.user.create({
+  if (wantsHousehold) {
+    // 1. Provision User & Household under Mera Ghar (100% Free)
+    const user = await prisma.user.create({
       data: {
         name: cleanName,
         email: normalizedEmail,
+        googleId: profile.id,
+        avatarUrl: profile.picture || null,
         passwordHash: dummyPasswordHash,
         platformRole: PlatformRole.USER,
       },
     });
 
-    // 2. Create Business Workspace Tenant
-    const business = await tx.business.create({
-      data: {
-        name: defaultBizName,
-        legalName: defaultBizName,
-        tradeType: 'Retail & Wholesale',
-        email: normalizedEmail,
-        city: 'Raipur',
-        state: 'Chhattisgarh',
-        currency: 'INR',
-      },
+    const { createHousehold } = await import('@/lib/household/householdService');
+    const household = await createHousehold(user.id, {
+      name: `${cleanName}'s Household`,
+      currency: 'INR',
+      monthlyBudget: 0,
     });
 
-    // 3. Link Membership as BUSINESS_OWNER
-    const membership = await tx.businessMembership.create({
-      data: {
-        userId: user.id,
-        businessId: business.id,
-        role: BusinessRole.BUSINESS_OWNER,
+    const { sessionToken, expiresAt, sessionId } = await createSession(user.id, null);
+
+    return {
+      isNewUser: true,
+      sessionToken,
+      expiresAt,
+      sessionId,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        platformRole: user.platformRole,
+        avatarUrl: user.avatarUrl,
       },
+      business: null,
+      household: {
+        id: household.id,
+        name: household.name,
+        role: 'OWNER',
+      },
+    };
+  } else if (wantsFreeKhata) {
+    // 2. Provision User & Business under Free Khata (Permanent Free Ledger)
+    const defaultBizName = `${cleanName}'s Khata`;
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: cleanName,
+          email: normalizedEmail,
+          googleId: profile.id,
+          avatarUrl: profile.picture || null,
+          passwordHash: dummyPasswordHash,
+          platformRole: PlatformRole.USER,
+        },
+      });
+
+      const business = await tx.business.create({
+        data: {
+          name: defaultBizName,
+          email: normalizedEmail,
+          currency: 'INR',
+        },
+      });
+
+      const membership = await tx.businessMembership.create({
+        data: {
+          userId: user.id,
+          businessId: business.id,
+          role: BusinessRole.BUSINESS_OWNER,
+        },
+      });
+
+      const subscription = await tx.subscription.create({
+        data: {
+          businessId: business.id,
+          plan: SubscriptionPlan.FREE_KHATA,
+          status: SubscriptionStatus.ACTIVE,
+          trialDaysRemaining: 999999,
+          monthlyPrice: 0,
+          maxMonthlyInvoices: 0,
+          maxStaffSeats: 1,
+          whatsAppQuota: 999999,
+        },
+      });
+
+      return { user, business, membership, subscription };
     });
 
-    // 4. Provision Initial Trial Subscription (14 days)
-    const trialStartDate = new Date();
-    const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
-    const subscription = await tx.subscription.create({
-      data: {
-        businessId: business.id,
-        plan: SubscriptionPlan.FREE_TRIAL,
-        status: SubscriptionStatus.TRIALING,
-        startDate: trialStartDate,
-        endDate: trialEndDate,
-        trialDaysRemaining: 14,
-        maxMonthlyInvoices: 500,
-        maxStaffSeats: 3,
-        whatsAppQuota: 100,
+    const { sessionToken, expiresAt, sessionId } = await createSession(
+      result.user.id,
+      result.business.id
+    );
+
+    return {
+      isNewUser: true,
+      sessionToken,
+      expiresAt,
+      sessionId,
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        platformRole: result.user.platformRole,
+        avatarUrl: result.user.avatarUrl,
       },
+      business: {
+        id: result.business.id,
+        name: result.business.name,
+        role: result.membership.role,
+        plan: result.subscription.plan,
+      },
+      household: null,
+    };
+  } else {
+    // 3. Provision standard Business Workspace Tenant with 14-day Free Trial
+    const defaultBizName = `${cleanName}'s Business`;
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name: cleanName,
+          email: normalizedEmail,
+          googleId: profile.id,
+          avatarUrl: profile.picture || null,
+          passwordHash: dummyPasswordHash,
+          platformRole: PlatformRole.USER,
+        },
+      });
+
+      const business = await tx.business.create({
+        data: {
+          name: defaultBizName,
+          legalName: defaultBizName,
+          tradeType: 'Retail & Wholesale',
+          email: normalizedEmail,
+          city: 'Raipur',
+          state: 'Chhattisgarh',
+          currency: 'INR',
+        },
+      });
+
+      const membership = await tx.businessMembership.create({
+        data: {
+          userId: user.id,
+          businessId: business.id,
+          role: BusinessRole.BUSINESS_OWNER,
+        },
+      });
+
+      const trialStartDate = new Date();
+      const trialEndDate = new Date(trialStartDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const subscription = await tx.subscription.create({
+        data: {
+          businessId: business.id,
+          plan: SubscriptionPlan.FREE_TRIAL,
+          status: SubscriptionStatus.TRIALING,
+          startDate: trialStartDate,
+          endDate: trialEndDate,
+          trialDaysRemaining: 14,
+          maxMonthlyInvoices: 500,
+          maxStaffSeats: 3,
+          whatsAppQuota: 100,
+        },
+      });
+
+      return { user, business, membership, subscription };
     });
 
-    return { user, business, membership, subscription };
-  });
+    const { sessionToken, expiresAt, sessionId } = await createSession(
+      result.user.id,
+      result.business.id
+    );
 
-  const { sessionToken, expiresAt, sessionId } = await createSession(
-    result.user.id,
-    result.business.id
-  );
-
-  return {
-    isNewUser: true,
-    sessionToken,
-    expiresAt,
-    sessionId,
-    user: {
-      id: result.user.id,
-      name: result.user.name,
-      email: result.user.email,
-      platformRole: result.user.platformRole,
-    },
-    business: {
-      id: result.business.id,
-      name: result.business.name,
-      role: result.membership.role,
-      plan: result.subscription.plan,
-    },
-  };
+    return {
+      isNewUser: true,
+      sessionToken,
+      expiresAt,
+      sessionId,
+      user: {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        platformRole: result.user.platformRole,
+        avatarUrl: result.user.avatarUrl,
+      },
+      business: {
+        id: result.business.id,
+        name: result.business.name,
+        role: result.membership.role,
+        plan: result.subscription.plan,
+      },
+      household: null,
+    };
+  }
 }

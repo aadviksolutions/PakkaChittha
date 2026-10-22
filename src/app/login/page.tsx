@@ -387,13 +387,15 @@ function LoginForm() {
         } else if (errorParam === 'invalid_state') {
           setError('Google sign-in session expired or security verification failed. Please try again.');
         } else if (errorParam === 'config_missing') {
-          setError('Google Single Sign-On is not configured yet (missing Client ID).');
+          setError('Google Sign-In is not configured yet. GOOGLE_CLIENT_ID is missing in environment variables or platform settings.');
           setShowGoogleModal(true);
         } else if (errorParam === 'google_secret_missing') {
-          setError('Google Client Secret is not configured. Please add GOOGLE_CLIENT_SECRET in platform settings or Vercel.');
+          setError('Google Client Secret is not configured. Please set GOOGLE_CLIENT_SECRET in Vercel or environment variables.');
           setShowGoogleModal(true);
         } else if (errorParam === 'token_exchange_failed') {
-          setError('Could not complete authentication with Google. Please check your credentials or try again.');
+          setError('Could not complete authorization code exchange with Google. Please check your OAuth Client credentials.');
+        } else if (errorParam === 'unverified_email') {
+          setError('Your Google account email is not verified by Google. For security reasons, please verify your email on Google or log in with your email and password.');
         } else if (errorParam === 'account_suspended') {
           setError('Your account has been administratively suspended. Please contact platform support.');
         } else {
@@ -465,11 +467,15 @@ function LoginForm() {
   const handleGoogleSignIn = () => {
     setError(null);
     setGoogleLoading(true);
-    const targetRedirect =
-      redirectUrl && redirectUrl !== '/'
-        ? `?redirect=${encodeURIComponent(redirectUrl)}`
-        : '';
-    window.location.href = `/api/auth/google${targetRedirect}`;
+    const params = new URLSearchParams();
+    if (redirectUrl && redirectUrl !== '/') {
+      params.set('redirect', redirectUrl);
+    }
+    if (modeParam) {
+      params.set('mode', modeParam);
+    }
+    params.set('origin', 'login');
+    window.location.href = `/api/auth/google?${params.toString()}`;
   };
 
   return (
@@ -1048,8 +1054,8 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* ATTRIBUTION — POWERED BY LAKSHYA STUDIOS & DEVELOPED BY AADVIK SOLUTIONS */}
-          <div className="flex items-center justify-center gap-3 sm:gap-8 mt-2 pt-1 border-t border-slate-100 flex-wrap">
+          {/* ATTRIBUTION — POWERED BY LAKSHYA STUDIOS, CO-POWERED BY LIONOR DIGITAL & DEVELOPED BY AADVIK SOLUTIONS */}
+          <div className="flex items-center justify-center gap-3 sm:gap-6 mt-2 pt-1 border-t border-slate-100 flex-wrap">
             {/* Powered by Lakshya Studios */}
             <div className="flex items-center gap-2">
               <span className="text-[10px] xl:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
@@ -1061,6 +1067,24 @@ function LoginForm() {
                   alt="Lakshya Studios"
                   className="h-4.5 xl:h-5 w-auto object-contain rounded"
                 />
+              </div>
+            </div>
+
+            {/* Subtle Vertical Divider */}
+            <div className="hidden sm:block h-4 w-px bg-slate-200" />
+
+            {/* Co-Powered by Lionor Digital */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] xl:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Co-Powered by
+              </span>
+              <div className="flex items-center gap-1.5 transition-transform hover:scale-105">
+                <img
+                  src="/lionor-digital-logo.png"
+                  alt="Lionor Digital"
+                  className="h-5 xl:h-5.5 w-auto object-contain rounded-full shadow-2xs"
+                />
+                <span className="text-[11px] xl:text-xs font-bold text-slate-800 tracking-tight">Lionor Digital</span>
               </div>
             </div>
 
@@ -1217,7 +1241,7 @@ function LoginForm() {
                 From professional GST invoicing to permanent Free Udhaar Khata, Pakka Chittha streamlines your entire business bookkeeping.
               </p>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-                Powered by <strong>Lakshya Studios</strong> • Developed by <strong>Aadvik Solutions</strong>.
+                Powered by <strong>Lakshya Studios</strong> • Co-Powered by <strong>Lionor Digital</strong> • Developed by <strong>Aadvik Solutions</strong>.
               </div>
             </div>
 
@@ -1321,6 +1345,75 @@ function LoginForm() {
                 className="px-4 py-2 bg-[#071F38] text-white rounded-xl text-xs font-semibold hover:bg-[#0D2C4D] transition-colors cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Google OAuth Configuration Guidance Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-[#EA580C]" />
+                <h3 className="font-bold text-base text-[#071F38]">Google Authentication Setup</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoogleModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3.5 text-xs text-slate-600 max-h-[60vh] overflow-y-auto">
+              <p>
+                To enable <strong>Continue with Google</strong> in production and local development, configure the following credentials:
+              </p>
+
+              <div className="space-y-2">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="font-bold text-slate-800 text-[11px]">1. Required Environment Variables</p>
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-600 font-mono text-[10.5px]">
+                    <li>GOOGLE_CLIENT_ID</li>
+                    <li>GOOGLE_CLIENT_SECRET</li>
+                  </ul>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Add these in Vercel Project Settings &rarr; Environment Variables (for Production) and in your local <code>.env</code> file.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="font-bold text-slate-800 text-[11px]">2. Google Cloud Console Redirect URIs</p>
+                  <p className="text-[10.5px] text-slate-500 mt-0.5">
+                    In Google Cloud Console &rarr; Credentials &rarr; OAuth 2.0 Client IDs, add:
+                  </p>
+                  <div className="mt-1.5 p-2 bg-slate-100 rounded-lg font-mono text-[10px] text-slate-800 break-all space-y-1">
+                    <div>https://lenden-pi.vercel.app/api/auth/callback/google</div>
+                    <div>http://localhost:3000/api/auth/callback/google</div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="font-bold text-slate-800 text-[11px]">3. Authorized JavaScript Origins</p>
+                  <div className="mt-1.5 p-2 bg-slate-100 rounded-lg font-mono text-[10px] text-slate-800 break-all space-y-1">
+                    <div>https://lenden-pi.vercel.app</div>
+                    <div>http://localhost:3000</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowGoogleModal(false)}
+                className="px-4 py-2 bg-[#EA580C] hover:bg-[#D94E00] text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Got It
               </button>
             </div>
           </div>

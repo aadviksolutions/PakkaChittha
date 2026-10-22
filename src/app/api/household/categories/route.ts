@@ -10,9 +10,16 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const householdId = searchParams.get('householdId');
+    const search = searchParams.get('search') || undefined;
+    const type = (searchParams.get('type') as any) || undefined;
+    const includeArchived = searchParams.get('includeArchived') === 'true';
 
     const authContext = await requireHouseholdAccess(householdId);
-    const categories = await getHouseholdCategories(authContext.householdId);
+    const categories = await getHouseholdCategories(authContext.householdId, {
+      search,
+      type,
+      includeArchived,
+    });
 
     return NextResponse.json({
       success: true,
@@ -27,7 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { householdId, name, type, icon, color, monthlyBudget } = body;
+    const { householdId, name, type, icon, color, monthlyBudget, subcategories } = body;
 
     const authContext = await requireHouseholdAccess(householdId, [
       HouseholdRole.OWNER,
@@ -40,6 +47,7 @@ export async function POST(req: NextRequest) {
       icon,
       color,
       monthlyBudget,
+      subcategories: Array.isArray(subcategories) ? subcategories : [],
     });
 
     return NextResponse.json({

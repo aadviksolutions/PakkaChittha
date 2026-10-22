@@ -53,7 +53,9 @@ export function Header({
 
   const getPageTitle = () => {
     if (pathname === '/ghar-kharcha') return 'Ghar Kharcha Dashboard';
-    if (pathname.startsWith('/ghar-kharcha/transactions')) return 'Household Transactions';
+    if (pathname.startsWith('/ghar-kharcha/transactions')) return 'Kharcha Register';
+    if (pathname.startsWith('/ghar-kharcha/splits')) return 'Family Splits & Settlements';
+    if (pathname.startsWith('/ghar-kharcha/reports')) return 'Household Reports & Analytics';
     if (pathname.startsWith('/ghar-kharcha/budget')) return 'Household Budget';
     if (pathname.startsWith('/ghar-kharcha/categories')) return 'Household Categories';
     if (pathname.startsWith('/ghar-kharcha/members')) return 'Family Members';

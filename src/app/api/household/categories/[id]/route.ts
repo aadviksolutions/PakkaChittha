@@ -50,10 +50,11 @@ export async function DELETE(
       HouseholdRole.ADMIN,
     ]);
 
-    await deleteHouseholdCategory(authContext.householdId, id);
+    const result = await deleteHouseholdCategory(authContext.householdId, id);
 
     return NextResponse.json({
       success: true,
+      ...result,
       deletedId: id,
     });
   } catch (error: unknown) {

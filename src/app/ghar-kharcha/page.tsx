@@ -25,6 +25,8 @@ import {
   CheckCircle2,
   X,
   CreditCard,
+  Scale,
+  BarChart3,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -298,12 +300,32 @@ export default function GharKharchaDashboardPage() {
             </button>
           )}
 
+          {/* Splits Button */}
+          <Link
+            href="/ghar-kharcha/splits"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
+            title="Family expense splits & settlements"
+          >
+            <Scale className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Splits</span>
+          </Link>
+
+          {/* Reports Button */}
+          <Link
+            href="/ghar-kharcha/reports"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
+            title="Reports, trends & exports"
+          >
+            <BarChart3 className="w-4 h-4 text-emerald-600" />
+            <span className="hidden sm:inline">Reports</span>
+          </Link>
+
           {/* Invite Family Button */}
           <Link
             href="/ghar-kharcha/members"
             className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
           >
-            <Users className="w-4 h-4 text-emerald-600" />
+            <Users className="w-4 h-4 text-slate-600" />
             <span>Family</span>
           </Link>
         </div>

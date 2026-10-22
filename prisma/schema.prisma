@@ -86,6 +86,8 @@ model User {
   name         String
   phone        String?
   passwordHash String
+  googleId     String?      @unique
+  avatarUrl    String?
   platformRole PlatformRole @default(USER)
   isDemo       Boolean      @default(false)
   isSuspended  Boolean      @default(false)
@@ -103,6 +105,7 @@ model User {
   sentHouseholdInvitations HouseholdInvitation[]
 
   @@index([email])
+  @@index([googleId])
   @@index([platformRole])
 }
 
@@ -921,6 +924,7 @@ model Household {
   categories     HouseholdCategory[]
   invitations    HouseholdInvitation[]
   budgets        HouseholdMonthlyBudget[]
+  settlements    HouseholdSettlement[]
 
   @@index([name])
 }
@@ -935,6 +939,12 @@ model HouseholdMember {
 
   household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  paidTransactions     HouseholdTransaction[]         @relation("PaidTransactions")
+  expenseSplits        HouseholdExpenseSplit[]
+  expenseContributions HouseholdExpenseContribution[]
+  settlementsPaid      HouseholdSettlement[]          @relation("SettlementsPaid")
+  settlementsReceived  HouseholdSettlement[]          @relation("SettlementsReceived")
 
   @@unique([userId, householdId])
   @@index([householdId])
@@ -970,6 +980,8 @@ model HouseholdCategory {
   color         String?
   monthlyBudget Float?
   isDefault     Boolean                  @default(false)
+  isArchived    Boolean                  @default(false)
+  subcategories String[]                 @default([])
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
 
@@ -979,33 +991,112 @@ model HouseholdCategory {
   @@unique([householdId, name, type])
   @@index([householdId])
   @@index([type])
+  @@index([isArchived])
 }
 
 model HouseholdTransaction {
-  id            String                   @id @default(cuid())
-  householdId   String
-  createdById   String
-  type          HouseholdTransactionType
-  amount        Float
-  categoryId    String?
-  categoryName  String                   // Denormalized snapshot for audit integrity
-  date          DateTime                 @default(now())
-  paymentMethod PaymentMethod            @default(CASH)
-  description   String?
-  payeeMerchant String?
-  notes         String?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  id              String                   @id @default(cuid())
+  householdId     String
+  createdById     String
+  type            HouseholdTransactionType
+  amount          Float
+  categoryId      String?
+  categoryName    String                   // Denormalized snapshot for audit integrity
+  subcategory     String?
+  date            DateTime                 @default(now())
+  paymentMethod   PaymentMethod            @default(CASH)
+  description     String?
+  payeeMerchant   String?
+  notes           String?
 
-  household     Household                @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  createdBy     User                     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  category      HouseholdCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Splitting & Payer metadata
+  isShared        Boolean                  @default(false)
+  splitType       String?                  // 'EQUAL' | 'CUSTOM' | null
+  paidByMemberId  String?
+  paidByName      String?
+
+  // Bills & Recharge metadata
+  billType        String?                  // 'MOBILE_RECHARGE' | 'MOBILE_POSTPAID' | 'ELECTRICITY' | 'WATER' | 'GAS' | 'INTERNET' | 'DTH' | null
+  billProvider    String?
+  billConsumerId  String?
+  billPeriod      String?
+  billDueDate     DateTime?
+  billReferenceNo String?
+
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  household       Household                @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy       User                     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  category        HouseholdCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  paidByMember    HouseholdMember?         @relation("PaidTransactions", fields: [paidByMemberId], references: [id], onDelete: SetNull)
+
+  splits          HouseholdExpenseSplit[]
+  contributions   HouseholdExpenseContribution[]
 
   @@index([householdId])
   @@index([householdId, date])
   @@index([householdId, type])
   @@index([createdById])
   @@index([categoryId])
+  @@index([isShared])
+  @@index([billType])
+  @@index([paidByMemberId])
+}
+
+model HouseholdExpenseSplit {
+  id              String               @id @default(cuid())
+  transactionId   String
+  memberId        String
+  allocatedAmount Float
+  notes           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  transaction     HouseholdTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  member          HouseholdMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, memberId])
+  @@index([transactionId])
+  @@index([memberId])
+}
+
+model HouseholdExpenseContribution {
+  id            String               @id @default(cuid())
+  transactionId String
+  memberId      String
+  amount        Float
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  transaction   HouseholdTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  member        HouseholdMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, memberId])
+  @@index([transactionId])
+  @@index([memberId])
+}
+
+model HouseholdSettlement {
+  id               String          @id @default(cuid())
+  householdId      String
+  payerMemberId    String
+  receiverMemberId String
+  amount           Float
+  date             DateTime        @default(now())
+  paymentMethod    PaymentMethod   @default(UPI)
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  household        Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  payerMember      HouseholdMember @relation("SettlementsPaid", fields: [payerMemberId], references: [id], onDelete: Cascade)
+  receiverMember   HouseholdMember @relation("SettlementsReceived", fields: [receiverMemberId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([payerMemberId])
+  @@index([receiverMemberId])
+  @@index([date])
 }
 
 model HouseholdMonthlyBudget {
@@ -1021,4 +1112,5 @@ model HouseholdMonthlyBudget {
   @@unique([householdId, monthYear])
   @@index([householdId])
 }
+
 
