@@ -58,12 +58,16 @@ export async function getBusinessEntitlements(
   // If a commercial subscription is expired (including expired trial), suspended, or unpaid/past_due, restrict write entitlements safely
   const effectiveEntitlements = { ...planConfig.entitlements };
   if ((isExpired || isPastDue) && planKey !== 'FREE_KHATA') {
-    // Expired or unpaid subscriptions cannot create new invoices, purchases, inventory items, or add staff
+    // Expired or unpaid subscriptions cannot create new invoices, purchases, inventory items, quotations, or upload images
     effectiveEntitlements.canCreateInvoices = false;
     effectiveEntitlements.canManagePurchases = false;
     effectiveEntitlements.canManageStaff = false;
     effectiveEntitlements.canManageInventoryBasic = false;
     effectiveEntitlements.canAdvancedInventory = false;
+    effectiveEntitlements.canCreateQuotations = false;
+    effectiveEntitlements.canUploadProductImages = false;
+    effectiveEntitlements.canScanPurchaseBills = false;
+    effectiveEntitlements.canImportScannedPurchases = false;
   }
 
   return {

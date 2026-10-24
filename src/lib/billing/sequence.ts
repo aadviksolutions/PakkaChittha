@@ -52,3 +52,34 @@ export async function generateInvoiceNumber(
   const paddedNum = String(sequence.currentNumber).padStart(4, '0');
   return `${prefix}-${fiscalYear}-${paddedNum}`;
 }
+
+/**
+ * Concurrency-safe sequential quotation number generator.
+ */
+export async function generateQuotationNumber(
+  client: Prisma.TransactionClient | PrismaClient,
+  businessId: string,
+  prefix = 'QTN'
+): Promise<string> {
+  const fiscalYear = getFiscalYear();
+
+  const sequence = await client.quotationSequence.upsert({
+    where: { businessId },
+    update: {
+      currentNumber: {
+        increment: 1,
+      },
+      fiscalYear,
+    },
+    create: {
+      businessId,
+      prefix,
+      fiscalYear,
+      currentNumber: 1,
+    },
+  });
+
+  const paddedNum = String(sequence.currentNumber).padStart(4, '0');
+  return `${prefix}-${fiscalYear}-${paddedNum}`;
+}
+

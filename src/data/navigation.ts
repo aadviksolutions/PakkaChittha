@@ -25,6 +25,15 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     description: 'Tax invoices, delivery challans, credit/debit notes',
   },
   {
+    id: 'quotations',
+    name: 'Quotations',
+    href: '/quotations',
+    iconName: 'FileSpreadsheet',
+    badge: 'Estimates',
+    badgeColor: 'emerald',
+    description: 'Create price estimates, proposals, and convert to invoices',
+  },
+  {
     id: 'customers',
     name: 'Customers',
     href: '/customers',
@@ -90,6 +99,15 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     href: '/settings',
     iconName: 'Settings',
     description: 'Business name, logo, address, GSTIN and invoice branding',
+  },
+  {
+    id: 'printer-settings',
+    name: 'Printer Settings',
+    href: '/settings/printer',
+    iconName: 'Printer',
+    badge: 'Thermal',
+    badgeColor: 'emerald',
+    description: 'Configure Bluetooth thermal printers, 58mm/80mm roll, and test print',
   },
   {
     id: 'subscription',

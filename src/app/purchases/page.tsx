@@ -18,6 +18,7 @@ import {
   Users,
   ChevronRight,
   X,
+  Camera,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
@@ -184,6 +185,14 @@ function PurchasesContent() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/purchases/scan"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+          >
+            <Camera className="w-4 h-4 text-emerald-100" />
+            Scan Bill (AI OCR)
+          </Link>
+
           <Link
             href="/suppliers"
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl shadow-2xs transition-colors"

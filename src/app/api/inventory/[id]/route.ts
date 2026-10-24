@@ -58,6 +58,7 @@ export async function PUT(
       taxRate: body.taxRate,
       lowStockAlert: body.lowStockAlert,
       description: body.description,
+      imageUrl: body.imageUrl,
     });
 
     return NextResponse.json({

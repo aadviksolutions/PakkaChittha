@@ -58,6 +58,12 @@ export interface OfficialPlan {
     canBulkCustomerFollowUp: boolean;
     canAdvancedDataExport: boolean;
     canPrioritySupport: boolean;
+    // New Feature Entitlements
+    canCreateQuotations: boolean;
+    canUsePrinterSettings: boolean;
+    canUploadProductImages: boolean;
+    canScanPurchaseBills: boolean;
+    canImportScannedPurchases: boolean;
   };
 }
 
@@ -144,6 +150,11 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canBulkCustomerFollowUp: false,
       canAdvancedDataExport: false,
       canPrioritySupport: false,
+      canCreateQuotations: true,
+      canUsePrinterSettings: true,
+      canUploadProductImages: false,
+      canScanPurchaseBills: false,
+      canImportScannedPurchases: false,
     },
   },
 
@@ -214,6 +225,11 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canBulkCustomerFollowUp: false,
       canAdvancedDataExport: false,
       canPrioritySupport: false,
+      canCreateQuotations: true,
+      canUsePrinterSettings: true,
+      canUploadProductImages: false,
+      canScanPurchaseBills: false,
+      canImportScannedPurchases: false,
     },
   },
 
@@ -286,6 +302,11 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canBulkCustomerFollowUp: false,
       canAdvancedDataExport: false,
       canPrioritySupport: false,
+      canCreateQuotations: true,
+      canUsePrinterSettings: true,
+      canUploadProductImages: false,
+      canScanPurchaseBills: false,
+      canImportScannedPurchases: false,
     },
   },
 
@@ -352,6 +373,11 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canBulkCustomerFollowUp: true,
       canAdvancedDataExport: true,
       canPrioritySupport: true,
+      canCreateQuotations: true,
+      canUsePrinterSettings: true,
+      canUploadProductImages: true,
+      canScanPurchaseBills: true,
+      canImportScannedPurchases: true,
     },
   },
 };

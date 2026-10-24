@@ -709,18 +709,18 @@ export async function getHouseholdTransactions(
       isShared: t.isShared,
       splitType: t.splitType,
       paidByMemberId: t.paidByMemberId,
-      paidByName: t.paidByName || t.paidByMember?.user.name || t.createdBy.name,
+      paidByName: t.paidByName || t.paidByMember?.user?.name || t.paidByMember?.name || t.createdBy.name,
       splits: t.splits.map((s) => ({
         id: s.id,
         memberId: s.memberId,
-        memberName: s.member.user.name,
+        memberName: s.member.user?.name || s.member.name || 'Family Member',
         allocatedAmount: s.allocatedAmount,
         notes: s.notes,
       })),
       contributions: t.contributions.map((c) => ({
         id: c.id,
         memberId: c.memberId,
-        memberName: c.member.user.name,
+        memberName: c.member.user?.name || c.member.name || 'Family Member',
         amount: c.amount,
       })),
 
@@ -791,7 +791,7 @@ export async function createHouseholdTransaction(
     });
     if (currentMember) {
       paidByMemberId = currentMember.id;
-      paidByName = currentMember.user.name;
+      paidByName = currentMember.user?.name || currentMember.name || 'Family Member';
     }
   } else {
     const member = await prisma.householdMember.findUnique({
@@ -801,7 +801,7 @@ export async function createHouseholdTransaction(
     if (!member || member.householdId !== householdId) {
       throw new Error('Selected paying member does not belong to this household.');
     }
-    paidByName = member.user.name;
+    paidByName = member.user?.name || member.name || 'Family Member';
   }
 
   // Validate Splitting if shared expense
@@ -1012,7 +1012,7 @@ export async function updateHouseholdTransaction(
           throw new Error('Selected paying member is invalid.');
         }
         updateData.paidByMember = { connect: { id: member.id } };
-        updateData.paidByName = member.user.name;
+        updateData.paidByName = member.user?.name || member.name || 'Family Member';
       } else {
         updateData.paidByMember = { disconnect: true };
         updateData.paidByName = null;
@@ -1176,9 +1176,9 @@ export async function getHouseholdBalances(householdId: string) {
 
   const memberMap: Record<string, {
     memberId: string;
-    userId: string;
+    userId: string | null;
     name: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     role: HouseholdRole;
     totalExpensePaid: number;
@@ -1191,9 +1191,9 @@ export async function getHouseholdBalances(householdId: string) {
     memberMap[m.id] = {
       memberId: m.id,
       userId: m.userId,
-      name: m.user.name,
-      email: m.user.email,
-      phone: m.user.phone,
+      name: m.user?.name || m.name || 'Family Member',
+      email: m.user?.email || null,
+      phone: m.user?.phone || m.phone || null,
       role: m.role,
       totalExpensePaid: 0,
       totalShareAllocated: 0,
@@ -1295,9 +1295,9 @@ export async function getHouseholdBalances(householdId: string) {
     recentSettlements: settlements.slice(0, 15).map((s) => ({
       id: s.id,
       payerMemberId: s.payerMemberId,
-      payerName: s.payerMember.user.name,
+      payerName: s.payerMember.user?.name || s.payerMember.name || 'Family Member',
       receiverMemberId: s.receiverMemberId,
-      receiverName: s.receiverMember.user.name,
+      receiverName: s.receiverMember.user?.name || s.receiverMember.name || 'Family Member',
       amount: s.amount,
       date: s.date,
       paymentMethod: s.paymentMethod,
@@ -1879,6 +1879,89 @@ export async function getHouseholdDashboard(householdId: string, monthYearParam?
 // MEMBERS & INVITATIONS
 // ============================================================================
 
+export interface AddDirectMemberInput {
+  householdId: string;
+  name: string;
+  mobile?: string;
+  relationship?: string;
+  role?: HouseholdRole;
+}
+
+export async function addDirectHouseholdMember(
+  operatorUserId: string,
+  input: AddDirectMemberInput
+) {
+  // 1. Verify caller has OWNER or ADMIN role in this household
+  const operatorMembership = await prisma.householdMember.findFirst({
+    where: {
+      householdId: input.householdId,
+      userId: operatorUserId,
+      role: { in: [HouseholdRole.OWNER, HouseholdRole.ADMIN] },
+    },
+  });
+
+  if (!operatorMembership) {
+    throw new Error('Only Household Owners and Admins can add family members directly.');
+  }
+
+  const cleanName = input.name?.trim();
+  if (!cleanName || cleanName.length < 2) {
+    throw new Error('Family member name must be at least 2 characters.');
+  }
+
+  // Normalize phone (take last 10 digits for Indian standard numbers)
+  const rawMobile = input.mobile?.trim() || '';
+  const cleanMobile = rawMobile ? rawMobile.replace(/\D/g, '').slice(-10) : '';
+
+  if (rawMobile && cleanMobile.length < 10) {
+    throw new Error('Please enter a valid 10-digit mobile number.');
+  }
+
+  // 2. Prevent duplicate members within the same family account
+  const existingMembers = await prisma.householdMember.findMany({
+    where: { householdId: input.householdId },
+    include: { user: true },
+  });
+
+  for (const em of existingMembers) {
+    const memberName = (em.name || em.user?.name || '').toLowerCase();
+    const memberPhone = (em.phone || em.user?.phone || '').replace(/\D/g, '').slice(-10);
+
+    if (cleanMobile && memberPhone && memberPhone === cleanMobile) {
+      throw new Error(`A family member with mobile number ${cleanMobile} already exists in this household.`);
+    }
+
+    if (memberName === cleanName.toLowerCase()) {
+      throw new Error(`A family member named "${cleanName}" already exists in this household.`);
+    }
+  }
+
+  // 3. Create direct family member record without creating an authenticated account
+  const newMember = await prisma.householdMember.create({
+    data: {
+      householdId: input.householdId,
+      userId: null,
+      name: cleanName,
+      phone: cleanMobile || null,
+      relationship: input.relationship?.trim() || null,
+      isDirectRecord: true,
+      role: input.role || HouseholdRole.MEMBER,
+    },
+  });
+
+  return {
+    id: newMember.id,
+    userId: null,
+    name: newMember.name,
+    email: null,
+    phone: newMember.phone,
+    relationship: newMember.relationship,
+    isDirectRecord: true,
+    role: newMember.role,
+    joinedAt: newMember.createdAt,
+  };
+}
+
 export async function getHouseholdMembers(householdId: string) {
   const members = await prisma.householdMember.findMany({
     where: { householdId },
@@ -1898,9 +1981,11 @@ export async function getHouseholdMembers(householdId: string) {
   return members.map((m) => ({
     id: m.id,
     userId: m.userId,
-    name: m.user.name,
-    email: m.user.email,
-    phone: m.user.phone,
+    name: m.user?.name || m.name || 'Family Member',
+    email: m.user?.email || null,
+    phone: m.user?.phone || m.phone || null,
+    relationship: m.relationship || null,
+    isDirectRecord: m.isDirectRecord,
     role: m.role,
     joinedAt: m.createdAt,
   }));

@@ -21,10 +21,15 @@ import {
   X,
   FileText,
   Boxes,
+  Camera,
+  Image as ImageIcon,
+  Sparkles,
+  Upload,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import { ProductImageUploader } from '@/components/inventory/ProductImageUploader';
 
 interface Product {
   id: string;
@@ -40,6 +45,7 @@ interface Product {
   openingStock: number;
   lowStockAlert: number;
   description: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -122,7 +128,9 @@ function InventoryContent() {
     openingStock: '0',
     lowStockAlert: '10',
     description: '',
+    imageUrl: '',
   });
+
 
   // Stock Adjustment Modal
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
@@ -198,6 +206,7 @@ function InventoryContent() {
           openingStock: parseFloat(addForm.openingStock) || 0,
           lowStockAlert: parseFloat(addForm.lowStockAlert) || 10,
           description: addForm.description.trim() || null,
+          imageUrl: addForm.imageUrl || null,
         }),
       });
 
@@ -219,6 +228,7 @@ function InventoryContent() {
         openingStock: '0',
         lowStockAlert: '10',
         description: '',
+        imageUrl: '',
       });
       toast.success('Product created successfully!');
       fetchInventory();
@@ -506,18 +516,31 @@ function InventoryContent() {
 
                 return (
                   <div key={p.id} className="p-4 space-y-2.5 hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/inventory/${p.id}`}
-                          className="font-bold text-slate-900 text-sm hover:text-blue-600 transition-colors block truncate"
-                        >
-                          {p.name}
-                        </Link>
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
-                          <span>SKU: {p.sku}</span>
-                          <span>•</span>
-                          <span>{p.category}</span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt={p.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200">
+                            <Package className="w-5 h-5 text-slate-400" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/inventory/${p.id}`}
+                            className="font-bold text-slate-900 text-sm hover:text-blue-600 transition-colors block truncate"
+                          >
+                            {p.name}
+                          </Link>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mt-0.5">
+                            <span>SKU: {p.sku}</span>
+                            <span>•</span>
+                            <span>{p.category}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
@@ -599,15 +622,30 @@ function InventoryContent() {
                     return (
                       <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3.5 px-4">
-                          <Link
-                            href={`/inventory/${p.id}`}
-                            className="font-bold text-slate-900 hover:text-blue-600 transition-colors block"
-                          >
-                            {p.name}
-                          </Link>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
-                            <span>SKU: {p.sku}</span>
-                            {p.barcode && <span>• Barcode: {p.barcode}</span>}
+                          <div className="flex items-center gap-3">
+                            {p.imageUrl ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.name}
+                                className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200">
+                                <Package className="w-4 h-4 text-slate-400" />
+                              </div>
+                            )}
+                            <div>
+                              <Link
+                                href={`/inventory/${p.id}`}
+                                className="font-bold text-slate-900 hover:text-blue-600 transition-colors block"
+                              >
+                                {p.name}
+                              </Link>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
+                                <span>SKU: {p.sku}</span>
+                                {p.barcode && <span>• Barcode: {p.barcode}</span>}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="py-3.5 px-4 font-medium text-slate-600">
@@ -849,6 +887,16 @@ function InventoryContent() {
                       value={addForm.lowStockAlert}
                       onChange={(e) => setAddForm({ ...addForm, lowStockAlert: e.target.value })}
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden font-mono text-xs"
+                    />
+                  </div>
+
+                  {/* Product Image Upload */}
+                  <div className="flex items-center gap-2">
+                    <ProductImageUploader
+                      value={addForm.imageUrl || null}
+                      onChange={(url: string | null) => setAddForm({ ...addForm, imageUrl: url || '' })}
+                      productId={undefined}
+                      disabled={creating}
                     />
                   </div>
 

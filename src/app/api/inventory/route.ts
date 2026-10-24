@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         openingStock: body.openingStock,
         lowStockAlert: body.lowStockAlert,
         description: body.description,
+        imageUrl: body.imageUrl,
       },
       session.user.name || 'User'
     );

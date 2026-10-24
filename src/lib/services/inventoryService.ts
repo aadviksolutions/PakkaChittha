@@ -15,6 +15,7 @@ export interface CreateProductInput {
   openingStock?: number;
   lowStockAlert?: number;
   description?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface UpdateProductInput {
@@ -28,6 +29,7 @@ export interface UpdateProductInput {
   taxRate?: number;
   lowStockAlert?: number;
   description?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface AdjustStockInput {
@@ -200,6 +202,7 @@ export async function createProduct(
         currentStock: openingStock,
         lowStockAlert,
         description,
+        imageUrl: data.imageUrl?.trim() || null,
         isActive: true,
       },
     });
@@ -283,6 +286,8 @@ export async function updateProduct(
         data.lowStockAlert !== undefined ? Math.max(0, Number(data.lowStockAlert)) : undefined,
       description:
         data.description !== undefined ? data.description?.trim() || null : undefined,
+      imageUrl:
+        data.imageUrl !== undefined ? data.imageUrl?.trim() || null : undefined,
     },
   });
 

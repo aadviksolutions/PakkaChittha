@@ -14,6 +14,7 @@ import {
   Building,
   CreditCard,
   FileText,
+  Smartphone,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -79,6 +80,45 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers(search);
   }, [fetchCustomers, search]);
+
+  const handleImportContact = async () => {
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      try {
+        const contacts = await (navigator as any).contacts.select(['name', 'tel', 'email'], {
+          multiple: false,
+        });
+        if (contacts && contacts[0]) {
+          const c = contacts[0];
+          const rawName = c.name?.[0] || '';
+          const rawPhone = (c.tel?.[0] || '').replace(/\D/g, '').slice(-10);
+          const rawEmail = c.email?.[0] || '';
+
+          if (rawPhone) {
+            const exists = customers.some(
+              (cust) => cust.mobile && cust.mobile.replace(/\D/g, '').slice(-10) === rawPhone
+            );
+            if (exists) {
+              toast.error(`A customer with mobile ${rawPhone} is already registered.`);
+            }
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            name: rawName || prev.name,
+            mobile: rawPhone || prev.mobile,
+            email: rawEmail || prev.email,
+          }));
+          toast.success('Contact details populated! Review before saving.');
+        }
+      } catch (err: unknown) {
+        console.warn('Contact picker cancelled or unavailable:', err);
+      }
+    } else {
+      alert(
+        'Phone Contacts Picker is supported on Chrome & Edge on Android or supported mobile browsers. On desktop, please enter contact details manually.'
+      );
+    }
+  };
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,6 +390,19 @@ export default function CustomersPage() {
             </div>
 
             <form onSubmit={handleCreateCustomer} className="p-5 space-y-3.5 text-xs">
+              {/* Phone Contacts Import Option */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <span className="text-[11px] text-slate-500 font-medium">Quick contact import:</span>
+                <button
+                  type="button"
+                  onClick={handleImportContact}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Choose from Contacts</span>
+                </button>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Customer / Trade Name *

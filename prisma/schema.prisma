@@ -155,6 +155,8 @@ model Business {
   subscriptionPayments SubscriptionPayment[]
   creditDebitNotes   CreditDebitNote[]
   gstr2bImports      Gstr2bImport[]
+  quotations         Quotation[]
+  quotationSequence  QuotationSequence?
 
   @@index([name])
 }
@@ -234,6 +236,7 @@ model Customer {
   payments        Payment[]
   whatsAppLogs    WhatsAppMessageLog[]
   creditDebitNotes CreditDebitNote[]
+  quotations      Quotation[]
 
   @@index([businessId])
   @@index([name])
@@ -394,6 +397,7 @@ model Product {
   openingStock   Float           @default(0)
   lowStockAlert  Float           @default(10)
   description    String?
+  imageUrl       String?
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -402,6 +406,7 @@ model Product {
   stockMovements StockMovement[]
   invoiceItems   InvoiceItem[]
   purchaseItems  PurchaseItem[]
+  quotationItems QuotationItem[]
 
   @@unique([businessId, sku])
   @@index([businessId])
@@ -493,6 +498,8 @@ model Purchase {
   itcEligibility         String            @default("ELIGIBLE") // ELIGIBLE, INELIGIBLE, BLOCKED_SEC_17_5, CAPITAL_GOODS, PENDING_VERIFICATION, RECONCILED
   placeOfSupply          String?
   documentUrl            String?
+  scannedBillUrl         String?
+  ocrData                Json?
 
   notes                  String?
   receivedAt             DateTime?
@@ -932,13 +939,17 @@ model Household {
 model HouseholdMember {
   id          String        @id @default(cuid())
   householdId String
-  userId      String
+  userId      String?
+  name        String?
+  phone       String?
+  relationship String?
+  isDirectRecord Boolean    @default(false)
   role        HouseholdRole @default(MEMBER)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   paidTransactions     HouseholdTransaction[]         @relation("PaidTransactions")
   expenseSplits        HouseholdExpenseSplit[]
@@ -1111,6 +1122,110 @@ model HouseholdMonthlyBudget {
 
   @@unique([householdId, monthYear])
   @@index([householdId])
+}
+
+// ============================================================================
+// QUOTATIONS (ALL SUBSCRIPTION PLANS)
+// ============================================================================
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  CONVERTED
+  EXPIRED
+}
+
+model QuotationSequence {
+  id            String   @id @default(cuid())
+  businessId    String   @unique
+  prefix        String   @default("QTN")
+  fiscalYear    String
+  currentNumber Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Quotation {
+  id                     String          @id @default(cuid())
+  businessId             String
+  customerId             String
+  quotationNumber        String
+  quotationDate          DateTime        @default(now())
+  validUntil             DateTime
+  status                 QuotationStatus @default(DRAFT)
+
+  // GST & Tax Configuration
+  gstType                GstType         @default(CGST_SGST)
+  isTaxInclusive         Boolean         @default(false)
+  isGstInvoice           Boolean         @default(true)
+
+  // Financial figures
+  subtotal               Float           @default(0)
+  discountTotal          Float           @default(0)
+  taxTotal               Float           @default(0)
+  cgstTotal              Float           @default(0)
+  sgstTotal              Float           @default(0)
+  igstTotal              Float           @default(0)
+  rounding               Float           @default(0)
+  total                  Float           @default(0)
+
+  // Historical snapshot
+  customerName           String
+  customerMobile         String
+  customerGstin          String?
+  customerBillingAddress String?
+  businessName           String
+  businessGstin          String?
+  businessAddress        String?
+  businessLogoUrl        String?
+
+  notes                  String?
+  termsAndConditions     String?
+  convertedInvoiceId     String?
+
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  business               Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer               Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                  QuotationItem[]
+
+  @@unique([businessId, quotationNumber])
+  @@index([businessId])
+  @@index([customerId])
+  @@index([status])
+  @@index([quotationDate])
+}
+
+model QuotationItem {
+  id             String    @id @default(cuid())
+  quotationId    String
+  productId      String?
+  hsnCode        String?
+  description    String
+  quantity       Float
+  unit           String    @default("Pcs")
+  rate           Float
+  discount       Float     @default(0)
+  discountType   String    @default("AMOUNT")
+  taxRate        Float     @default(0)
+  taxAmount      Float     @default(0)
+  cgstRate       Float     @default(0)
+  cgstAmount     Float     @default(0)
+  sgstRate       Float     @default(0)
+  sgstAmount     Float     @default(0)
+  igstRate       Float     @default(0)
+  igstAmount     Float     @default(0)
+  lineTotal      Float
+
+  quotation      Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product        Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([quotationId])
+  @@index([productId])
 }
 
 
