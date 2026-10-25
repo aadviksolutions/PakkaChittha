@@ -23,13 +23,25 @@ interface PaymentItem {
   category: string;
   businessId: string;
   businessName: string;
+  userId?: string | null;
+  userEmail?: string;
+  userName?: string;
+  userPhone?: string | null;
+  plan?: string | null;
+  billingPeriod?: string;
   relatedEntity: string;
   amount: number;
   currency: string;
   gateway: string;
+  gatewayOrderId?: string | null;
+  gatewayPaymentId?: string | null;
   gatewayTransactionId: string;
   status: string; // SUCCESS, PENDING, FAILED, CANCELLED, REFUNDED
   refundStatus: string;
+  refundAmount?: number;
+  autoPayStatus?: string;
+  subscriptionStartDate?: string | null;
+  subscriptionEndDate?: string | null;
   notes: string | null;
   reconciledBy: string | null;
   createdAt: string;
@@ -43,6 +55,8 @@ interface StatusCounts {
   failed: number;
   cancelled: number;
   refunded: number;
+  totalCollected?: number;
+  totalRefunded?: number;
 }
 
 export default function PlatformAdminPaymentsPage() {
@@ -195,6 +209,54 @@ export default function PlatformAdminPaymentsPage() {
         </div>
       </div>
 
+      {/* Financial KPI Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Total SaaS Revenue
+          </span>
+          <span className="text-lg font-black text-emerald-600 font-mono mt-0.5 block">
+            ₹{(statusCounts?.totalCollected || 0).toLocaleString('en-IN')}
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Successful Payments
+          </span>
+          <span className="text-lg font-black text-slate-900 font-mono mt-0.5 block">
+            {statusCounts?.success || 0}
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Pending Verification
+          </span>
+          <span className="text-lg font-black text-amber-600 font-mono mt-0.5 block">
+            {statusCounts?.pending || 0}
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Failed Attempts
+          </span>
+          <span className="text-lg font-black text-rose-600 font-mono mt-0.5 block">
+            {statusCounts?.failed || 0}
+          </span>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            Total Refunded
+          </span>
+          <span className="text-lg font-black text-purple-600 font-mono mt-0.5 block">
+            ₹{(statusCounts?.totalRefunded || 0).toLocaleString('en-IN')}
+          </span>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
         {[
@@ -265,7 +327,7 @@ export default function PlatformAdminPaymentsPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200/90 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="py-3 px-4">Payment ID & Store</th>
+                <th className="py-3 px-4">Payment ID & Customer</th>
                 <th className="py-3 px-4">Type & Related Entity</th>
                 <th className="py-3 px-4">Amount</th>
                 <th className="py-3 px-4">Gateway & Txn Ref</th>
@@ -294,6 +356,14 @@ export default function PlatformAdminPaymentsPage() {
                     <td className="py-3.5 px-4">
                       <div className="font-mono text-[11px] font-semibold text-slate-800">{p.id}</div>
                       <div className="font-bold text-slate-900">{p.businessName}</div>
+                      {p.userEmail && p.userEmail !== 'N/A' && (
+                        <div className="text-[10px] text-slate-500 truncate max-w-[170px]" title={p.userEmail}>
+                          {p.userEmail}
+                        </div>
+                      )}
+                      {p.userId && (
+                        <div className="text-[9px] text-slate-400 font-mono">ID: {p.userId.slice(-8)}</div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-700">
@@ -311,10 +381,24 @@ export default function PlatformAdminPaymentsPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-800 uppercase">{p.gateway}</div>
-                      <div className="font-mono text-[10px] text-slate-500 truncate max-w-[140px]">
-                        {p.gatewayTransactionId}
+                      <div className="font-semibold text-slate-800 uppercase flex items-center gap-1.5">
+                        <span>{p.gateway}</span>
+                        {p.autoPayStatus && p.autoPayStatus !== 'N/A' && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 font-normal">
+                            One-Time
+                          </span>
+                        )}
                       </div>
+                      {p.gatewayPaymentId && (
+                        <div className="font-mono text-[10px] text-slate-600 truncate max-w-[140px]" title={p.gatewayPaymentId}>
+                          Pay: {p.gatewayPaymentId}
+                        </div>
+                      )}
+                      {p.gatewayOrderId && (
+                        <div className="font-mono text-[10px] text-slate-400 truncate max-w-[140px]" title={p.gatewayOrderId}>
+                          Ord: {p.gatewayOrderId}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4">

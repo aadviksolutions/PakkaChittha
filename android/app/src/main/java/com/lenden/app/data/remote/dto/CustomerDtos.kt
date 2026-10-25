@@ -32,3 +32,30 @@ data class CreateCustomerRequest(
     val openingBalance: Double = 0.0,
     val notes: String? = null
 )
+
+@Serializable
+data class GstLookupResponse(
+    val success: Boolean = false,
+    val data: GstBusinessDetailsDto? = null,
+    val error: String? = null,
+    val code: String? = null
+)
+
+@Serializable
+data class GstBusinessDetailsDto(
+    val gstin: String,
+    val legalName: String = "",
+    val tradeName: String = "",
+    val status: String = "ACTIVE",
+    val registrationDate: String? = null,
+    val taxpayerType: String? = null,
+    val constitution: String? = null,
+    val address: String = "",
+    val city: String? = null,
+    val state: String = "",
+    val stateCode: String = "",
+    val pincode: String = "",
+    val source: String = "",
+    val fetchedAt: String = ""
+)
+

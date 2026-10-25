@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
       subPaymentWhere.OR = [
         { id: { contains: query, mode: 'insensitive' } },
         { gatewayPaymentId: { contains: query, mode: 'insensitive' } },
+        { gatewayOrderId: { contains: query, mode: 'insensitive' } },
         { business: { name: { contains: query, mode: 'insensitive' } } },
+        { business: { email: { contains: query, mode: 'insensitive' } } },
       ];
     }
 
@@ -40,10 +42,20 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           business: {
-            select: { id: true, name: true, phone: true, email: true },
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              email: true,
+              memberships: {
+                take: 1,
+                where: { role: 'BUSINESS_OWNER' },
+                include: { user: { select: { id: true, email: true, name: true } } },
+              },
+            },
           },
           subscription: {
-            select: { id: true, plan: true, status: true },
+            select: { id: true, plan: true, status: true, startDate: true, endDate: true },
           },
         },
       }),
@@ -78,23 +90,43 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Format subscription payments
-    const formattedSubPayments = subPayments.map((p: any) => ({
-      id: p.id,
-      category: 'SUBSCRIPTION_BILLING',
-      businessId: p.businessId,
-      businessName: p.business?.name || 'Unknown Store',
-      relatedEntity: `Subscription: ${p.plan}`,
-      amount: p.amount,
-      currency: p.currency,
-      gateway: p.gateway,
-      gatewayTransactionId: p.gatewayPaymentId || p.gatewayOrderId || 'N/A',
-      status: p.status, // SUCCESS, PENDING, FAILED, CANCELLED, REFUNDED
-      refundStatus: p.refundAmount && p.refundAmount > 0 ? `Refunded ₹${p.refundAmount}` : (p.status === 'REFUNDED' ? 'Full Refund' : 'None'),
-      notes: p.notes,
-      reconciledBy: p.reconciledBy,
-      createdAt: p.createdAt,
-      paidAt: p.paidAt,
-    }));
+    const formattedSubPayments = subPayments.map((p: any) => {
+      const ownerUser = p.business?.memberships?.[0]?.user;
+      return {
+        id: p.id,
+        category: 'SUBSCRIPTION_BILLING',
+        businessId: p.businessId,
+        businessName: p.business?.name || 'Unknown Store',
+        userId: ownerUser?.id || null,
+        userEmail: ownerUser?.email || p.business?.email || 'N/A',
+        userName: ownerUser?.name || 'Business Owner',
+        userPhone: p.business?.phone || null,
+        plan: p.plan,
+        billingPeriod: p.billingPeriod || 'MONTHLY',
+        relatedEntity: `Subscription: ${p.plan} (${p.billingPeriod || 'MONTHLY'})`,
+        amount: p.amount,
+        currency: p.currency,
+        gateway: p.gateway,
+        gatewayPaymentId: p.gatewayPaymentId || null,
+        gatewayOrderId: p.gatewayOrderId || null,
+        gatewayTransactionId: p.gatewayPaymentId || p.gatewayOrderId || 'N/A',
+        status: p.status, // SUCCESS, PENDING, FAILED, CANCELLED, REFUNDED
+        refundStatus:
+          p.refundAmount && p.refundAmount > 0
+            ? `Refunded ₹${p.refundAmount}`
+            : p.status === 'REFUNDED'
+            ? 'Full Refund'
+            : 'None',
+        refundAmount: p.refundAmount || 0,
+        autoPayStatus: 'DISABLED_ONE_TIME',
+        subscriptionStartDate: p.subscription?.startDate || null,
+        subscriptionEndDate: p.subscription?.endDate || null,
+        notes: p.notes,
+        reconciledBy: p.reconciledBy,
+        createdAt: p.createdAt,
+        paidAt: p.paidAt,
+      };
+    });
 
     // Format invoice payments
     const formattedInvoicePayments = invoicePayments.map((p) => ({
@@ -102,13 +134,25 @@ export async function GET(request: NextRequest) {
       category: 'INVOICE_COLLECTION',
       businessId: p.businessId,
       businessName: p.business.name,
+      userId: null,
+      userEmail: 'N/A',
+      userName: p.customer.name,
+      userPhone: p.customer.mobile,
+      plan: null,
+      billingPeriod: 'ONE_TIME',
       relatedEntity: `Invoice ${p.invoice.invoiceNumber} (${p.customer.name})`,
       amount: p.amount,
       currency: 'INR',
       gateway: p.paymentMethod,
+      gatewayPaymentId: p.referenceNumber || null,
+      gatewayOrderId: null,
       gatewayTransactionId: p.referenceNumber || 'N/A',
       status: 'SUCCESS', // Invoice payments in LenDen are confirmed receipts
       refundStatus: 'None',
+      refundAmount: 0,
+      autoPayStatus: 'N/A',
+      subscriptionStartDate: null,
+      subscriptionEndDate: null,
       notes: p.notes,
       reconciledBy: null,
       createdAt: p.paymentDate,
@@ -125,16 +169,25 @@ export async function GET(request: NextRequest) {
       combined = formattedInvoicePayments;
       grandTotal = totalInvoicePayments;
     } else {
-      combined = [...formattedSubPayments, ...formattedInvoicePayments].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ).slice(0, limit);
+      combined = [...formattedSubPayments, ...formattedInvoicePayments]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
       grandTotal = totalSubPayments + totalInvoicePayments;
     }
 
-    // Status counts for subscription payments
+    // Status counts and financial totals for subscription payments
     const allSubPayments = await (prisma as any).subscriptionPayment.findMany({
       select: { status: true, amount: true, refundAmount: true },
     });
+
+    const totalCollected = allSubPayments
+      .filter((p: any) => p.status === 'SUCCESS')
+      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+    const totalRefunded = allSubPayments.reduce(
+      (sum: number, p: any) => sum + (p.refundAmount || 0),
+      0
+    );
 
     const statusCounts = {
       all: grandTotal,
@@ -142,7 +195,11 @@ export async function GET(request: NextRequest) {
       success: allSubPayments.filter((p: any) => p.status === 'SUCCESS').length,
       failed: allSubPayments.filter((p: any) => p.status === 'FAILED').length,
       cancelled: allSubPayments.filter((p: any) => p.status === 'CANCELLED').length,
-      refunded: allSubPayments.filter((p: any) => p.status === 'REFUNDED' || (p.refundAmount && p.refundAmount > 0)).length,
+      refunded: allSubPayments.filter(
+        (p: any) => p.status === 'REFUNDED' || (p.refundAmount && p.refundAmount > 0)
+      ).length,
+      totalCollected,
+      totalRefunded,
     };
 
     return NextResponse.json({

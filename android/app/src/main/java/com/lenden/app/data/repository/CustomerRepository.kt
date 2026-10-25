@@ -54,4 +54,19 @@ class CustomerRepository(
             emit(Resource.Error(e.localizedMessage ?: "Network connection error"))
         }
     }
+
+    fun lookupGstin(gstin: String): Flow<Resource<GstBusinessDetailsDto>> = flow {
+        emit(Resource.Loading())
+        try {
+            val response = api.lookupGstin(gstin)
+            if (response.isSuccessful && response.body()?.success == true && response.body()?.data != null) {
+                emit(Resource.Success(response.body()!!.data!!))
+            } else {
+                val errorMsg = response.body()?.error ?: "Failed to fetch GST details"
+                emit(Resource.Error(errorMsg))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.localizedMessage ?: "Network connection error"))
+        }
+    }
 }

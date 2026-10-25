@@ -286,16 +286,105 @@ private fun AddCustomerDialog(
     viewModel: CustomersViewModel,
     onDismiss: () -> Unit
 ) {
+    val state by viewModel.uiState.collectAsState()
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     var gstin by remember { mutableStateOf("") }
     var openingBalance by remember { mutableStateOf("") }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            viewModel.clearGstLookupState()
+            onDismiss()
+        },
         title = { Text("Add New Customer", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // GSTIN Section with Fetch Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        LendenTextField(
+                            value = gstin,
+                            onValueChange = { gstin = it.uppercase() },
+                            label = "GSTIN (Optional)"
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.lookupGstin(gstin) { details ->
+                                if (details != null) {
+                                    if (name.isBlank()) {
+                                        name = details.tradeName.ifBlank { details.legalName }
+                                    }
+                                }
+                            }
+                        },
+                        enabled = gstin.trim().length == 15 && !state.isLookingUpGst,
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        if (state.isLookingUpGst) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Fetch", fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                if (state.gstLookupError != null) {
+                    Text(
+                        text = state.gstLookupError!!,
+                        color = RoseError,
+                        fontSize = 11.sp
+                    )
+                }
+
+                if (state.lastFetchedGstDetails != null) {
+                    val details = state.lastFetchedGstDetails!!
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = SurfaceWarm),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = details.tradeName.ifBlank { details.legalName },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = details.status,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    color = if (details.status == "ACTIVE") EmeraldPrimary else RoseError
+                                )
+                            }
+                            if (details.address.isNotBlank()) {
+                                Text(
+                                    text = details.address,
+                                    fontSize = 10.sp,
+                                    color = TextSecondary,
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
+                }
+
                 LendenTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -306,11 +395,6 @@ private fun AddCustomerDialog(
                     onValueChange = { mobile = it },
                     label = "Mobile Number *",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                )
-                LendenTextField(
-                    value = gstin,
-                    onValueChange = { gstin = it.uppercase() },
-                    label = "GSTIN (Optional)"
                 )
                 LendenTextField(
                     value = openingBalance,
@@ -325,6 +409,7 @@ private fun AddCustomerDialog(
                 onClick = {
                     val bal = openingBalance.toDoubleOrNull() ?: 0.0
                     viewModel.createCustomer(name, mobile, gstin, bal) {
+                        viewModel.clearGstLookupState()
                         onDismiss()
                     }
                 },
@@ -334,7 +419,10 @@ private fun AddCustomerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = {
+                viewModel.clearGstLookupState()
+                onDismiss()
+            }) { Text("Cancel") }
         }
     )
 }

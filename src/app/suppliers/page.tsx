@@ -22,6 +22,7 @@ import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import { GstFetchBox } from '@/components/gst/GstFetchBox';
 
 interface SupplierItem {
   id: string;
@@ -367,6 +368,21 @@ function SuppliersContent() {
             </div>
 
             <form onSubmit={handleCreateSupplier} className="space-y-4 text-xs">
+              {/* GSTIN Auto-Fetch Section */}
+              <GstFetchBox
+                gstin={addForm.gstin}
+                onGstinChange={(val) => setAddForm((prev) => ({ ...prev, gstin: val }))}
+                onDetailsFetched={(details) => {
+                  setAddForm((prev) => ({
+                    ...prev,
+                    gstin: details.gstin,
+                    name: prev.name ? prev.name : (details.tradeName || details.legalName),
+                    address: prev.address ? prev.address : details.address,
+                  }));
+                  toast.success(`GST details fetched for ${details.tradeName || details.legalName}! Review before saving.`);
+                }}
+              />
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Supplier / Company Name <span className="text-rose-500">*</span>
@@ -407,30 +423,18 @@ function SuppliersContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">GSTIN</label>
-                  <input
-                    type="text"
-                    placeholder="15-digit GSTIN"
-                    value={addForm.gstin}
-                    onChange={(e) => setAddForm({ ...addForm, gstin: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 uppercase font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Opening Balance (Payable Due)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={addForm.openingBalance}
-                    onChange={(e) => setAddForm({ ...addForm, openingBalance: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Opening Balance (Payable Due)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={addForm.openingBalance}
+                  onChange={(e) => setAddForm({ ...addForm, openingBalance: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                />
               </div>
 
               <div>

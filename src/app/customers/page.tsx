@@ -20,6 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import { GstFetchBox } from '@/components/gst/GstFetchBox';
 
 interface CustomerSummary {
   id: string;
@@ -403,6 +404,21 @@ export default function CustomersPage() {
                 </button>
               </div>
 
+              {/* GSTIN Auto-Fetch Section */}
+              <GstFetchBox
+                gstin={formData.gstin}
+                onGstinChange={(val) => setFormData((prev) => ({ ...prev, gstin: val }))}
+                onDetailsFetched={(details) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    gstin: details.gstin,
+                    name: prev.name ? prev.name : (details.tradeName || details.legalName),
+                    billingAddress: prev.billingAddress ? prev.billingAddress : details.address,
+                  }));
+                  toast.success(`GST details fetched for ${details.tradeName || details.legalName}! Review before saving.`);
+                }}
+              />
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Customer / Trade Name *
@@ -417,34 +433,18 @@ export default function CustomersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. 9876543210"
-                    value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    GSTIN (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={15}
-                    placeholder="22AAAAA0000A1Z5"
-                    value={formData.gstin}
-                    onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono uppercase focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Mobile Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="e.g. 9876543210"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-900"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

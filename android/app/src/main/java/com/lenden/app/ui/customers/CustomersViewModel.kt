@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.lenden.app.data.remote.dto.CreateCustomerRequest
 import com.lenden.app.data.remote.dto.CustomerDto
+import com.lenden.app.data.remote.dto.GstBusinessDetailsDto
 import com.lenden.app.data.repository.CustomerRepository
 import com.lenden.app.util.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,10 @@ data class CustomersUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isCreatingCustomer: Boolean = false,
-    val createSuccess: Boolean = false
+    val createSuccess: Boolean = false,
+    val isLookingUpGst: Boolean = false,
+    val gstLookupError: String? = null,
+    val lastFetchedGstDetails: GstBusinessDetailsDto? = null
 ) {
     val totalOutstandingUdhaar: Double
         get() = customers.sumOf { it.totalOutstanding }
@@ -110,6 +114,44 @@ class CustomersViewModel(
                 }
             }
         }
+    }
+
+    fun lookupGstin(gstin: String, onComplete: (GstBusinessDetailsDto?) -> Unit) {
+        val clean = gstin.replace(Regex("[\\s\\-\\u200B\\u00A0]"), "").trim().uppercase()
+        if (clean.length != 15) {
+            _uiState.value = _uiState.value.copy(gstLookupError = "GSTIN must be 15 characters")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLookingUpGst = true, gstLookupError = null)
+            customerRepository.lookupGstin(clean).collect { res ->
+                when (res) {
+                    is Resource.Loading -> {
+                        _uiState.value = _uiState.value.copy(isLookingUpGst = true)
+                    }
+                    is Resource.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLookingUpGst = false,
+                            lastFetchedGstDetails = res.data,
+                            gstLookupError = null
+                        )
+                        onComplete(res.data)
+                    }
+                    is Resource.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isLookingUpGst = false,
+                            gstLookupError = res.message ?: "Failed to fetch GST details"
+                        )
+                        onComplete(null)
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearGstLookupState() {
+        _uiState.value = _uiState.value.copy(isLookingUpGst = false, gstLookupError = null, lastFetchedGstDetails = null)
     }
 
     class Factory(private val customerRepository: CustomerRepository) : ViewModelProvider.Factory {

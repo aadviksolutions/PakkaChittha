@@ -57,6 +57,12 @@ interface LendenApiService {
     @POST("api/customers")
     suspend fun createCustomer(@Body request: CreateCustomerRequest): Response<StandardApiResponse>
 
+    // --- GSTIN Verification & Business Lookup ---
+    @GET("api/gstin/lookup")
+    suspend fun lookupGstin(
+        @Query("gstin") gstin: String
+    ): Response<GstLookupResponse>
+
     // --- Product Inventory ---
     @GET("api/inventory")
     suspend fun getInventory(

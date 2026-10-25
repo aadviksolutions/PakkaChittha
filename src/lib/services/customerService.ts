@@ -166,9 +166,9 @@ export async function createCustomer(businessId: string, input: CustomerInput) {
   }
 
   // Validate GSTIN if entered
-  const trimmedGstin = input.gstin?.trim().toUpperCase() || null;
+  const trimmedGstin = input.gstin?.replace(/[\s\-\u200B\u00A0]/g, '').trim().toUpperCase() || null;
   if (trimmedGstin) {
-    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{3}$/;
     if (!gstinRegex.test(trimmedGstin)) {
       throw new Error('Invalid GSTIN format. Expected standard 15-character Indian GSTIN (e.g. 22AAAAA0000A1Z5).');
     }

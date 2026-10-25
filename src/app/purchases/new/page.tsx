@@ -21,6 +21,7 @@ import { useToast } from '@/context/ToastContext';
 import { round2 } from '@/lib/billing/calculator';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import { GstFetchBox } from '@/components/gst/GstFetchBox';
 
 interface SupplierOption {
   id: string;
@@ -739,16 +740,15 @@ function PurchaseCreationForm() {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">GSTIN</label>
-                <input
-                  type="text"
-                  placeholder="15-digit GSTIN"
-                  value={newSupplierGstin}
-                  onChange={(e) => setNewSupplierGstin(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl uppercase font-mono"
-                />
-              </div>
+              <GstFetchBox
+                gstin={newSupplierGstin}
+                onGstinChange={(val) => setNewSupplierGstin(val)}
+                onDetailsFetched={(details) => {
+                  setNewSupplierGstin(details.gstin);
+                  if (!newSupplierName) setNewSupplierName(details.tradeName || details.legalName);
+                  toast.success(`GST details fetched for ${details.tradeName || details.legalName}! Review before saving.`);
+                }}
+              />
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -40,6 +40,32 @@ export function Header({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('Today');
 
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Global document click/touch listener for immediate outside dismissal on any mobile or desktop device
+  useEffect(() => {
+    if (!showUserMenu && !showNotifications) return;
+
+    const handleOutsideInteraction = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (showUserMenu && userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setShowUserMenu(false);
+      }
+      if (showNotifications && notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideInteraction);
+    document.addEventListener('touchstart', handleOutsideInteraction, { passive: true });
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideInteraction);
+      document.removeEventListener('touchstart', handleOutsideInteraction);
+    };
+  }, [showUserMenu, showNotifications]);
+
   const { user, activeBusiness, logout } = useAuth();
 
   const getMonogram = () => {
@@ -70,7 +96,7 @@ export function Header({
   };
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4">
+    <header className={`sticky top-0 ${showUserMenu || showNotifications ? 'z-[60]' : 'z-40'} h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4`}>
       {/* Left: Mobile Toggle & Business Name with Logo */}
       <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-xl min-w-0">
         <button
@@ -200,7 +226,7 @@ export function Header({
         )}
 
         {/* Notifications Popover with Outside Click/Touch Dismissal */}
-        <div className="relative">
+        <div ref={notificationsRef} className="relative">
           <button
             type="button"
             onClick={() => {
@@ -218,12 +244,12 @@ export function Header({
             <>
               {/* Invisible touch/click outside backdrop */}
               <div
-                className="fixed inset-0 z-40 bg-transparent cursor-default"
+                className="fixed inset-0 z-[65] bg-black/5 sm:bg-transparent cursor-default"
                 onClick={() => setShowNotifications(false)}
                 onTouchStart={() => setShowNotifications(false)}
                 aria-hidden="true"
               />
-              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 p-3 text-xs z-50 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                   <span className="font-semibold text-slate-900">Notifications</span>
                   <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
@@ -254,7 +280,7 @@ export function Header({
         </div>
 
         {/* User Account Menu with Outside Click/Touch Dismissal */}
-        <div className="relative">
+        <div ref={userMenuRef} className="relative">
           <button
             type="button"
             onClick={() => {
@@ -284,12 +310,12 @@ export function Header({
             <>
               {/* Invisible touch/click outside backdrop */}
               <div
-                className="fixed inset-0 z-40 bg-transparent cursor-default"
+                className="fixed inset-0 z-[65] bg-black/5 sm:bg-transparent cursor-default"
                 onClick={() => setShowUserMenu(false)}
                 onTouchStart={() => setShowUserMenu(false)}
                 aria-hidden="true"
               />
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 p-2 text-xs z-50 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-2 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
                   <p className="font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>

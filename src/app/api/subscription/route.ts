@@ -101,6 +101,29 @@ export async function GET(request: NextRequest) {
     const { calculateSubscriptionTrialInfo } = await import('@/lib/subscription/trial');
     const trial = calculateSubscriptionTrialInfo(subscription);
 
+    // Fetch customer's subscription payments history
+    const payments = await (prisma as any).subscriptionPayment.findMany({
+      where: { businessId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        plan: true,
+        status: true,
+        gateway: true,
+        gatewayPaymentId: true,
+        gatewayOrderId: true,
+        billingPeriod: true,
+        notes: true,
+        paidAt: true,
+        refundedAt: true,
+        refundAmount: true,
+        createdAt: true,
+      },
+    });
+
     return NextResponse.json({
       subscription: {
         ...subscription,
@@ -108,6 +131,21 @@ export async function GET(request: NextRequest) {
         trialDaysRemaining: trial.trialDaysRemaining,
         endDate: trial.endDate,
         displayText: trial.displayText,
+      },
+      customerIdentity: {
+        userId: authContext.session.user.id,
+        email: authContext.session.user.email,
+        name: authContext.session.user.name,
+        phone: authContext.session.user.phone || (authContext.business as any).phone || '',
+        businessId: authContext.business.id,
+        businessName: authContext.business.name,
+      },
+      payments,
+      autoPay: {
+        enabled: false,
+        status: 'ONE_TIME_BILLING',
+        description:
+          'AutoPay (recurring e-mandate) is currently disabled pending merchant bank mandate approval on Razorpay Dashboard. Subscriptions are billed per selected duration with zero automatic recurring charges.',
       },
       usage: {
         monthlyInvoicesCreated,

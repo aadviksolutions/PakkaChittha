@@ -34,6 +34,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import { GstFetchBox } from '@/components/gst/GstFetchBox';
 
 interface CustomerOption {
   id: string;
@@ -1714,19 +1715,16 @@ function InvoiceCreationForm() {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  GSTIN <span className="text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={15}
-                  placeholder="e.g. 22AAAAA0000A1Z5"
-                  value={newCustGstin}
-                  onChange={(e) => setNewCustGstin(e.target.value.toUpperCase())}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono uppercase focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
+              <GstFetchBox
+                gstin={newCustGstin}
+                onGstinChange={(val) => setNewCustGstin(val)}
+                onDetailsFetched={(details) => {
+                  setNewCustGstin(details.gstin);
+                  if (!newCustName) setNewCustName(details.tradeName || details.legalName);
+                  if (!newCustAddress) setNewCustAddress(details.address);
+                  toast.success(`GST details fetched for ${details.tradeName || details.legalName}! Review before saving.`);
+                }}
+              />
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
