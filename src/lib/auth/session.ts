@@ -14,6 +14,7 @@ export interface AuthenticatedUser {
   phone: string | null;
   platformRole: PlatformRole;
   isDemo?: boolean;
+  preferredLanguage?: string;
   createdAt: Date;
 }
 
@@ -137,6 +138,7 @@ export async function validateSessionToken(
     phone: session.user.phone,
     platformRole: session.user.platformRole,
     isDemo: Boolean((session.user as any).isDemo || session.user.id.startsWith('demo_')),
+    preferredLanguage: (session.user as any).preferredLanguage || 'en',
     createdAt: session.user.createdAt,
   };
 

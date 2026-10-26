@@ -19,6 +19,8 @@ import {
   Settings,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void;
@@ -35,6 +37,7 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const isPlatformAdmin = pathname.startsWith('/platform-admin');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -173,7 +176,7 @@ export function Header({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder={isSuperAdmin ? 'Search platform tenants... (⌘K)' : 'Search bills, customers... (⌘K)'}
+            placeholder={isSuperAdmin ? t('common.searchTenantsPlaceholder') : t('common.searchPlaceholder')}
             className="w-full pl-8 pr-10 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#071F38] focus:border-[#071F38] transition-all cursor-pointer"
             readOnly
             onClick={() => onOpenQuickActionModal('search')}
@@ -220,10 +223,13 @@ export function Header({
             className="flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5 text-white" />
-            <span className="hidden xs:inline">New Bill</span>
-            <span className="xs:hidden">Bill</span>
+            <span className="hidden xs:inline">{t('dashboard.newBill')}</span>
+            <span className="xs:hidden">{t('dashboard.newBill')}</span>
           </Link>
         )}
+
+        {/* Global Multi-Language Selector (22 Scheduled Languages + English) */}
+        <LanguageSelector variant="header" />
 
         {/* Notifications Popover with Outside Click/Touch Dismissal */}
         <div ref={notificationsRef} className="relative">
@@ -251,7 +257,7 @@ export function Header({
               />
               <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                  <span className="font-semibold text-slate-900">Notifications</span>
+                  <span className="font-semibold text-slate-900">{t('common.notifications')}</span>
                   <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
                     2 Pending
                   </span>
@@ -367,7 +373,7 @@ export function Header({
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors text-left font-medium cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                    <span>Sign Out</span>
+                    <span>{t('common.signOut')}</span>
                   </button>
                 </div>
               </div>

@@ -13,6 +13,7 @@ import {
   PackagePlus,
 } from 'lucide-react';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { useTranslation } from '@/i18n/context';
 
 interface QuickActionsProps {
   onTriggerAction: (actionType: string) => void;
@@ -20,12 +21,13 @@ interface QuickActionsProps {
 
 export function QuickActions({ onTriggerAction }: QuickActionsProps) {
   const { isAllowed } = useEntitlements();
+  const { t } = useTranslation();
 
   // Dynamic actions tailored to user's assigned plan
   const actions = [
     {
       id: 'new_invoice',
-      label: 'Add Sale Bill',
+      label: t('dashboard.addSaleBill'),
       subtitle: 'GST invoice',
       icon: FilePlus2,
       primary: true,
@@ -34,7 +36,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     },
     {
       id: 'record_payment',
-      label: 'Receive Payment',
+      label: t('invoices.recordPayment'),
       subtitle: 'Cash / UPI receipt',
       icon: CreditCard,
       primary: false,
@@ -43,7 +45,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     },
     {
       id: 'record_udhaar',
-      label: 'Add Udhar',
+      label: t('dashboard.recordUdhaar'),
       subtitle: 'Credit entry',
       icon: BookOpen,
       primary: false,
@@ -52,7 +54,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     },
     {
       id: 'add_customer',
-      label: 'Add Customer',
+      label: t('dashboard.addCustomer'),
       subtitle: 'New ledger',
       icon: UserPlus,
       primary: false,
@@ -62,7 +64,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     isAllowed('canManagePurchases')
       ? {
           id: 'new_purchase',
-          label: 'Add Purchase',
+          label: t('dashboard.newPurchase'),
           subtitle: 'Vendor bill',
           icon: Truck,
           primary: false,
@@ -71,7 +73,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
         }
       : {
           id: 'new_item',
-          label: 'Add Product',
+          label: t('dashboard.newItem'),
           subtitle: 'Stock item',
           icon: PackagePlus,
           primary: false,
@@ -81,7 +83,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     isAllowed('canAdvancedReports')
       ? {
           id: 'view_reports',
-          label: 'View Reports',
+          label: t('dashboard.viewReports'),
           subtitle: 'Sales & GST',
           icon: BarChart3,
           primary: false,
@@ -90,7 +92,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
         }
       : {
           id: 'whatsapp_reminder',
-          label: 'Send Reminder',
+          label: t('dashboard.sendReminder'),
           subtitle: 'WhatsApp link',
           icon: MessageSquare,
           primary: false,
@@ -105,7 +107,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#00B887]" />
           <h2 className="text-xs font-bold uppercase tracking-wider text-[#071F38]">
-            Quick Actions
+            {t('dashboard.quickActions')}
           </h2>
         </div>
         <span className="text-[10.5px] sm:text-[11px] text-slate-400 font-medium">

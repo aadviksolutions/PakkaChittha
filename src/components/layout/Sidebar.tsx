@@ -12,6 +12,7 @@ import {
 } from '@/data/navigation';
 import { BusinessProfileArea } from './BusinessProfileArea';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from '@/i18n/context';
 import {
   LayoutDashboard,
   FileText,
@@ -79,6 +80,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { activeBusiness } = useAuth();
+  const { t } = useTranslation();
   const {
     isFreeKhata,
     isAllowed,
@@ -89,6 +91,35 @@ export function Sidebar({
     displayText,
     trialDaysRemaining,
   } = useEntitlements();
+
+  const getTranslatedNavName = (item: NavigationItem): string => {
+    switch (item.id) {
+      case 'dashboard': return t('nav.overview');
+      case 'invoices': return t('nav.invoices');
+      case 'quotations': return t('nav.quotations');
+      case 'customers': return t('nav.customers');
+      case 'customer-ledger': return t('nav.customerLedger');
+      case 'payments': return t('nav.payments');
+      case 'inventory': return t('nav.inventory');
+      case 'purchases': return t('nav.purchases');
+      case 'suppliers': return t('nav.suppliers');
+      case 'expenses': return t('nav.expenses');
+      case 'reports': return t('nav.reports');
+      case 'whatsapp': return t('nav.whatsapp');
+      case 'staff': return t('nav.staff');
+      case 'subscription': return t('nav.subscription');
+      case 'settings': return t('nav.settings');
+      case 'ghar-kharcha-overview':
+      case 'ghar-kharcha': return t('nav.gharKharcha');
+      case 'free-khata':
+      case 'free-khata-link': return t('nav.freeKhata');
+      case 'platform-overview': return t('nav.platformOverview');
+      case 'businesses': return t('nav.businesses');
+      case 'plans': return t('nav.plans');
+      case 'platform-settings': return t('nav.platformSettings');
+      default: return item.name;
+    }
+  };
 
   // Filter business items dynamically based on plan entitlements
   const filteredBusinessItems = BUSINESS_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
@@ -188,7 +219,7 @@ export function Sidebar({
                   </span>
                 </div>
                 <p className="text-[9.5px] text-amber-700 font-semibold truncate">
-                  {isSuperAdmin ? 'Platform Control Center' : 'Billing • Inventory • Udhari • Reports'}
+                  {isSuperAdmin ? 'Platform Control Center' : t('common.tagline')}
                 </p>
               </div>
             )}
@@ -301,7 +332,7 @@ export function Sidebar({
                                 : 'text-slate-400 group-hover:text-[#EA580C]'
                             }`}
                           />
-                          {!isCollapsed && <span className="truncate">{item.name}</span>}
+                          {!isCollapsed && <span className="truncate">{getTranslatedNavName(item)}</span>}
                         </div>
 
                         {!isCollapsed && item.badge && (

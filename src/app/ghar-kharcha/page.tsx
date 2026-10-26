@@ -28,6 +28,8 @@ import {
   Scale,
   BarChart3,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 interface DashboardData {
   monthYear: string;
@@ -82,6 +84,7 @@ interface DashboardData {
 
 export default function GharKharchaDashboardPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -251,7 +254,7 @@ export default function GharKharchaDashboardPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              PakkaChittha Ghar Kharcha
+              PakkaChittha {t('gharKharcha.title')}
             </span>
             <span className="text-xs font-bold text-slate-400">• 100% Free Family Ledger</span>
           </div>
@@ -259,13 +262,16 @@ export default function GharKharchaDashboardPage() {
             <span>{data?.authContext.householdName || 'My Household'}</span>
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            "Har ghar ka pakka hisaab." • Collaborating as{' '}
+            "{t('gharKharcha.tagline')}" • Collaborating as{' '}
             <strong className="text-slate-700 uppercase">{data?.authContext.role}</strong>
           </p>
         </div>
 
         {/* Right side: Month Picker & Quick Add Action */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Language Selector */}
+          <LanguageSelector variant="compact" />
+
           {/* Month selector with prev/next */}
           <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
             <button
@@ -296,7 +302,7 @@ export default function GharKharchaDashboardPage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Record Kharcha</span>
+              <span>{t('gharKharcha.addExpense')}</span>
             </button>
           )}
 
@@ -307,7 +313,7 @@ export default function GharKharchaDashboardPage() {
             title="Family expense splits & settlements"
           >
             <Scale className="w-4 h-4 text-indigo-600" />
-            <span className="hidden sm:inline">Splits</span>
+            <span className="hidden sm:inline">{t('gharKharcha.splitExpense')}</span>
           </Link>
 
           {/* Reports Button */}
@@ -317,7 +323,7 @@ export default function GharKharchaDashboardPage() {
             title="Reports, trends & exports"
           >
             <BarChart3 className="w-4 h-4 text-emerald-600" />
-            <span className="hidden sm:inline">Reports</span>
+            <span className="hidden sm:inline">{t('reports.title')}</span>
           </Link>
 
           {/* Invite Family Button */}
@@ -326,7 +332,7 @@ export default function GharKharchaDashboardPage() {
             className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
           >
             <Users className="w-4 h-4 text-slate-600" />
-            <span>Family</span>
+            <span>{t('gharKharcha.familyMembers')}</span>
           </Link>
         </div>
       </div>
@@ -337,7 +343,7 @@ export default function GharKharchaDashboardPage() {
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Income</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Income</span>
               <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <ArrowDownRight className="w-4 h-4" />
               </div>
@@ -355,7 +361,7 @@ export default function GharKharchaDashboardPage() {
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Expenses</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('gharKharcha.totalExpenses')}</span>
               <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
@@ -373,7 +379,7 @@ export default function GharKharchaDashboardPage() {
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Net Cash Flow</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('freeKhata.netBalance')}</span>
               <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <Wallet className="w-4 h-4" />
               </div>
@@ -393,7 +399,7 @@ export default function GharKharchaDashboardPage() {
         <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Monthly Budget</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('gharKharcha.monthlyBudget')}</span>
               <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                 <Landmark className="w-4 h-4" />
               </div>

@@ -30,6 +30,8 @@ import {
   LayoutDashboard,
   Home,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 /* =====================================================================
    REALISTIC 3D DASHBOARD PREVIEW
@@ -351,6 +353,7 @@ function GlossyHeroBackground() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const redirectUrl = searchParams.get('redirect') || '/';
   const modeParam = searchParams.get('mode');
 
@@ -584,18 +587,19 @@ function LoginForm() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <LanguageSelector variant="compact" />
             <button
               type="button"
               onClick={handleSignInFocus}
               className="hidden sm:inline-flex px-3.5 py-1.5 rounded-lg border border-slate-300 hover:border-slate-400 bg-white text-slate-800 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
             >
-              Sign In
+              {t('auth.signInButton')}
             </button>
             <Link
               href="/register"
               className="px-3 sm:px-4 py-1.5 rounded-lg bg-[#EA580C] hover:bg-[#D94E00] text-white font-bold text-xs transition-all shadow-sm flex items-center gap-1"
             >
-              Get Started
+              {t('auth.createAccount')}
             </Link>
             <button
               type="button"
@@ -847,7 +851,7 @@ function LoginForm() {
                 {/* Email address field */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                    Email address
+                    {t('auth.email')}
                   </label>
                   <div className="relative">
                     <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -856,7 +860,7 @@ function LoginForm() {
                       type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder={t('auth.email')}
                       disabled={loading}
                       required
                       className="w-full pl-8 pr-3 py-1.5 xl:py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 focus:border-[#EA580C] text-xs xl:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all disabled:opacity-60"
@@ -867,7 +871,7 @@ function LoginForm() {
                 {/* Password field with show/hide control */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
-                    Password
+                    {t('auth.password')}
                   </label>
                   <div className="relative">
                     <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -875,7 +879,7 @@ function LoginForm() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder={t('auth.password')}
                       disabled={loading}
                       required
                       className="w-full pl-8 pr-8 py-1.5 xl:py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#EA580C]/20 focus:border-[#EA580C] text-xs xl:text-sm text-slate-900 placeholder:text-slate-400 bg-white transition-all disabled:opacity-60"
@@ -904,7 +908,7 @@ function LoginForm() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="w-3.5 h-3.5 rounded border-slate-300 text-[#EA580C] focus:ring-[#EA580C] cursor-pointer"
                     />
-                    <span className="text-slate-600 font-medium">Remember me</span>
+                    <span className="text-slate-600 font-medium">{t('auth.rememberMe')}</span>
                   </label>
 
                   <button
@@ -912,7 +916,7 @@ function LoginForm() {
                     onClick={() => setShowForgotModal(true)}
                     className="font-medium text-[#EA580C] hover:text-[#C2410C] transition-colors cursor-pointer"
                   >
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </button>
                 </div>
 
@@ -926,7 +930,7 @@ function LoginForm() {
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Sign In</span>
+                      <span>{t('auth.signInButton')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}
@@ -937,7 +941,7 @@ function LoginForm() {
               <div className="relative flex items-center justify-center my-2 xl:my-2.5">
                 <div className="w-full border-t border-slate-200" />
                 <span className="absolute px-2.5 bg-white text-[10.5px] font-normal text-slate-400">
-                  Or continue with
+                  {t('auth.orContinueWith')}
                 </span>
               </div>
 
@@ -970,7 +974,7 @@ function LoginForm() {
                     />
                   </svg>
                 )}
-                <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
+                <span>{googleLoading ? 'Connecting to Google...' : t('auth.googleSignIn')}</span>
               </button>
 
               {/* Don't have an account? Sign up */}
@@ -987,12 +991,12 @@ function LoginForm() {
                   </>
                 ) : (
                   <>
-                    Don&apos;t have an account?{' '}
+                    {t('auth.dontHaveAccount')}{' '}
                     <Link
                       href="/register"
                       className="font-semibold text-[#EA580C] hover:underline"
                     >
-                      Sign up
+                      {t('auth.createAccount')}
                     </Link>
                   </>
                 )}

@@ -13,12 +13,14 @@ import { SubscriptionUsageCard } from '@/components/dashboard/SubscriptionUsageC
 import { GstOverviewCard } from '@/components/dashboard/GstOverviewCard';
 import { useActionModal } from '@/context/ActionModalContext';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from '@/i18n/context';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { Shield, AlertTriangle, PlusCircle } from 'lucide-react';
 import ModeSelectionPage from './select-mode/page';
 
 function DashboardContent() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { openAction } = useActionModal();
   const { activeBusiness, user, loading } = useAuth();
   const { isFreeKhata, isAllowed, isSuperAdmin } = useEntitlements();
@@ -106,14 +108,14 @@ function DashboardContent() {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-[#071F38] tracking-tight">
-              Hello, {user?.name ? user.name.split(' ')[0] : 'Vyapari'} 👋
+              {t('dashboard.helloVyapari', { name: user?.name ? user.name.split(' ')[0] : 'Vyapari' })}
             </h1>
             <span className="text-[11px] font-bold text-[#00B887] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-              {activeBusiness ? 'Workspace Active' : 'Ready'}
+              {activeBusiness ? t('common.workspaceActive') : t('common.ready')}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <span className="font-medium text-slate-600">Aaj ka business kaisa chal raha hai?</span>
+            <span className="font-medium text-slate-600">{t('dashboard.businessStatus')}</span>
             <span className="text-slate-300 hidden xs:inline">•</span>
             <span className="text-slate-500">
               Workspace: <strong className="text-[#071F38]">{activeBusiness?.name || 'My Business'}</strong>
@@ -135,7 +137,7 @@ function DashboardContent() {
             className="inline-flex items-center gap-1.5 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer min-h-[44px]"
           >
             <PlusCircle className="w-4 h-4 text-white" />
-            <span>Add Sale Bill</span>
+            <span>{t('dashboard.addSaleBill')}</span>
           </Link>
         </div>
       </div>

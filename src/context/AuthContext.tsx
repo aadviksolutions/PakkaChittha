@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   phone: string | null;
   platformRole: 'SUPER_ADMIN' | 'USER';
+  preferredLanguage?: string;
 }
 
 export interface ActiveBusiness {

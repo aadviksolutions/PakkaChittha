@@ -12,9 +12,12 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Sparkles,
+  Languages,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { UpiQrCode } from '@/components/shared/UpiQrCode';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 interface BusinessSettings {
   id: string;
@@ -35,6 +38,7 @@ interface BusinessSettings {
 
 export default function SettingsPage() {
   const toast = useToast();
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -486,6 +490,21 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Language & Regional Preferences */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Languages className="w-4 h-4 text-[#EA580C]" />
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">{t('settings.languagePreference')}</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">{t('settings.languageHelp')}</p>
+              </div>
+            </div>
+
+            <div className="pt-1">
+              <LanguageSelector variant="settings" />
+            </div>
+          </div>
+
           {/* Action Bar */}
           <div className="flex items-center justify-between pt-2">
             <span className="text-xs text-slate-500">
@@ -496,7 +515,7 @@ export default function SettingsPage() {
               disabled={saving}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white font-semibold text-xs rounded-xl hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
             >
-              {saving ? 'Saving...' : 'Save Configuration'}
+              {saving ? t('common.saving') : t('settings.saveSettings')}
             </button>
           </div>
         </form>

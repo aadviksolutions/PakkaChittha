@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   AlertCircle,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
 
 interface SummaryCardsProps {
   customMetrics?: {
@@ -35,6 +36,7 @@ interface SummaryData {
 }
 
 export function SummaryCards({ customMetrics }: SummaryCardsProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -100,7 +102,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
         <div>
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
-              Total Sales
+              {t('dashboard.todaySales')}
             </span>
             <div className="w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-[#00B887] border border-emerald-100 flex items-center justify-center shrink-0">
               <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -118,7 +120,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
         <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 gap-1 flex-wrap">
           <span className="inline-flex items-center gap-0.5 font-semibold text-[#00B887] text-[10px] sm:text-[11px] truncate">
             <ArrowUpRight className="w-3 h-3 shrink-0" />
-            ₹{todaysSales.toLocaleString('en-IN')} today
+            ₹{todaysSales.toLocaleString('en-IN')} {t('common.today')}
           </span>
           <span className="text-slate-400 text-[10px] sm:text-[11px] font-medium hidden xs:inline">
             {invoiceCount} {invoiceCount === 1 ? 'bill' : 'bills'}
@@ -131,7 +133,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
         <div>
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
-              Total Udhar
+              {t('dashboard.totalReceivable')}
             </span>
             <div className="w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -150,15 +152,15 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
           {overdueAmount > 0 ? (
             <span className="inline-flex items-center gap-0.5 text-rose-700 text-[10px] sm:text-[11px] font-bold truncate">
               <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" />
-              ₹{overdueAmount.toLocaleString('en-IN')} overdue
+              ₹{overdueAmount.toLocaleString('en-IN')} {t('invoices.statusOverdue')}
             </span>
           ) : (
             <span className="text-slate-500 text-[10px] sm:text-[11px] font-medium truncate">
-              Receivables due
+              {t('invoices.balanceDue')}
             </span>
           )}
           <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 px-1 py-0.2 rounded border border-amber-200 hidden xs:inline">
-            Active
+            {t('common.active')}
           </span>
         </div>
       </div>
@@ -168,7 +170,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
         <div>
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
-              Collected
+              {t('invoices.paidAmount')}
             </span>
             <div className="w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-[#00B887] border border-emerald-100 flex items-center justify-center shrink-0">
               <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -189,7 +191,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
             Cash & UPI
           </span>
           <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-[#00B887] px-1 py-0.2 rounded border border-emerald-200 hidden xs:inline">
-            Settled
+            {t('invoices.statusPaid')}
           </span>
         </div>
       </div>
@@ -199,7 +201,7 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
         <div>
           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
-              Total Bills
+              {t('nav.invoices')}
             </span>
             <div className="w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-lg bg-teal-50 text-[#008F91] border border-teal-200 flex items-center justify-center shrink-0">
               <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -211,14 +213,14 @@ export function SummaryCards({ customMetrics }: SummaryCardsProps) {
               {invoiceCount}
             </span>
             <span className="text-[10px] font-semibold text-slate-500">
-              {invoiceCount === 1 ? 'Bill' : 'Bills'}
+              {t('dashboard.newBill')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 gap-1 flex-wrap">
           <span className="text-[10px] sm:text-[11px] font-semibold text-[#008F91] truncate">
-            {pendingCount} pending
+            {pendingCount} {t('common.pending')}
           </span>
           <span className="text-[9px] font-semibold text-teal-800 bg-teal-50 px-1 py-0.2 rounded border border-teal-200 uppercase hidden xs:inline">
             ₹{pendingAmount.toLocaleString('en-IN')}

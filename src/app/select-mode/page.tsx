@@ -16,12 +16,15 @@ import {
   Lock,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 function ModeSelectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get('redirect');
   const { user, activeBusiness, loading } = useAuth();
+  const { t } = useTranslation();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   // If already authenticated, forward user to authorized workspace
@@ -99,13 +102,16 @@ function ModeSelectionContent() {
           />
         </Link>
 
-        {/* Top-Right Sign In Button */}
-        <Link
-          href="/login"
-          className="px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border border-[#EA580C] bg-white/95 hover:bg-[#EA580C] text-[#071F38] hover:text-white font-bold text-xs sm:text-sm shadow-xs transition-all duration-200 shrink-0"
-        >
-          Sign In
-        </Link>
+        {/* Top-Right Language Selector and Sign In Button */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <LanguageSelector variant="pill" />
+          <Link
+            href="/login"
+            className="px-4 sm:px-6 py-1.5 sm:py-2 rounded-full border border-[#EA580C] bg-white/95 hover:bg-[#EA580C] text-[#071F38] hover:text-white font-bold text-xs sm:text-sm shadow-xs transition-all duration-200 shrink-0"
+          >
+            {t('auth.signInButton')}
+          </Link>
+        </div>
       </header>
 
       {/* =========================================================
@@ -198,7 +204,7 @@ function ModeSelectionContent() {
               href={householdLoginUrl}
               className="mt-4 sm:mt-5 w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF5500] to-[#EA580C] hover:from-[#E64A00] hover:to-[#D94E00] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 transition-all duration-150 active:scale-[0.99] shrink-0"
             >
-              <span>Ghar ka Hisaab</span>
+              <span>{t('modeSelect.meraGharCta')}</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </Link>
           </div>
@@ -274,7 +280,7 @@ function ModeSelectionContent() {
               href={businessLoginUrl}
               className="mt-4 sm:mt-5 w-full py-2.5 sm:py-3 px-4 rounded-xl bg-[#071F38] hover:bg-[#0A2A4C] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-slate-900/25 transition-all duration-150 active:scale-[0.99] shrink-0"
             >
-              <span>Business Hisaab</span>
+              <span>{t('modeSelect.meraVyapaarCta')}</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </Link>
           </div>

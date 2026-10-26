@@ -27,6 +27,8 @@ import { TransactionModal, ContactOption } from '@/components/free-khata/Transac
 import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 interface KhataContactSummary {
   id: string;
@@ -97,6 +99,7 @@ interface DashboardData {
 
 function FreeKhataDashboardContent() {
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const filterParam = searchParams.get('filter') || 'ALL'; // 'ALL', 'GAVE', 'RECEIVED'
   const viewParam = searchParams.get('view'); // 'reminders'
 
@@ -242,7 +245,7 @@ function FreeKhataDashboardContent() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-black text-[#071F38] tracking-tight">
-              Free Udhaar Khata
+              {t('freeKhata.title')}
             </h1>
             <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
               <Sparkles className="w-3 h-3 text-[#00B887]" />
@@ -250,19 +253,21 @@ function FreeKhataDashboardContent() {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Personal lending and borrowing ledger • Unlimited contacts • Zero limits
+            {t('freeKhata.tagline')}
           </p>
         </div>
 
         {/* Desktop Quick Actions */}
         <div className="hidden sm:flex items-center gap-2.5">
+          <LanguageSelector variant="compact" />
+
           <button
             type="button"
             onClick={handleOpenGave}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <ArrowUpRight className="w-4 h-4" />
-            <span>+ I Gave (Maine Diye)</span>
+            <span>+ {t('freeKhata.youWillGive')}</span>
           </button>
 
           <button
@@ -271,7 +276,7 @@ function FreeKhataDashboardContent() {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <ArrowDownLeft className="w-4 h-4" />
-            <span>+ I Received (Maine Liye)</span>
+            <span>+ {t('freeKhata.youWillGet')}</span>
           </button>
 
           <button
@@ -307,7 +312,7 @@ function FreeKhataDashboardContent() {
         <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-[#009E74] text-white shadow-md shadow-emerald-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">
-              You will get
+              {t('freeKhata.youWillGet')}
             </span>
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4 text-white" />
@@ -328,7 +333,7 @@ function FreeKhataDashboardContent() {
         <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-rose-100 uppercase tracking-wider">
-              You will pay
+              {t('freeKhata.youWillGive')}
             </span>
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4 text-white" />

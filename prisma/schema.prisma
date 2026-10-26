@@ -92,6 +92,7 @@ model User {
   isDemo       Boolean      @default(false)
   isSuspended  Boolean      @default(false)
   suspendedReason String?
+  preferredLanguage String   @default("en")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -107,6 +108,7 @@ model User {
   @@index([email])
   @@index([googleId])
   @@index([platformRole])
+  @@index([preferredLanguage])
 }
 
 model Business {
@@ -127,6 +129,7 @@ model Business {
   bankIfsc           String?
   bankUpiId          String?
   invoiceTerms       String?
+  invoiceLanguage    String?            @default("en")
   allowNegativeStock Boolean            @default(false)
   isDemo             Boolean            @default(false)
   logoUrl            String?

@@ -16,6 +16,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { useTranslation } from '@/i18n/context';
 
 interface MobileBottomNavigationProps {
   onOpenMobileMenu: () => void;
@@ -24,6 +25,7 @@ interface MobileBottomNavigationProps {
 export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigationProps) {
   const pathname = usePathname();
   const { isFreeKhata, isStarter, isAllowed, isSuperAdmin } = useEntitlements();
+  const { t } = useTranslation();
 
   // Do not render bottom navigation on public/auth/print pages
   const isExcludedPage =
@@ -140,31 +142,31 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
   if (isFreeKhata) {
     const freeKhataItems = [
       {
-        label: 'Home',
+        label: t('nav.overview'),
         href: '/free-khata',
         icon: LayoutDashboard,
         isActive: pathname === '/free-khata' && !pathname.includes('filter='),
       },
       {
-        label: 'People',
+        label: t('nav.customers'),
         href: '/free-khata/contacts',
         icon: Users,
         isActive: pathname.startsWith('/free-khata/contacts') || pathname.startsWith('/free-khata/person'),
       },
       {
-        label: 'Maine Diye',
+        label: t('freeKhata.youWillGive'),
         href: '/free-khata?filter=GAVE',
         icon: CreditCard,
         isActive: pathname === '/free-khata' && typeof window !== 'undefined' && window.location.search.includes('GAVE'),
       },
       {
-        label: 'Maine Liye',
+        label: t('freeKhata.youWillGet'),
         href: '/free-khata?filter=RECEIVED',
         icon: Receipt,
         isActive: pathname === '/free-khata' && typeof window !== 'undefined' && window.location.search.includes('RECEIVED'),
       },
       {
-        label: 'Reminders',
+        label: t('dashboard.sendReminder'),
         href: '/free-khata?view=reminders',
         icon: MessageSquare,
         isActive: pathname === '/free-khata' && typeof window !== 'undefined' && window.location.search.includes('reminders'),
@@ -211,38 +213,38 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
   // 2. COMMERCIAL PLANS (STARTER, GROWTH, SCALE)
   const commercialItems = [
     {
-      label: 'Home',
+      label: t('nav.overview'),
       href: '/',
       icon: LayoutDashboard,
       isActive: pathname === '/',
     },
     {
-      label: 'Billing',
+      label: t('nav.invoices'),
       href: '/invoices',
       icon: FileText,
       isActive: pathname.startsWith('/invoices'),
     },
     {
-      label: 'Customers',
+      label: t('nav.customers'),
       href: '/customers',
       icon: Users,
       isActive: pathname.startsWith('/customers'),
     },
     isAllowed('canManagePurchases')
       ? {
-          label: 'Purchases',
+          label: t('nav.purchases'),
           href: '/purchases',
           icon: Truck,
           isActive: pathname.startsWith('/purchases'),
         }
       : {
-          label: 'Stock',
+          label: t('nav.inventory'),
           href: '/inventory',
           icon: Package,
           isActive: pathname.startsWith('/inventory'),
         },
     {
-      label: 'More',
+      label: t('common.actions'),
       onClick: onOpenMobileMenu,
       icon: Menu,
       isActive:

@@ -7,6 +7,8 @@ import { amountToWordsIndian } from '@/lib/billing/numberToWords';
 import { generateUpiQrDataUrl } from '@/lib/billing/upiQr';
 import { Printer, ArrowLeft, Smartphone } from 'lucide-react';
 import { PrintButton } from './PrintButton';
+import { getServerTranslation } from '@/i18n/server';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,8 @@ export default async function InvoicePrintPage({
   if (!invoice) {
     notFound();
   }
+
+  const { t, dir } = await getServerTranslation();
 
   const amountInWords = amountToWordsIndian(invoice.total);
   const isCancelled = invoice.status === 'CANCELLED';
@@ -69,12 +73,13 @@ export default async function InvoicePrintPage({
         </Link>
 
         <div className="flex items-center gap-2">
+          <LanguageSelector variant="compact" />
           <PrintButton />
         </div>
       </div>
 
       {/* A4 Document Container */}
-      <div className="max-w-4xl mx-auto bg-white border border-slate-200/90 shadow-lg rounded-xl print:shadow-none print:border-none print:rounded-none p-8 sm:p-10 relative overflow-hidden">
+      <div dir={dir} className="max-w-4xl mx-auto bg-white border border-slate-200/90 shadow-lg rounded-xl print:shadow-none print:border-none print:rounded-none p-8 sm:p-10 relative overflow-hidden">
         {/* Watermark if Cancelled */}
         {isCancelled && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 opacity-15">
@@ -125,14 +130,14 @@ export default async function InvoicePrintPage({
 
           <div className="text-left sm:text-right">
             <div className="inline-block bg-slate-900 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-md mb-2">
-              {invoice.isGstInvoice ? 'TAX INVOICE' : 'COMMERCIAL BILL'}
+              {invoice.isGstInvoice ? t('invoices.taxInvoice') : 'COMMERCIAL BILL'}
             </div>
-            <p className="text-xs text-slate-500">Invoice Number</p>
+            <p className="text-xs text-slate-500">{t('invoices.invoiceNumber')}</p>
             <p className="text-base font-extrabold font-mono text-slate-900">{invoice.invoiceNumber}</p>
 
             <div className="mt-2 text-xs text-slate-600 space-y-0.5">
               <p>
-                Date:{' '}
+                {t('invoices.invoiceDate')}:{' '}
                 <strong className="text-slate-900">
                   {new Date(invoice.invoiceDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
@@ -142,7 +147,7 @@ export default async function InvoicePrintPage({
                 </strong>
               </p>
               <p>
-                Due Date:{' '}
+                {t('invoices.dueDate')}:{' '}
                 <strong className="text-slate-900">
                   {new Date(invoice.dueDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
@@ -211,17 +216,17 @@ export default async function InvoicePrintPage({
             <thead>
               <tr className="border-b-2 border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                 <th className="py-2.5 pl-2">#</th>
-                <th className="py-2.5">Item Description</th>
-                <th className="py-2.5 text-right">Qty</th>
-                <th className="py-2.5 text-right">Rate</th>
-                <th className="py-2.5 text-right">Disc</th>
+                <th className="py-2.5">{t('invoices.itemDescription')}</th>
+                <th className="py-2.5 text-right">{t('invoices.quantity')}</th>
+                <th className="py-2.5 text-right">{t('invoices.rate')}</th>
+                <th className="py-2.5 text-right">{t('invoices.discount')}</th>
                 {invoice.isGstInvoice && (
                   <>
-                    <th className="py-2.5 text-right">GST %</th>
-                    <th className="py-2.5 text-right">Tax (₹)</th>
+                    <th className="py-2.5 text-right">{t('invoices.tax')} %</th>
+                    <th className="py-2.5 text-right">{t('invoices.tax')} (₹)</th>
                   </>
                 )}
-                <th className="py-2.5 pr-2 text-right">Total (₹)</th>
+                <th className="py-2.5 pr-2 text-right">{t('invoices.total')} (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-mono text-[11px]">
@@ -255,7 +260,7 @@ export default async function InvoicePrintPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 border-t-2 border-slate-800 text-xs">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Invoice Amount in Words
+              {t('invoices.amountInWords')}
             </span>
             <p className="font-semibold text-slate-800 italic bg-slate-50 p-2.5 rounded-lg border border-slate-100">
               {amountInWords}
@@ -266,29 +271,29 @@ export default async function InvoicePrintPage({
                 <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
                   <div className="flex-1 space-y-1 w-full">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                      Bank & Payment Settlement
+                      {t('invoices.bankDetails')}
                     </span>
                     {invoice.business.bankName && (
                       <div className="flex justify-between text-[11px] text-slate-700">
-                        <span className="text-slate-500">Bank Name:</span>
+                        <span className="text-slate-500">{t('invoices.bankName')}:</span>
                         <span className="font-semibold">{invoice.business.bankName}</span>
                       </div>
                     )}
                     {invoice.business.bankAccountNumber && (
                       <div className="flex justify-between text-[11px] text-slate-700">
-                        <span className="text-slate-500">Account No:</span>
+                        <span className="text-slate-500">{t('invoices.accountNumber')}:</span>
                         <span className="font-mono font-semibold">{invoice.business.bankAccountNumber}</span>
                       </div>
                     )}
                     {invoice.business.bankIfsc && (
                       <div className="flex justify-between text-[11px] text-slate-700">
-                        <span className="text-slate-500">IFSC Code:</span>
+                        <span className="text-slate-500">{t('invoices.ifscCode')}:</span>
                         <span className="font-mono font-semibold">{invoice.business.bankIfsc}</span>
                       </div>
                     )}
                     {invoice.business.bankUpiId && (
                       <div className="flex justify-between text-[11px] text-emerald-800 pt-1 border-t border-slate-200">
-                        <span className="font-medium text-slate-600">UPI ID:</span>
+                        <span className="font-medium text-slate-600">{t('invoices.upiId')}:</span>
                         <span className="font-mono font-bold">{invoice.business.bankUpiId}</span>
                       </div>
                     )}
@@ -303,7 +308,7 @@ export default async function InvoicePrintPage({
                       />
                       <div className="mt-1 flex items-center gap-1 text-[9px] font-bold text-slate-800">
                         <Smartphone className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Scan & Pay (UPI)</span>
+                        <span>{t('invoices.scanToPay')} (UPI)</span>
                       </div>
                       <div className="text-[8px] text-slate-400 font-semibold flex items-center gap-1 mt-0.5">
                         <span>GPay</span>
@@ -321,13 +326,13 @@ export default async function InvoicePrintPage({
 
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/90 space-y-1.5">
             <div className="flex justify-between text-slate-600">
-              <span>Taxable Subtotal:</span>
+              <span>{t('invoices.subtotal')}:</span>
               <span className="font-mono tabular-nums">₹{invoice.subtotal.toFixed(2)}</span>
             </div>
 
             {invoice.discountTotal > 0 && (
               <div className="flex justify-between text-emerald-700">
-                <span>Total Discount:</span>
+                <span>{t('invoices.discount')}:</span>
                 <span className="font-mono tabular-nums">-₹{invoice.discountTotal.toFixed(2)}</span>
               </div>
             )}
@@ -362,17 +367,17 @@ export default async function InvoicePrintPage({
             )}
 
             <div className="pt-2 border-t border-slate-300 flex justify-between font-bold text-sm text-slate-900">
-              <span>Grand Total:</span>
+              <span>{t('invoices.grandTotal')}:</span>
               <span className="font-mono text-base tabular-nums">₹{invoice.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
 
             <div className="flex justify-between text-emerald-700 font-semibold pt-1 border-t border-slate-200">
-              <span>Paid Amount:</span>
+              <span>{t('invoices.paidAmount')}:</span>
               <span className="font-mono tabular-nums">₹{invoice.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
 
             <div className="flex justify-between text-amber-900 font-bold text-xs bg-amber-50/80 -mx-4 -mb-4 p-3 rounded-b-xl border-t border-amber-200">
-              <span>Balance Due (Udhaar):</span>
+              <span>{t('invoices.balanceDue')}:</span>
               <span className="font-mono text-sm tabular-nums">₹{invoice.balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -382,7 +387,7 @@ export default async function InvoicePrintPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 mt-6 border-t border-slate-200 text-xs">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              Terms & Conditions
+              {t('invoices.termsAndConditions')}
             </span>
             <p className="text-[10px] text-slate-500 whitespace-pre-line leading-relaxed font-mono">
               {invoice.termsAndConditions}
@@ -392,7 +397,7 @@ export default async function InvoicePrintPage({
           <div className="text-center sm:text-right flex flex-col justify-end items-center sm:items-end">
             <div className="h-14 w-36 border-b border-slate-400 mb-1"></div>
             <p className="font-bold text-slate-900 text-xs">For {invoice.businessName}</p>
-            <p className="text-[10px] text-slate-400">Authorized Signatory</p>
+            <p className="text-[10px] text-slate-400">{t('invoices.authorizedSignatory')}</p>
           </div>
         </div>
 

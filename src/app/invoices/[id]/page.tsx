@@ -20,6 +20,7 @@ import {
 import { WhatsAppShareModal } from '@/components/whatsapp/WhatsAppShareModal';
 import { useToast } from '@/context/ToastContext';
 import { UpiQrCode } from '@/components/shared/UpiQrCode';
+import { useTranslation } from '@/i18n/context';
 
 interface InvoiceDetail {
   id: string;
@@ -99,6 +100,7 @@ function InvoiceDetailContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -293,7 +295,7 @@ function InvoiceDetailContent({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors"
           >
             <Printer className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Print A4 / PDF</span>
+            <span>{t('invoices.print')}</span>
           </Link>
 
           <button
@@ -303,7 +305,7 @@ function InvoiceDetailContent({
             title="Send invoice via WhatsApp"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Send to WhatsApp</span>
+            <span>{t('invoices.shareWhatsApp')}</span>
           </button>
 
           {!isCancelled && invoice.balanceDue > 0 && (
@@ -313,7 +315,7 @@ function InvoiceDetailContent({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors cursor-pointer"
             >
               <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Record Payment</span>
+              <span>{t('invoices.recordPayment')}</span>
             </button>
           )}
 
@@ -324,7 +326,7 @@ function InvoiceDetailContent({
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 transition-colors cursor-pointer"
             >
               <Ban className="w-3.5 h-3.5" />
-              <span>Void</span>
+              <span>{t('invoices.cancelInvoice')}</span>
             </button>
           )}
         </div>
@@ -401,13 +403,13 @@ function InvoiceDetailContent({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-2.5 px-3">Description</th>
-                  <th className="py-2.5 px-3 text-right">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Rate</th>
-                  <th className="py-2.5 px-3 text-right">Disc</th>
-                  {invoice.isGstInvoice && <th className="py-2.5 px-3 text-right">GST %</th>}
-                  {invoice.isGstInvoice && <th className="py-2.5 px-3 text-right">Tax (₹)</th>}
-                  <th className="py-2.5 px-3 text-right">Total (₹)</th>
+                  <th className="py-2.5 px-3">{t('invoices.itemDescription')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('invoices.quantity')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('invoices.rate')}</th>
+                  <th className="py-2.5 px-3 text-right">{t('invoices.discount')}</th>
+                  {invoice.isGstInvoice && <th className="py-2.5 px-3 text-right">{t('invoices.tax')} %</th>}
+                  {invoice.isGstInvoice && <th className="py-2.5 px-3 text-right">{t('invoices.tax')} (₹)</th>}
+                  <th className="py-2.5 px-3 text-right">{t('invoices.total')} (₹)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono text-[11px]">

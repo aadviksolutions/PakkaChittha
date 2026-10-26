@@ -21,14 +21,39 @@
     --brand-teal: #071F38;
     --brand-teal-subtle: #F1F5F9;
     --slate-muted: #64748b;
+    --font-indic-fallback: "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans Telugu", 
+                           "Noto Sans Tamil", "Noto Sans Gujarati", "Noto Sans Kannada", 
+                           "Noto Sans Malayalam", "Noto Sans Oriya", "Noto Sans Gurmukhi", 
+                           "Noto Nastaliq Urdu", "Noto Sans Arabic", "Noto Sans Ol Chiki", 
+                           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-inter), var(--font-indic-fallback);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* RTL Support for Urdu, Kashmiri and Sindhi */
+  [dir="rtl"], .rtl-layout {
+    direction: rtl;
+    text-align: right;
+  }
+
+  [dir="rtl"] input[type="text"],
+  [dir="rtl"] input[type="email"],
+  [dir="rtl"] input[type="password"],
+  [dir="rtl"] textarea {
+    text-align: right;
+  }
+
+  [dir="rtl"] input[type="number"],
+  [dir="rtl"] input[type="tel"] {
+    direction: ltr;
+    text-align: right;
   }
 
   /* Accessible focus visible styling */

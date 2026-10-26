@@ -12,6 +12,7 @@ import { ToastProvider } from '@/context/ToastContext';
 
 import { MobileBottomNavigation } from './MobileBottomNavigation';
 import { CinematicIntro } from '../welcome/CinematicIntro';
+import { I18nProvider } from '@/i18n/context';
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -94,19 +95,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ActionModalProvider>
-        <ToastProvider>
-          <React.Suspense
-            fallback={
-              <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            }
-          >
-            <AppShellInner>{children}</AppShellInner>
-          </React.Suspense>
-        </ToastProvider>
-      </ActionModalProvider>
+      <I18nProvider>
+        <ActionModalProvider>
+          <ToastProvider>
+            <React.Suspense
+              fallback={
+                <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <AppShellInner>{children}</AppShellInner>
+            </React.Suspense>
+          </ToastProvider>
+        </ActionModalProvider>
+      </I18nProvider>
     </AuthProvider>
   );
 }

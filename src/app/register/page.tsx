@@ -15,6 +15,8 @@ import {
   BookOpen,
   Home,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 const INDIAN_STATES = [
   'Andhra Pradesh',
@@ -51,6 +53,7 @@ const TRADE_TYPES = [
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const { user: loggedInUser, activeBusiness: loggedInBusiness, loading: authLoading } = useAuth();
   const planParam = searchParams.get('plan');
   const initialCategory =
@@ -226,6 +229,10 @@ function RegisterForm() {
       <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-xl relative z-10 text-center">
+        <div className="flex justify-center mb-4">
+          <LanguageSelector variant="pill" />
+        </div>
+
         <div className="flex justify-center mb-3">
           <div className="w-16 h-16 rounded-2xl bg-white p-1.5 shadow-xl shadow-black/40 border border-slate-700/60 flex items-center justify-center">
             <img
