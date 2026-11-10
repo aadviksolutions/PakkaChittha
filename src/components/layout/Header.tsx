@@ -17,9 +17,13 @@ import {
   PanelLeft,
   ArrowLeft,
   Settings,
+  Home,
+  BookOpen,
+  Store,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/i18n/context';
+import { useEntitlements } from '@/hooks/useEntitlements';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 interface HeaderProps {
@@ -70,6 +74,7 @@ export function Header({
   }, [showUserMenu, showNotifications]);
 
   const { user, activeBusiness, logout } = useAuth();
+  const { isFreeKhata, canAccessCommercial, isAllowed } = useEntitlements();
 
   const getMonogram = () => {
     if (!user?.name) return 'U';
@@ -82,6 +87,16 @@ export function Header({
 
   // Compute readable page title for top context
   const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+  const isFreeKhataRoute = pathname.startsWith('/free-khata');
+
+  // New Bill permission check: STRICTLY FALSE for Free Khata users, Free Khata route, Ghar Kharcha, or non-commercial users
+  const showNewBill =
+    !isSuperAdmin &&
+    !isFreeKhata &&
+    canAccessCommercial &&
+    !isGharKharcha &&
+    !isFreeKhataRoute &&
+    isAllowed('canCreateInvoices');
 
   // Back navigation check: if not on root/primary home screens, allow going back
   const canGoBack =
@@ -99,13 +114,13 @@ export function Header({
   };
 
   return (
-    <header className={`sticky top-0 ${showUserMenu || showNotifications ? 'z-40' : 'z-30'} h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4`}>
+    <header className={`sticky top-0 ${showUserMenu || showNotifications ? 'z-40' : 'z-30'} h-14 sm:h-16 bg-white border-b border-slate-200/90 px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4`}>
       {/* Left: Mobile Toggle & Business Name with Logo */}
-      <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-xl min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 flex-1 min-w-0">
         <button
           type="button"
           onClick={onOpenMobileSidebar}
-          className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
+          className="lg:hidden p-1.5 sm:p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
           aria-label="Open sidebar menu"
         >
           <Menu className="w-5 h-5" />
@@ -116,7 +131,7 @@ export function Header({
           <button
             type="button"
             onClick={handleBackNavigation}
-            className="p-1.5 sm:p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0 border border-slate-200/70"
+            className="p-1 sm:p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0 border border-slate-200/70"
             title="Go back to previous screen"
             aria-label="Go back to previous screen"
           >
@@ -125,27 +140,31 @@ export function Header({
         )}
 
         {/* Business or Household Branding with Pakka Chittha Logo */}
-        <div className="flex items-center gap-2 min-w-0 shrink">
-          <div className="h-8 w-auto rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg overflow-hidden bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0">
             <img src="/pakka-chittha-logo.png" alt="Pakka Chittha" className="h-full w-auto object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight max-w-[120px] xs:max-w-[160px] sm:max-w-[220px]">
+              <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight">
                 {isSuperAdmin
                   ? 'Platform Control Center'
                   : isGharKharcha
                   ? 'Ghar Kharcha'
+                  : isFreeKhataRoute
+                  ? 'Personal Khata'
                   : (activeBusiness?.name || 'Pakka Chittha')}
               </span>
-              <span className={`hidden xs:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0 ${
+              <span className={`hidden md:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border shrink-0 ${
                 isSuperAdmin
                   ? 'bg-purple-50 text-purple-700 border-purple-200'
                   : isGharKharcha
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : isFreeKhataRoute
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-orange-50 text-[#EA580C] border-orange-200'
               }`}>
-                {isSuperAdmin ? 'Super Admin' : isGharKharcha ? 'Free Household' : 'Active'}
+                {isSuperAdmin ? 'Super Admin' : isGharKharcha ? 'Free Household' : isFreeKhataRoute ? 'Free Khata' : 'Active'}
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-medium truncate hidden sm:block">
@@ -153,6 +172,8 @@ export function Header({
                 ? 'Authoritative SaaS Platform Administration'
                 : isGharKharcha
                 ? 'Har ghar ka pakka hisaab'
+                : isFreeKhataRoute
+                ? 'Har paise ka hisaab, bilkul aasaan.'
                 : (activeBusiness?.gstin ? `GSTIN: ${activeBusiness.gstin}` : 'Smart Financial Billing')}
             </p>
           </div>
@@ -171,15 +192,20 @@ export function Header({
           </button>
         )}
 
-        {/* Search: Full Bar on sm+, Compact Icon on mobile */}
+        {/* Search: Full Bar on sm+ */}
         <div className="hidden sm:block relative flex-1 min-w-[120px] max-w-xs">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder={isSuperAdmin ? t('common.searchTenantsPlaceholder') : t('common.searchPlaceholder')}
             className="w-full pl-8 pr-10 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#071F38] focus:border-[#071F38] transition-all cursor-pointer"
-            readOnly
-            onClick={() => onOpenQuickActionModal('search')}
+            onClick={() => {
+              if (isFreeKhataRoute) {
+                // Focus in-page search or route
+              } else {
+                router.push(isSuperAdmin ? '/platform-admin/users' : '/customers');
+              }
+            }}
           />
           <div className="hidden md:flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center text-[10px] font-mono text-slate-400 bg-white border border-slate-200 px-1 py-0.2 rounded">
             <span>⌘K</span>
@@ -188,19 +214,9 @@ export function Header({
       </div>
 
       {/* Right: Actions, Notifications, User */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* Mobile Search Button */}
-        <button
-          type="button"
-          onClick={() => onOpenQuickActionModal('search')}
-          className="sm:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-          aria-label="Search"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-
-        {/* Date Filter selector (Only for business workspace users) */}
-        {!isSuperAdmin && (
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Date Filter selector (Only for business workspace users on lg screens) */}
+        {!isSuperAdmin && !isGharKharcha && !isFreeKhataRoute && (
           <div className="hidden lg:flex items-center gap-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700">
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <select
@@ -216,19 +232,18 @@ export function Header({
           </div>
         )}
 
-        {/* Quick Create Invoice Primary Action (Hidden for Super Admin) */}
-        {!isSuperAdmin && (
+        {/* Quick Create Invoice Primary Action (STRICTLY HIDDEN FOR FREE KHATA USERS, HIDDEN ON MOBILE TO PREVENT OVERLAP) */}
+        {showNewBill && (
           <Link
             href="/invoices/new"
-            className="flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-3.5 h-3.5 text-white" />
-            <span className="hidden xs:inline">{t('dashboard.newBill')}</span>
-            <span className="xs:hidden">{t('dashboard.newBill')}</span>
+            <span>{t('dashboard.newBill')}</span>
           </Link>
         )}
 
-        {/* Global Multi-Language Selector (22 Scheduled Languages + English) */}
+        {/* Global Multi-Language Selector (Compact on mobile) */}
         <LanguageSelector variant="header" />
 
         {/* Notifications Popover with Outside Click/Touch Dismissal */}
@@ -239,11 +254,11 @@ export function Header({
               setShowNotifications(!showNotifications);
               setShowUserMenu(false);
             }}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
+            className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors relative cursor-pointer"
             aria-label="View notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#EA580C] ring-2 ring-white" />
+            <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-[#EA580C] ring-2 ring-white" />
           </button>
 
           {showNotifications && (
@@ -265,10 +280,10 @@ export function Header({
                 <div className="space-y-2">
                   <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                     <p className="font-semibold text-slate-800 text-[11px]">
-                      Udhaar Payment Due
+                      Payment Reminder
                     </p>
                     <p className="text-slate-500 text-[10px] mt-0.5">
-                      Metro Electricals has ₹38,200 overdue since 3 days.
+                      Check your pending payment reminders and collections.
                     </p>
                   </div>
                   <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
@@ -293,10 +308,10 @@ export function Header({
               setShowUserMenu(!showUserMenu);
               setShowNotifications(false);
             }}
-            className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-lg hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 p-1 pl-1 sm:pl-1.5 pr-1.5 sm:pr-2 rounded-lg hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
             aria-label="User account menu"
           >
-            <div className={`w-7.5 h-7.5 rounded-lg text-white flex items-center justify-center font-bold text-xs shadow-2xs ${
+            <div className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-white flex items-center justify-center font-bold text-xs shadow-2xs ${
               isSuperAdmin ? 'bg-purple-950 text-purple-200 border border-purple-800' : 'bg-[#071F38]'
             }`}>
               {isSuperAdmin ? 'SA' : getMonogram()}
@@ -309,7 +324,7 @@ export function Header({
                 {isSuperAdmin ? 'Super Admin' : activeBusiness?.role || 'Staff'}
               </p>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400" />
           </button>
 
           {showUserMenu && (
@@ -321,19 +336,68 @@ export function Header({
                 onTouchStart={() => setShowUserMenu(false)}
                 aria-hidden="true"
               />
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-2 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
+              <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-2 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
                   <p className="font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
                   <div className="mt-1.5 flex items-center gap-1.5">
-                    <Building className="w-3 h-3 text-slate-400" />
+                    <Building className="w-3 h-3 text-slate-400 shrink-0" />
                     <span className="text-[10px] font-medium text-slate-700 truncate">
-                      {isSuperAdmin ? 'Platform Management (Super Admin)' : activeBusiness?.name || 'Workspace'}
+                      {isSuperAdmin
+                        ? 'Platform Management (Super Admin)'
+                        : isGharKharcha
+                        ? 'Ghar Kharcha Household'
+                        : isFreeKhataRoute
+                        ? 'Personal Khata'
+                        : activeBusiness?.name || 'Workspace'}
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-0.5">
+                  {/* DEDICATED WORKSPACE MODE SWITCHER (AVAILABLE TO ALL USERS ON ANY PLAN) */}
+                  <div className="px-2 py-1 bg-slate-50 rounded-lg mb-1 space-y-0.5">
+                    <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-400 block px-1 py-0.5">
+                      मोड बदलें (Switch Mode)
+                    </span>
+                    <Link
+                      href="/ghar-kharcha"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-[11px] font-semibold ${
+                        isGharKharcha
+                          ? 'bg-emerald-100 text-emerald-900 font-bold'
+                          : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
+                      }`}
+                    >
+                      <Home className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Switch to Ghar Kharcha</span>
+                    </Link>
+                    <Link
+                      href="/free-khata"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-[11px] font-semibold ${
+                        isFreeKhataRoute
+                          ? 'bg-orange-100 text-[#EA580C] font-bold'
+                          : 'text-slate-700 hover:text-[#EA580C] hover:bg-orange-50'
+                      }`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
+                      <span>Switch to Free Khata</span>
+                    </Link>
+                    <Link
+                      href="/"
+                      onClick={() => setShowUserMenu(false)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-[11px] font-semibold ${
+                        !isGharKharcha && !isFreeKhataRoute
+                          ? 'bg-blue-100 text-blue-900 font-bold'
+                          : 'text-slate-700 hover:text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      <Store className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Switch to Mera Vyapaar</span>
+                    </Link>
+                  </div>
+
                   {isSuperAdmin ? (
                     <>
                       <Link

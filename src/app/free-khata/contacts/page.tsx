@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
 import { formatDate } from '@/lib/services/khataService';
+import { useTranslation } from '@/i18n/context';
 
 interface ContactItem {
   id: string;
@@ -37,6 +38,8 @@ interface ContactItem {
 
 function ContactsContent() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
+  const isHi = locale === 'hi';
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -297,13 +300,13 @@ function ContactsContent() {
 
       {/* Add Person Modal */}
       {addPersonModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
             <h3 className="text-base font-black text-[#071F38] mb-1">
-              नया संपर्क जोड़ें
+              {isHi ? 'नया संपर्क जोड़ें' : 'Add New Person'}
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              व्यक्ति का नाम और वैकल्पिक मोबाइल नंबर दर्ज करें
+              {isHi ? 'व्यक्ति का नाम और वैकल्पिक मोबाइल नंबर दर्ज करें' : 'Enter person name and optional mobile number'}
             </p>
 
             {modalError && (
@@ -315,7 +318,7 @@ function ContactsContent() {
             <form onSubmit={handleAddPerson} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  व्यक्ति का नाम <span className="text-rose-500">*</span>
+                  {isHi ? 'व्यक्ति का नाम' : 'Person Name'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -329,7 +332,7 @@ function ContactsContent() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  मोबाइल नंबर (वैकल्पिक)
+                  {isHi ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Number (Optional)'}
                 </label>
                 <input
                   type="tel"
@@ -342,7 +345,7 @@ function ContactsContent() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  टिप्पणी (वैकल्पिक)
+                  {isHi ? 'टिप्पणी (वैकल्पिक)' : 'Notes / Remarks (Optional)'}
                 </label>
                 <input
                   type="text"
@@ -360,14 +363,14 @@ function ContactsContent() {
                   disabled={savingPerson}
                   className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                 >
-                  रद्द करें
+                  {isHi ? 'रद्द करें' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={savingPerson || !newName.trim()}
                   className="px-4 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {savingPerson ? 'सहेज रहे हैं...' : 'संपर्क जोड़ें'}
+                  {savingPerson ? (isHi ? 'सहेज रहे हैं...' : 'Saving...') : (isHi ? 'संपर्क जोड़ें' : 'Add Person')}
                 </button>
               </div>
             </form>

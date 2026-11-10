@@ -11,6 +11,7 @@ import {
   BookOpen,
   Truck,
   PackagePlus,
+  Home,
 } from 'lucide-react';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { useTranslation } from '@/i18n/context';
@@ -20,7 +21,7 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ onTriggerAction }: QuickActionsProps) {
-  const { isAllowed } = useEntitlements();
+  const { isFreeKhata, isAllowed } = useEntitlements();
   const { t } = useTranslation();
 
   // Dynamic actions tailored to user's assigned plan
@@ -32,7 +33,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
       icon: FilePlus2,
       primary: true,
       color: 'emerald',
-      visible: true,
+      visible: !isFreeKhata && isAllowed('canCreateInvoices'),
     },
     {
       id: 'record_payment',
@@ -50,6 +51,24 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
       icon: BookOpen,
       primary: false,
       color: 'amber',
+      visible: true,
+    },
+    {
+      id: 'switch_ghar_kharcha',
+      label: 'Ghar Kharcha',
+      subtitle: 'Household budget',
+      icon: Home,
+      primary: false,
+      color: 'emerald',
+      visible: true,
+    },
+    {
+      id: 'switch_free_khata',
+      label: 'Personal Khata',
+      subtitle: '100% Free Ledger',
+      icon: BookOpen,
+      primary: false,
+      color: 'orange',
       visible: true,
     },
     {

@@ -45,6 +45,9 @@ fun AppNavHost(
     val userName = (authState as? AuthUiState.Authenticated)?.user?.name
     val businessName = (authState as? AuthUiState.Authenticated)?.businessName
 
+    val currentLang by subscriptionViewModel.preferredLanguage.collectAsState(initial = "en")
+    val isHindi = currentLang == "hi"
+
     val showBottomBar = currentRoute in listOf(
         Screen.Dashboard.route,
         Screen.Invoices.route,
@@ -194,7 +197,17 @@ fun AppNavHost(
                 composable(Screen.FreeKhata.route) {
                     FreeKhataDashboardScreen(
                         viewModel = freeKhataViewModel,
-                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } }
+                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                        isHindi = isHindi
+                    )
+                }
+
+                // Ghar Kharcha (Household Mode)
+                composable(Screen.GharKharcha.route) {
+                    FreeKhataDashboardScreen(
+                        viewModel = freeKhataViewModel,
+                        onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                        isHindi = isHindi
                     )
                 }
 

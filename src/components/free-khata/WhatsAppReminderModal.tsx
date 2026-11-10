@@ -133,7 +133,7 @@ export function WhatsAppReminderModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 my-auto">
         {/* Header */}
         <div className="p-5 bg-emerald-500 text-white flex items-center justify-between">

@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { PaymentMethod } from '@prisma/client';
+import { useTranslation } from '@/i18n/context';
 
 export interface ContactOption {
   id: string;
@@ -55,6 +56,9 @@ export function TransactionModal({
   preselectedContact = null,
   existingContacts = [],
 }: TransactionModalProps) {
+  const { t, locale } = useTranslation();
+  const isHi = locale === 'hi';
+
   // Step 1: Subtype selection (if not already set)
   // Step 2: Form entry
   const [subtype, setSubtype] = useState<KhataTransactionSubtype | null>(initialSubtype);
@@ -305,7 +309,7 @@ export function TransactionModal({
   const isGaveDirection = subtype === 'GAVE_NEW' || subtype === 'BORROWED_REPAY';
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 my-auto">
         {/* Step 1: Subtype Picker if not yet selected */}
         {!subtype ? (
@@ -313,16 +317,18 @@ export function TransactionModal({
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Personal Khata • नया हिसाब
+                  Personal Khata • {t('freeKhata.addTransaction')}
                 </span>
                 <h3 className="text-lg font-black text-[#071F38] mt-0.5">
-                  {primaryIntent === 'GAVE' ? 'मैंने रकम दी (पैसे मेरे पास से गए)' : 'मुझे रकम मिली (पैसे मेरे पास आए)'}
+                  {primaryIntent === 'GAVE'
+                    ? `${t('freeKhata.iGave')} (${t('freeKhata.iGaveSub')})`
+                    : `${t('freeKhata.iReceived')} (${t('freeKhata.iReceivedSub')})`}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -330,7 +336,7 @@ export function TransactionModal({
 
             <div className="py-5 space-y-3.5">
               <p className="text-xs font-semibold text-slate-600">
-                कृपया लेन-देन का प्रकार चुनें:
+                {t('freeKhata.selectTransactionType')}
               </p>
 
               {primaryIntent === 'GAVE' ? (
@@ -347,14 +353,14 @@ export function TransactionModal({
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm font-black text-rose-950 group-hover:text-rose-700">
-                          1. नई रकम दी
+                          {t('freeKhata.gaveNewShort')}
                         </strong>
                         <span className="text-[10px] font-bold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full">
-                          मिलने वाली रकम बढ़ेगी
+                          {t('freeKhata.receivableWillIncrease')}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        मैंने किसी को नई रकम दी है। अब मुझे वापस मिलनी है।
+                        {t('freeKhata.gaveNewDesc')}
                       </p>
                     </div>
                   </button>
@@ -371,14 +377,14 @@ export function TransactionModal({
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm font-black text-[#071F38]">
-                          2. पहले ली गई रकम वापस की
+                          {t('freeKhata.borrowedRepayShort')}
                         </strong>
                         <span className="text-[10px] font-bold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded-full">
-                          देने वाली रकम घटेगी
+                          {t('freeKhata.payableWillDecrease')}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        मैंने पहले किसी से रकम ली थी और अब वापस कर रहा हूं।
+                        {t('freeKhata.borrowedRepayDesc')}
                       </p>
                     </div>
                   </button>
@@ -397,14 +403,14 @@ export function TransactionModal({
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm font-black text-emerald-950 group-hover:text-emerald-700">
-                          1. पहले दी गई रकम वापस मिली
+                          {t('freeKhata.lentRepayShort')}
                         </strong>
                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                          मिलने वाली रकम घटेगी
+                          {t('freeKhata.receivableWillDecrease')}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        मैंने पहले किसी को रकम दी थी और अब वह वापस मिली है।
+                        {t('freeKhata.lentRepayDesc')}
                       </p>
                     </div>
                   </button>
@@ -421,14 +427,14 @@ export function TransactionModal({
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <strong className="text-sm font-black text-[#071F38]">
-                          2. नई रकम ली
+                          {t('freeKhata.receivedNewShort')}
                         </strong>
                         <span className="text-[10px] font-bold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded-full">
-                          देने वाली रकम बढ़ेगी
+                          {t('freeKhata.payableWillIncrease')}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                        मैंने किसी से नई रकम ली है और अब मुझे वापस करनी है।
+                        {t('freeKhata.receivedNewDesc')}
                       </p>
                     </div>
                   </button>
@@ -452,19 +458,19 @@ export function TransactionModal({
                   onClick={() => setSubtype(null)}
                   className="text-[10.5px] font-bold text-slate-500 hover:underline mb-0.5 block cursor-pointer"
                 >
-                  ← प्रकार बदलें
+                  ← {isHi ? 'प्रकार बदलें' : 'Change Type'}
                 </button>
                 <h3 className="text-base sm:text-lg font-black text-[#071F38]">
-                  {subtype === 'GAVE_NEW' && 'मैंने नई रकम दी'}
-                  {subtype === 'BORROWED_REPAY' && 'पहले ली गई रकम वापस की'}
-                  {subtype === 'LENT_REPAY' && 'पहले दी गई रकम वापस मिली'}
-                  {subtype === 'RECEIVED_NEW' && 'मैंने नई रकम ली'}
+                  {subtype === 'GAVE_NEW' && (isHi ? 'मैंने नई रकम दी' : 'Gave New Amount')}
+                  {subtype === 'BORROWED_REPAY' && (isHi ? 'पहले ली गई रकम वापस की' : 'Repaid Borrowed Amount')}
+                  {subtype === 'LENT_REPAY' && (isHi ? 'पहले दी गई रकम वापस मिली' : 'Received Lent Money Back')}
+                  {subtype === 'RECEIVED_NEW' && (isHi ? 'मैंने नई रकम ली' : 'Took New Amount')}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-white/80 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-white/80 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -483,7 +489,7 @@ export function TransactionModal({
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-700">
-                    व्यक्ति का नाम (Person / Contact) <span className="text-rose-500">*</span>
+                    {isHi ? 'व्यक्ति का नाम (Person / Contact)' : 'Person / Contact Name'} <span className="text-rose-500">*</span>
                   </label>
                   {!preselectedContact && typeof window !== 'undefined' && 'contacts' in navigator && (
                     <button
@@ -492,7 +498,7 @@ export function TransactionModal({
                       className="text-[11px] font-bold text-[#EA580C] hover:text-[#D94E00] inline-flex items-center gap-1 cursor-pointer hover:underline"
                     >
                       <Phone className="w-3 h-3" />
-                      <span>फोन संपर्क से चुनें</span>
+                      <span>{isHi ? 'फोन संपर्क से चुनें' : 'Pick from phone contacts'}</span>
                     </button>
                   )}
                 </div>
@@ -508,7 +514,7 @@ export function TransactionModal({
                       )}
                     </div>
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      चयनित संपर्क
+                      {isHi ? 'चयनित संपर्क' : 'Selected'}
                     </span>
                   </div>
                 ) : (
@@ -518,8 +524,8 @@ export function TransactionModal({
                       onChange={(e) => handleContactSelect(e.target.value)}
                       className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] focus:bg-white font-medium"
                     >
-                      <option value="">-- संपर्क चुनें (या नया जोड़ें) --</option>
-                      <option value="NEW">+ नया संपर्क जोड़ें (Add New Contact)</option>
+                      <option value="">{isHi ? '-- संपर्क चुनें (या नया जोड़ें) --' : '-- Choose contact (or add new) --'}</option>
+                      <option value="NEW">{isHi ? '+ नया संपर्क जोड़ें (Add New Contact)' : '+ Add New Person / Contact'}</option>
                       {existingContacts.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name} {c.phone ? `(${c.phone})` : ''}
@@ -535,14 +541,14 @@ export function TransactionModal({
                           required
                           value={personName}
                           onChange={(e) => setPersonName(e.target.value)}
-                          placeholder="व्यक्ति का नाम *"
+                          placeholder={isHi ? 'व्यक्ति का नाम *' : 'Person Name *'}
                           className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
                         />
                         <input
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          placeholder="मोबाइल नंबर (वैकल्पिक)"
+                          placeholder={isHi ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Number (Optional)'}
                           className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
                         />
                       </div>
@@ -785,13 +791,13 @@ export function TransactionModal({
               {/* Description / Notes */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  विवरण / टिप्पणी (Description / Note - Optional)
+                  {isHi ? 'विवरण / टिप्पणी (Description / Note - Optional)' : 'Notes / Description (Optional)'}
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="किस काम के लिए पैसे दिए/लिए..."
+                  placeholder={isHi ? 'किस काम के लिए पैसे दिए/लिए...' : 'Reason / Note for this transaction...'}
                   className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] focus:bg-white"
                 />
               </div>
@@ -802,14 +808,14 @@ export function TransactionModal({
                   <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-slate-900 block">
-                      पुष्टि सारांश (Confirmation):
+                      {isHi ? 'पुष्टि सारांश (Confirmation):' : 'Confirmation:'}
                     </span>
                     <span className="text-[11px] text-slate-600">
                       ₹{parsedAmount.toLocaleString('en-IN')} • {paymentMode} •{' '}
-                      {subtype === 'GAVE_NEW' && 'मिलने वाली रकम में जुड़ेगी'}
-                      {subtype === 'BORROWED_REPAY' && 'देने वाली रकम से घटेगी'}
-                      {subtype === 'LENT_REPAY' && 'मिलने वाली रकम से घटेगी'}
-                      {subtype === 'RECEIVED_NEW' && 'देने वाली रकम में जुड़ेगी'}
+                      {subtype === 'GAVE_NEW' && (isHi ? 'मिलने वाली रकम में जुड़ेगी' : 'Added to Amount to Receive')}
+                      {subtype === 'BORROWED_REPAY' && (isHi ? 'देने वाली रकम से घटेगी' : 'Deducted from Amount to Pay')}
+                      {subtype === 'LENT_REPAY' && (isHi ? 'मिलने वाली रकम से घटेगी' : 'Deducted from Amount to Receive')}
+                      {subtype === 'RECEIVED_NEW' && (isHi ? 'देने वाली रकम में जुड़ेगी' : 'Added to Amount to Pay')}
                     </span>
                   </div>
                 </div>
@@ -824,7 +830,7 @@ export function TransactionModal({
                 disabled={loading}
                 className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-xl transition-colors cursor-pointer"
               >
-                रद्द करें
+                {isHi ? 'रद्द करें' : 'Cancel'}
               </button>
               <button
                 type="submit"
@@ -833,9 +839,9 @@ export function TransactionModal({
                   }`}
               >
                 {loading ? (
-                  <span>सहेजा जा रहा है...</span>
+                  <span>{isHi ? 'सहेजा जा रहा है...' : 'Saving...'}</span>
                 ) : (
-                  <span>नया हिसाब जोड़ें</span>
+                  <span>{isHi ? 'नया हिसाब जोड़ें' : 'Save Transaction'}</span>
                 )}
               </button>
             </div>

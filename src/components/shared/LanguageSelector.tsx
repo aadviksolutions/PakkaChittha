@@ -93,16 +93,19 @@ export function LanguageSelector({ variant = 'header', className = '' }: Languag
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50 hover:text-slate-900 rounded-xl border border-slate-200 shadow-2xs transition-all cursor-pointer"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-50 hover:text-slate-900 rounded-xl border border-slate-200 shadow-2xs transition-all cursor-pointer"
           aria-expanded={isOpen}
           title="Select language (English / हिन्दी)"
           aria-label="Select language"
         >
-          <Languages className="w-4 h-4 text-[#EA580C] shrink-0" />
-          <span className="font-bold text-slate-800 text-[11px]">
+          <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#EA580C] shrink-0" />
+          <span className="font-bold text-slate-800 text-[11px] uppercase sm:hidden">
+            {locale}
+          </span>
+          <span className="font-bold text-slate-800 text-[11px] hidden sm:inline">
             {language.nativeName}
           </span>
-          <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       )}
 

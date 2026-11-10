@@ -134,7 +134,8 @@ interface DashboardData {
 
 function PersonalKhataDashboardContent() {
   const searchParams = useSearchParams();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const isHi = locale === 'hi';
   const filterParam = searchParams.get('filter') || 'ALL'; // 'ALL', 'GAVE', 'RECEIVED'
   const viewParam = searchParams.get('view');
 
@@ -380,7 +381,7 @@ function PersonalKhataDashboardContent() {
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#00B887] to-[#009E74] text-white shadow-md shadow-emerald-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">
-              कुल लेने वाली रकम
+              {t('freeKhata.amountToReceive')}
             </span>
             <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4 text-white" />
@@ -392,7 +393,7 @@ function PersonalKhataDashboardContent() {
               ₹{kpis.amountToReceive.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-emerald-100 block mt-1 font-medium">
-              लोगों से मिलने वाली बाकी रकम
+              {t('freeKhata.amountToReceiveDesc')}
             </span>
           </div>
         </div>
@@ -401,7 +402,7 @@ function PersonalKhataDashboardContent() {
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-100 uppercase tracking-wider">
-              कुल देने वाली रकम
+              {t('freeKhata.amountToPay')}
             </span>
             <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4 text-white" />
@@ -413,7 +414,7 @@ function PersonalKhataDashboardContent() {
               ₹{kpis.amountToPay.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-rose-100 block mt-1 font-medium">
-              लोगों को देने वाली बाकी रकम
+              {t('freeKhata.amountToPayDesc')}
             </span>
           </div>
         </div>
@@ -422,7 +423,7 @@ function PersonalKhataDashboardContent() {
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              मेरी वर्तमान स्थिति (Net Position)
+              {t('freeKhata.netPosition')}
             </span>
             <span
               className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
@@ -433,7 +434,7 @@ function PersonalKhataDashboardContent() {
                   : 'bg-slate-100 text-slate-700'
               }`}
             >
-              {kpis.netPosition > 0 ? '+ लेने हैं' : kpis.netPosition < 0 ? '- देने हैं' : 'बराबर'}
+              {kpis.netPosition > 0 ? `+ ${t('freeKhata.toReceiveStatus')}` : kpis.netPosition < 0 ? `- ${t('freeKhata.toPayStatus')}` : t('freeKhata.settled')}
             </span>
           </div>
 
@@ -452,7 +453,11 @@ function PersonalKhataDashboardContent() {
               {Math.abs(kpis.netPosition).toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-slate-600 block mt-1 font-medium leading-relaxed">
-              {kpis.netPositionDescription}
+              {kpis.netPosition > 0
+                ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक मिलने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to receive in total.`)
+                : kpis.netPosition < 0
+                ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक देने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to pay in total.`)
+                : (isHi ? 'आपका कुल हिसाब बराबर है।' : 'Your accounts are completely balanced.')}
             </span>
           </div>
         </div>
@@ -461,11 +466,11 @@ function PersonalKhataDashboardContent() {
       {/* 3. HISTORICAL CUMULATIVE TOTALS */}
       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
         <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
-          ऐतिहासिक कुल हिसाब (Cumulative Historical Totals)
+          {t('freeKhata.totalSummary')}
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
           <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">कुल दी गई रकम</span>
+            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountGiven')}</span>
             <strong className="text-sm font-black text-[#071F38] block mt-0.5">
               ₹{kpis.totalGiven.toLocaleString('en-IN')}
             </strong>
@@ -473,7 +478,7 @@ function PersonalKhataDashboardContent() {
           </div>
 
           <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">कुल ली गई रकम</span>
+            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountTaken')}</span>
             <strong className="text-sm font-black text-[#071F38] block mt-0.5">
               ₹{kpis.totalTaken.toLocaleString('en-IN')}
             </strong>
@@ -481,7 +486,7 @@ function PersonalKhataDashboardContent() {
           </div>
 
           <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">कुल वापस मिली रकम</span>
+            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountReceivedBack')}</span>
             <strong className="text-sm font-black text-emerald-600 block mt-0.5">
               ₹{kpis.totalReceivedBack.toLocaleString('en-IN')}
             </strong>
@@ -489,7 +494,7 @@ function PersonalKhataDashboardContent() {
           </div>
 
           <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">कुल वापस की गई रकम</span>
+            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountReturned')}</span>
             <strong className="text-sm font-black text-rose-600 block mt-0.5">
               ₹{kpis.totalReturned.toLocaleString('en-IN')}
             </strong>
@@ -508,10 +513,10 @@ function PersonalKhataDashboardContent() {
         >
           <div className="text-left">
             <span className="text-base sm:text-lg font-black block">
-              मैंने रकम दी
+              {t('freeKhata.iGave')}
             </span>
             <span className="text-xs text-rose-100 font-medium block mt-0.5">
-              पैसे मेरे पास से गए
+              {t('freeKhata.iGaveSub')}
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
@@ -527,10 +532,10 @@ function PersonalKhataDashboardContent() {
         >
           <div className="text-left">
             <span className="text-base sm:text-lg font-black block">
-              मुझे रकम मिली
+              {t('freeKhata.iReceived')}
             </span>
             <span className="text-xs text-emerald-100 font-medium block mt-0.5">
-              पैसे मेरे पास आए
+              {t('freeKhata.iReceivedSub')}
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
@@ -588,7 +593,7 @@ function PersonalKhataDashboardContent() {
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          मेरे संपर्क ({data?.contacts?.length || 0})
+          {t('freeKhata.contacts')} ({data?.contacts?.length || 0})
         </button>
 
         <button
@@ -600,7 +605,7 @@ function PersonalKhataDashboardContent() {
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          हिसाब का पूरा रिकॉर्ड ({data?.recentTransactions?.length || 0})
+          {t('freeKhata.transactions')} ({data?.recentTransactions?.length || 0})
         </button>
 
         {kpis.overdueCount > 0 && (
@@ -613,7 +618,7 @@ function PersonalKhataDashboardContent() {
                 : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
             }`}
           >
-            समय से बाकी ({kpis.overdueCount})
+            {t('freeKhata.overdue')} ({kpis.overdueCount})
           </button>
         )}
       </div>
@@ -629,7 +634,7 @@ function PersonalKhataDashboardContent() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="नाम या मोबाइल नंबर से खोजें..."
+                placeholder={t('freeKhata.searchPlaceholder')}
                 className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
               />
             </div>
@@ -641,10 +646,10 @@ function PersonalKhataDashboardContent() {
                 onChange={(e) => setContactStatusFilter(e.target.value as any)}
                 className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
               >
-                <option value="ALL">सभी संपर्क (All)</option>
-                <option value="TO_RECEIVE">मुझे लेने हैं (Receivable)</option>
-                <option value="TO_PAY">मुझे देने हैं (Payable)</option>
-                <option value="SETTLED">हिसाब पूरा (Settled)</option>
+                <option value="ALL">{isHi ? 'सभी संपर्क (All)' : 'All Contacts'}</option>
+                <option value="TO_RECEIVE">{isHi ? 'मुझे लेने हैं (Receivable)' : 'To Receive'}</option>
+                <option value="TO_PAY">{isHi ? 'मुझे देने हैं (Payable)' : 'To Pay'}</option>
+                <option value="SETTLED">{isHi ? 'हिसाब पूरा (Settled)' : 'Settled'}</option>
               </select>
 
               {/* Sort By */}
@@ -653,10 +658,10 @@ function PersonalKhataDashboardContent() {
                 onChange={(e) => setContactSortBy(e.target.value as any)}
                 className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
               >
-                <option value="RECEIVE_HIGH">सबसे अधिक लेने हैं</option>
-                <option value="PAY_HIGH">सबसे अधिक देने हैं</option>
-                <option value="NAME">नाम (A-Z)</option>
-                <option value="RECENT">हाल की गतिविधि</option>
+                <option value="RECEIVE_HIGH">{isHi ? 'सबसे अधिक लेने हैं' : 'Highest to Receive'}</option>
+                <option value="PAY_HIGH">{isHi ? 'सबसे अधिक देने हैं' : 'Highest to Pay'}</option>
+                <option value="NAME">{isHi ? 'नाम (A-Z)' : 'Name (A-Z)'}</option>
+                <option value="RECENT">{isHi ? 'हाल की गतिविधि' : 'Recent Activity'}</option>
               </select>
             </div>
           </div>
@@ -665,9 +670,9 @@ function PersonalKhataDashboardContent() {
           {filteredContacts.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
               <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="font-bold text-slate-700">कोई संपर्क नहीं मिला।</p>
+              <p className="font-bold text-slate-700">{t('freeKhata.noContacts')}</p>
               <p className="mt-1 text-slate-400">
-                नया लेन-देन दर्ज करने के लिए ऊपर &quot;मैंने रकम दी&quot; या &quot;मुझे रकम मिली&quot; पर क्लिक करें।
+                {isHi ? 'नया लेन-देन दर्ज करने के लिए ऊपर "मैंने रकम दी" या "मुझे रकम मिली" पर क्लिक करें।' : 'Click "I Gave Money" or "I Received Money" above to add your first transaction.'}
               </p>
             </div>
           ) : (
@@ -676,6 +681,7 @@ function PersonalKhataDashboardContent() {
                 const isToReceive = c.amountToReceive > 0;
                 const isToPay = c.amountToPay > 0;
                 const isSettled = !isToReceive && !isToPay;
+                const badgeLabel = c.status === 'TO_RECEIVE' ? (isHi ? 'मुझे लेने हैं' : 'To Receive') : c.status === 'TO_PAY' ? (isHi ? 'मुझे देने हैं' : 'To Pay') : (isHi ? 'हिसाब पूरा' : 'Settled');
 
                 return (
                   <div
@@ -710,20 +716,20 @@ function PersonalKhataDashboardContent() {
                               : 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {c.statusLabel}
+                          {badgeLabel}
                         </span>
                       </div>
 
                       {/* Balances Display */}
                       <div className="mt-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-500 block">मिलने वाली रकम:</span>
+                          <span className="text-[10px] text-slate-500 block">{t('freeKhata.amountToReceive')}:</span>
                           <strong className="text-xs font-black text-emerald-700 block mt-0.5">
                             ₹{c.amountToReceive.toLocaleString('en-IN')}
                           </strong>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 block">देने वाली रकम:</span>
+                          <span className="text-[10px] text-slate-500 block">{t('freeKhata.amountToPay')}:</span>
                           <strong className="text-xs font-black text-rose-700 block mt-0.5">
                             ₹{c.amountToPay.toLocaleString('en-IN')}
                           </strong>
@@ -733,7 +739,7 @@ function PersonalKhataDashboardContent() {
                       {/* Net Position if both exist */}
                       {isToReceive && isToPay && (
                         <div className="mt-1.5 px-1 flex items-center justify-between text-[10.5px]">
-                          <span className="text-slate-500">मेरी वर्तमान स्थिति:</span>
+                          <span className="text-slate-500">{t('freeKhata.netPosition')}:</span>
                           <strong
                             className={`font-black ${
                               c.netPosition >= 0 ? 'text-emerald-700' : 'text-rose-700'
@@ -753,7 +759,7 @@ function PersonalKhataDashboardContent() {
                           <button
                             type="button"
                             onClick={() => handleOpenContactWhatsApp(c)}
-                            title="WhatsApp तगादा / Reminder"
+                            title={isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}
                             className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
@@ -761,7 +767,7 @@ function PersonalKhataDashboardContent() {
                           </button>
                         )}
                         <span className="text-[10px] text-slate-400">
-                          {c.transactionCount} लेन-देन
+                          {c.transactionCount} {isHi ? 'लेन-देन' : 'entries'}
                         </span>
                       </div>
 
@@ -769,7 +775,7 @@ function PersonalKhataDashboardContent() {
                         href={`/free-khata/person/${c.id}`}
                         className="px-3 py-1.5 bg-[#071F38] hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
                       >
-                        <span>खाता देखें</span>
+                        <span>{isHi ? 'खाता देखें' : 'View Ledger'}</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
@@ -824,7 +830,7 @@ function PersonalKhataDashboardContent() {
 
           {filteredTransactions.length === 0 ? (
             <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
-              कोई लेन-देन रिकॉर्ड नहीं मिला।
+              {t('freeKhata.noTransactions')}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
@@ -893,7 +899,7 @@ function PersonalKhataDashboardContent() {
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
-                          {tx.status === 'SETTLED' ? 'हिसाब पूरा' : tx.status === 'PARTIAL' ? 'आंशिक' : 'बाकी'}
+                          {tx.status === 'SETTLED' ? (isHi ? 'हिसाब पूरा' : 'Settled') : tx.status === 'PARTIAL' ? (isHi ? 'आंशिक' : 'Partial') : (isHi ? 'बाकी' : 'Pending')}
                         </span>
 
                         {tx.balanceAmount > 0 && (
@@ -902,7 +908,7 @@ function PersonalKhataDashboardContent() {
                             onClick={() => handleOpenRepay(tx)}
                             className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer ml-1"
                           >
-                            वापसी दर्ज करें
+                            {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
                           </button>
                         )}
                       </div>
@@ -921,7 +927,9 @@ function PersonalKhataDashboardContent() {
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
             <Clock className="w-4 h-4 text-rose-600 shrink-0" />
             <span>
-              नीचे दी गई प्रविष्टियों की देय तिथि (Due Date) समाप्त हो चुकी है और रकम अभी बाकी है।
+              {isHi
+                ? 'नीचे दी गई प्रविष्टियों की देय तिथि (Due Date) समाप्त हो चुकी है और रकम अभी बाकी है।'
+                : 'The following entries have passed their due date and remain outstanding.'}
             </span>
           </div>
 
@@ -936,7 +944,7 @@ function PersonalKhataDashboardContent() {
                     {o.contactName}
                   </Link>
                   <span className="text-rose-600 text-[11px] block mt-0.5 font-semibold">
-                    {o.daysOverdue} दिन पहले देय थी (Due: {formatDate(o.dueDate)})
+                    {o.daysOverdue} {isHi ? 'दिन पहले देय थी' : 'days overdue'} (Due: {formatDate(o.dueDate)})
                   </span>
                 </div>
 
@@ -950,7 +958,7 @@ function PersonalKhataDashboardContent() {
                     className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
                   >
                     <MessageSquare className="w-3 h-3" />
-                    <span>WhatsApp तगादा</span>
+                    <span>{isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}</span>
                   </button>
                 </div>
               </div>

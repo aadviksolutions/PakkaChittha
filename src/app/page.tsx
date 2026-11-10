@@ -131,15 +131,17 @@ function DashboardContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/invoices/new"
-            className="inline-flex items-center gap-1.5 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer min-h-[44px]"
-          >
-            <PlusCircle className="w-4 h-4 text-white" />
-            <span>{t('dashboard.addSaleBill')}</span>
-          </Link>
-        </div>
+        {!isFreeKhata && isAllowed('canCreateInvoices') && (
+          <div className="flex items-center gap-2">
+            <Link
+              href="/invoices/new"
+              className="inline-flex items-center gap-1.5 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold px-3.5 py-2.5 rounded-xl shadow-sm shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer min-h-[44px]"
+            >
+              <PlusCircle className="w-4 h-4 text-white" />
+              <span>{t('dashboard.addSaleBill')}</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* 4 Summary KPI Cards */}
@@ -152,8 +154,14 @@ function DashboardContent() {
             router.push('/invoices/new');
           } else if (type === 'add_customer') {
             router.push('/customers?action=new');
-          } else if (type === 'record_udhaar' || type === 'record_payment') {
-            openAction('record_udhaar');
+          } else if (type === 'record_udhaar') {
+            router.push('/customers?view=ledger');
+          } else if (type === 'record_payment') {
+            router.push('/invoices?view=payments');
+          } else if (type === 'switch_ghar_kharcha') {
+            router.push('/ghar-kharcha');
+          } else if (type === 'switch_free_khata') {
+            router.push('/free-khata');
           } else if (type === 'new_purchase') {
             router.push('/purchases/new');
           } else if (type === 'new_item') {
@@ -163,7 +171,7 @@ function DashboardContent() {
           } else if (type === 'view_reports') {
             router.push('/reports');
           } else {
-            openAction(type);
+            router.push('/customers');
           }
         }}
       />
@@ -190,18 +198,19 @@ function DashboardContent() {
 
           {/* Outstanding Udhaar Watchlist */}
           <OutstandingWatchlist
-            onSendReminder={(cust) =>
-              openAction('whatsapp_reminder', {
-                name: cust.name,
-                phone: cust.phone,
-                amount: cust.totalOutstanding,
-              })
-            }
-            onRecordCredit={(cust) =>
-              openAction('record_udhaar', {
-                name: cust.name,
-              })
-            }
+            onSendReminder={(cust) => {
+              const cleanPhone = (cust.phone || '').replace(/[^0-9]/g, '');
+              const targetPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+              const text = encodeURIComponent(
+                `Namaste ${cust.name} ji,\n\nThis is a friendly reminder regarding your pending balance of ₹${cust.totalOutstanding.toLocaleString('en-IN')}.\nKindly arrange the payment at your convenience.\nThank you! 🙏\n- Sent via Pakka Chittha`
+              );
+              if (typeof window !== 'undefined') {
+                window.open(`https://wa.me/${targetPhone}?text=${text}`, '_blank');
+              }
+            }}
+            onRecordCredit={(cust) => {
+              router.push(`/customers?search=${encodeURIComponent(cust.name)}`);
+            }}
           />
 
           {/* Low Stock Alerts (Growth & Scale Plans Only) */}

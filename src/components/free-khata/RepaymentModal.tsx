@@ -13,6 +13,7 @@ import {
   Banknote,
 } from 'lucide-react';
 import { PaymentMethod } from '@prisma/client';
+import { useTranslation } from '@/i18n/context';
 
 export interface RepaymentTransactionTarget {
   id: string;
@@ -37,6 +38,8 @@ export function RepaymentModal({
   onSuccess,
   transaction,
 }: RepaymentModalProps) {
+  const { t, locale } = useTranslation();
+  const isHi = locale === 'hi';
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [paymentMode, setPaymentMode] = useState<PaymentMethod>('CASH');
@@ -133,14 +136,14 @@ export function RepaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 my-auto">
         {/* Header */}
         <div className={`p-5 border-b flex items-center justify-between ${isLent ? 'bg-emerald-50/80 border-emerald-100' : 'bg-slate-50/80 border-slate-200'
           }`}>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#071F38] bg-white px-2 py-0.5 rounded border border-slate-200">
-              {isLent ? 'पहले दी गई रकम वापस मिली' : 'पहले ली गई रकम वापस की'}
+              {isLent ? (isHi ? 'पहले दी गई रकम वापस मिली' : 'Received Lent Money Back') : (isHi ? 'पहले ली गई रकम वापस की' : 'Repaid Borrowed Amount')}
             </span>
             <h3 className="text-base font-black text-[#071F38] mt-1">
               {transaction.contactName}
@@ -149,7 +152,7 @@ export function RepaymentModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-white/80 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-white/80 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -159,14 +162,14 @@ export function RepaymentModal({
         <div className="px-5 pt-4 pb-1">
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
             <div>
-              <span className="text-slate-500 block text-[10.5px]">मूल रकम (Original)</span>
+              <span className="text-slate-500 block text-[10.5px]">{isHi ? 'मूल रकम (Original)' : 'Original Amount'}</span>
               <strong className="text-slate-800 font-bold">
                 ₹{transaction.amount.toLocaleString('en-IN')}
               </strong>
             </div>
 
             <div className="text-right">
-              <span className="text-slate-500 block text-[10.5px]">वर्तमान बाकी रकम</span>
+              <span className="text-slate-500 block text-[10.5px]">{isHi ? 'वर्तमान बाकी रकम' : 'Current Balance'}</span>
               <span className="font-black text-sm text-[#071F38]">
                 ₹{transaction.balanceAmount.toLocaleString('en-IN')}
               </span>
@@ -187,14 +190,14 @@ export function RepaymentModal({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-bold text-slate-700">
-                वापस की जा रही रकम <span className="text-rose-500">*</span>
+                {isHi ? 'वापस की जा रही रकम' : 'Repayment Amount'} <span className="text-rose-500">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleSetFull}
                 className="text-[10.5px] font-bold text-[#EA580C] hover:underline cursor-pointer"
               >
-                पूरा हिसाब (Full: ₹{transaction.balanceAmount.toLocaleString('en-IN')})
+                {isHi ? `पूरा हिसाब (Full: ₹${transaction.balanceAmount.toLocaleString('en-IN')})` : `Full (₹${transaction.balanceAmount.toLocaleString('en-IN')})`}
               </button>
             </div>
 
@@ -369,14 +372,18 @@ export function RepaymentModal({
               disabled={loading}
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
             >
-              रद्द करें
+              {isHi ? 'रद्द करें' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={loading || parsedAmount <= 0 || parsedAmount > transaction.balanceAmount}
               className="px-5 py-2.5 bg-[#071F38] hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-2"
             >
-              {loading ? <span>सहेजा जा रहा है...</span> : <span>हिसाब दर्ज करें</span>}
+              {loading ? (
+                <span>{isHi ? 'सहेजा जा रहा है...' : 'Saving...'}</span>
+              ) : (
+                <span>{isHi ? 'हिसाब दर्ज करें' : 'Record Repayment'}</span>
+              )}
             </button>
           </div>
         </form>
