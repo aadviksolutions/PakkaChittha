@@ -69,6 +69,47 @@
   .safe-area-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Native Mobile App Experience & Touch Optimizations */
+  html, body {
+    overscroll-behavior-y: contain;
+    -webkit-touch-callout: none;
+  }
+
+  *, *::before, *::after {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+
+  /* Prevent text selection on UI controls */
+  button, nav, header, aside, .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Retain text selection on data, textareas, inputs, and documents */
+  input, textarea, [contenteditable="true"], .selectable-text {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Ensure modal overlays always stay above headers and sticky elements */
+  [role="dialog"],
+  .modal-overlay,
+  div[class*="fixed inset-0"][class*="z-50"] {
+    z-index: 100 !important;
+  }
+
+  /* Ensure modal dialog contents stay within the viewport and allow vertical touch scroll */
+  div[class*="fixed inset-0"][class*="z-50"] > div,
+  div[class*="fixed inset-0"][class*="z-[100]"] > div {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Indian Rupee tabular formatting and numbers */

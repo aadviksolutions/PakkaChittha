@@ -1,6 +1,6 @@
 import { TranslationDictionary } from './en';
 
-export const mr: TranslationDictionary = {
+export const mr: any = {
   common: {
     appName: 'पक्का चिट्ठा',
     tagline: 'बिलिंग • इन्व्हेंटरी • उधारी • अहवाल',

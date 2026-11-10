@@ -99,7 +99,7 @@ export function Header({
   };
 
   return (
-    <header className={`sticky top-0 ${showUserMenu || showNotifications ? 'z-[60]' : 'z-40'} h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4`}>
+    <header className={`sticky top-0 ${showUserMenu || showNotifications ? 'z-40' : 'z-30'} h-16 bg-white/95 backdrop-blur-xs border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-4`}>
       {/* Left: Mobile Toggle & Business Name with Logo */}
       <div className="flex items-center gap-2.5 sm:gap-3 flex-1 max-w-xl min-w-0">
         <button

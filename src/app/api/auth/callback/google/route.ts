@@ -211,6 +211,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      sessionToken: authResult.sessionToken,
+      token: authResult.sessionToken,
+      expiresAt: authResult.expiresAt,
       user: authResult.user,
       business: authResult.business,
       household: authResult.household,

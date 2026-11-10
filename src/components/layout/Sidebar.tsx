@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -156,7 +157,7 @@ export function Sidebar({
     visibleGroups = [
       {
         id: 'free_khata_group',
-        title: 'Free Udhaar Khata',
+        title: 'Personal Khata',
         scope: 'BUSINESS_WORKSPACE' as const,
         description: 'Personal ledger and WhatsApp reminders',
         badge: '100% Free',
@@ -183,7 +184,7 @@ export function Sidebar({
       {/* Mobile Backdrop - clicking or touching outside closes the side menu */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity cursor-pointer"
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity cursor-pointer"
           onClick={onCloseMobile}
           onTouchStart={onCloseMobile}
           aria-hidden="true"
@@ -192,9 +193,8 @@ export function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'
-        } ${isCollapsed ? 'lg:w-20' : 'lg:w-64 w-72'}`}
+        className={`fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+          } ${isCollapsed ? 'lg:w-20' : 'lg:w-64 w-[85vw] max-w-[300px]'}`}
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200/80 bg-white shrink-0">
@@ -259,7 +259,7 @@ export function Sidebar({
         <BusinessProfileArea collapsed={isCollapsed} />
 
         {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4 overscroll-contain">
           {visibleGroups.map((group) => {
             const isPlatformAdminGroup = group.scope === 'PLATFORM_ADMIN';
 
@@ -269,19 +269,17 @@ export function Sidebar({
                 {!isCollapsed ? (
                   <div className="px-2.5 pt-1 pb-1 flex items-center justify-between">
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-wider ${
-                        isPlatformAdminGroup ? 'text-purple-700' : 'text-slate-400'
-                      }`}
+                      className={`text-[10px] font-bold uppercase tracking-wider ${isPlatformAdminGroup ? 'text-purple-700' : 'text-slate-400'
+                        }`}
                     >
                       {group.title}
                     </span>
                     {group.badge && (
                       <span
-                        className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border ${
-                          isPlatformAdminGroup
+                        className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border ${isPlatformAdminGroup
                             ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }`}
+                          }`}
                       >
                         {group.badge}
                       </span>
@@ -299,8 +297,8 @@ export function Sidebar({
                       item.href === '/'
                         ? pathname === '/'
                         : item.href === '/platform-admin'
-                        ? pathname === '/platform-admin'
-                        : pathname.startsWith(item.href);
+                          ? pathname === '/platform-admin'
+                          : pathname.startsWith(item.href);
 
                     return (
                       <Link
@@ -308,48 +306,44 @@ export function Sidebar({
                         href={item.href}
                         onClick={onCloseMobile}
                         title={isCollapsed ? item.name : undefined}
-                        className={`group flex items-center ${
-                          isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
-                        } rounded-xl text-xs font-medium transition-all ${
-                          isActive
+                        className={`group flex items-center ${isCollapsed ? 'justify-center p-2.5 min-h-[44px]' : 'justify-between px-3 py-2.5 min-h-[44px]'
+                          } rounded-xl text-xs font-medium transition-all ${isActive
                             ? isPlatformAdminGroup
                               ? 'bg-purple-900 text-white shadow-xs font-semibold'
                               : 'bg-[#EA580C] text-white shadow-sm font-bold'
                             : isPlatformAdminGroup
-                            ? 'text-slate-700 hover:text-purple-900 hover:bg-purple-50/70'
-                            : 'text-slate-600 hover:text-[#EA580C] hover:bg-orange-50/70'
-                        }`}
+                              ? 'text-slate-700 hover:text-purple-900 hover:bg-purple-50/70'
+                              : 'text-slate-600 hover:text-[#EA580C] hover:bg-orange-50/70'
+                          }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Icon
-                            className={`w-4 h-4 shrink-0 transition-colors ${
-                              isActive
+                            className={`w-4 h-4 shrink-0 transition-colors ${isActive
                                 ? isPlatformAdminGroup
                                   ? 'text-purple-300'
                                   : 'text-white'
                                 : isPlatformAdminGroup
-                                ? 'text-purple-600 group-hover:text-purple-800'
-                                : 'text-slate-400 group-hover:text-[#EA580C]'
-                            }`}
+                                  ? 'text-purple-600 group-hover:text-purple-800'
+                                  : 'text-slate-400 group-hover:text-[#EA580C]'
+                              }`}
                           />
                           {!isCollapsed && <span className="truncate">{getTranslatedNavName(item)}</span>}
                         </div>
 
                         {!isCollapsed && item.badge && (
                           <span
-                            className={`text-[10px] font-medium px-1.5 py-0.2 rounded transition-colors ${
-                              isActive
+                            className={`text-[10px] font-medium px-1.5 py-0.2 rounded transition-colors ${isActive
                                 ? 'bg-white/20 text-white'
                                 : item.badgeColor === 'violet'
-                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                : item.badgeColor === 'blue'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : item.badgeColor === 'amber'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : item.badgeColor === 'emerald'
-                                ? 'bg-orange-50 text-[#EA580C] border border-orange-200'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                  : item.badgeColor === 'blue'
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : item.badgeColor === 'amber'
+                                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                      : item.badgeColor === 'emerald'
+                                        ? 'bg-orange-50 text-[#EA580C] border border-orange-200'
+                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              }`}
                           >
                             {item.badge}
                           </span>
@@ -376,15 +370,14 @@ export function Sidebar({
                   )}
                   {isSuperAdmin ? 'Super Admin' : planName}
                 </span>
-                <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${
-                  isSuperAdmin
+                <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${isSuperAdmin
                     ? 'text-purple-700 bg-purple-50 border-purple-200'
                     : isExpired
-                    ? 'text-rose-700 bg-rose-50 border-rose-200'
-                    : isTrial
-                    ? 'text-blue-700 bg-blue-50 border-blue-200'
-                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                }`}>
+                      ? 'text-rose-700 bg-rose-50 border-rose-200'
+                      : isTrial
+                        ? 'text-blue-700 bg-blue-50 border-blue-200'
+                        : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  }`}>
                   {isSuperAdmin ? 'ROOT ACCESS' : isExpired ? 'EXPIRED' : planStatus}
                 </span>
               </div>

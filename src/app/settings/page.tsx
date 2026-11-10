@@ -31,6 +31,8 @@ interface BusinessSettings {
   bankAccountNumber?: string | null;
   bankIfsc?: string | null;
   bankUpiId?: string | null;
+  upiQrImageUrl?: string | null;
+  upiBeneficiaryName?: string | null;
   invoiceTerms?: string | null;
   allowNegativeStock: boolean;
   logoUrl?: string | null;
@@ -40,9 +42,12 @@ export default function SettingsPage() {
   const toast = useToast();
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const [savingPaymentDetails, setSavingPaymentDetails] = useState(false);
   const [settings, setSettings] = useState<BusinessSettings>({
     id: '',
     name: '',
@@ -55,6 +60,8 @@ export default function SettingsPage() {
     bankAccountNumber: '',
     bankIfsc: '',
     bankUpiId: '',
+    upiQrImageUrl: null,
+    upiBeneficiaryName: '',
     invoiceTerms: '1. Payment due within 15 days.\n2. Goods once sold will not be taken back.\n3. Subject to local jurisdiction.',
     allowNegativeStock: false,
     logoUrl: null,
@@ -67,11 +74,21 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/settings');
+      const [res, payRes] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/user/payment-details')
+      ]);
+
       if (!res.ok) {
         throw new Error('Failed to load business settings');
       }
       const data = await res.json();
+      let payDetails: any = null;
+      if (payRes.ok) {
+        const payData = await payRes.json();
+        payDetails = payData.paymentDetails;
+      }
+
       if (data.business) {
         setSettings({
           id: data.business.id || '',
@@ -84,7 +101,9 @@ export default function SettingsPage() {
           bankName: data.business.bankName || '',
           bankAccountNumber: data.business.bankAccountNumber || '',
           bankIfsc: data.business.bankIfsc || '',
-          bankUpiId: data.business.bankUpiId || '',
+          bankUpiId: data.business.bankUpiId || payDetails?.upiId || '',
+          upiQrImageUrl: data.business.upiQrImageUrl || payDetails?.upiQrImageUrl || null,
+          upiBeneficiaryName: data.business.upiBeneficiaryName || payDetails?.upiBeneficiaryName || '',
           invoiceTerms: data.business.invoiceTerms || '1. Payment due within 15 days.\n2. Subject to local jurisdiction.',
           allowNegativeStock: Boolean(data.business.allowNegativeStock),
           logoUrl: data.business.logoUrl || null,
@@ -156,6 +175,91 @@ export default function SettingsPage() {
     }
   };
 
+  const handleQrFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
+      toast.error('Please upload a PNG, JPEG, or WebP image of your UPI QR code.');
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error('QR code image file size must be under 3 MB.');
+      return;
+    }
+
+    try {
+      setUploadingQr(true);
+      const formData = new FormData();
+      formData.append('qrImage', file);
+      if (settings.bankUpiId) formData.append('upiId', settings.bankUpiId);
+      if (settings.upiBeneficiaryName) formData.append('upiBeneficiaryName', settings.upiBeneficiaryName);
+
+      const res = await fetch('/api/user/payment-details', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload UPI QR image');
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+        upiQrImageUrl: data.paymentDetails?.upiQrImageUrl || prev.upiQrImageUrl,
+      }));
+      toast.success('UPI QR Code uploaded successfully!');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error uploading QR code');
+    } finally {
+      setUploadingQr(false);
+      if (qrInputRef.current) qrInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveQr = async () => {
+    if (!confirm('Are you sure you want to remove your uploaded UPI QR Code?')) return;
+    try {
+      setUploadingQr(true);
+      const res = await fetch('/api/user/payment-details', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to remove QR code');
+      }
+      setSettings((prev) => ({ ...prev, upiQrImageUrl: null }));
+      toast.success('UPI QR Code removed. Dynamic QR will be generated from your UPI ID.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error removing QR code');
+    } finally {
+      setUploadingQr(false);
+    }
+  };
+
+  const handleSavePaymentDetails = async () => {
+    try {
+      setSavingPaymentDetails(true);
+      const res = await fetch('/api/user/payment-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          upiId: settings.bankUpiId,
+          upiBeneficiaryName: settings.upiBeneficiaryName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save payment details');
+      }
+      toast.success('मेरी Payment Details (UPI details) saved successfully!');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error saving payment details');
+    } finally {
+      setSavingPaymentDetails(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings.name.trim()) {
@@ -165,11 +269,21 @@ export default function SettingsPage() {
 
     try {
       setSaving(true);
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
+      const [res] = await Promise.all([
+        fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings),
+        }),
+        fetch('/api/user/payment-details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            upiId: settings.bankUpiId,
+            upiBeneficiaryName: settings.upiBeneficiaryName,
+          }),
+        }),
+      ]);
 
       const data = await res.json();
       if (!res.ok) {
@@ -361,19 +475,60 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Bank & UPI Settlement Information + Live QR Code Preview */}
+          {/* मेरी Payment Details / My Payment Details */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Landmark className="w-4 h-4 text-emerald-600" />
-              <h3 className="font-bold text-sm text-slate-900">Bank & Digital UPI Settlement Details</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+              <div className="flex items-center gap-2">
+                <QrCode className="w-4 h-4 text-[#EA580C]" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">मेरी Payment Details / My Payment Details</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Save your official UPI ID, Beneficiary Name, and scannable UPI QR Code for instant client payments and WhatsApp reminders.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={savingPaymentDetails}
+                onClick={handleSavePaymentDetails}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer self-start sm:self-auto shrink-0 shadow-2xs"
+              >
+                {savingPaymentDetails ? 'सेव हो रहा है...' : 'Save Payment Details'}
+              </button>
             </div>
-            <p className="text-xs text-slate-500">
-              These payment details and the instant scannable UPI QR code will be printed directly on your customer invoices and public view links so clients can transfer funds via GPay, PhonePe, Paytm, or BHIM.
-            </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Form Fields */}
               <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1 flex items-center gap-1.5">
+                    <QrCode className="w-3.5 h-3.5 text-[#EA580C]" />
+                    UPI ID / VPA <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.bankUpiId || ''}
+                    onChange={(e) => setSettings({ ...settings, bankUpiId: e.target.value.toLowerCase() })}
+                    placeholder="e.g. yourname@okhdfcbank"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono lowercase focus:outline-none focus:ring-1 focus:ring-[#EA580C] focus:bg-white"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">GPay, PhonePe, Paytm or BHIM UPI ID</p>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">
+                    खाताधारक / Beneficiary Name
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.upiBeneficiaryName || ''}
+                    onChange={(e) => setSettings({ ...settings, upiBeneficiaryName: e.target.value })}
+                    placeholder="e.g. Ramesh Kumar / Acme Enterprises"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#EA580C] focus:bg-white"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Name shown to customers upon scanning QR</p>
+                </div>
+
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Bank Name</label>
                   <input
@@ -396,7 +551,7 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="font-semibold text-slate-700 block mb-1">Bank IFSC Code</label>
                   <input
                     type="text"
@@ -404,44 +559,89 @@ export default function SettingsPage() {
                     value={settings.bankIfsc || ''}
                     onChange={(e) => setSettings({ ...settings, bankIfsc: e.target.value.toUpperCase() })}
                     placeholder="e.g. HDFC0001234"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1 flex items-center gap-1.5">
-                    <QrCode className="w-3.5 h-3.5 text-emerald-600" />
-                    Primary UPI ID / VPA <span className="text-emerald-600 font-bold">(Generates QR)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.bankUpiId || ''}
-                    onChange={(e) => setSettings({ ...settings, bankUpiId: e.target.value.toLowerCase() })}
-                    placeholder="e.g. business@okhdfcbank"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono lowercase focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white"
+                    className="w-full max-w-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 font-mono uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white"
                   />
                 </div>
               </div>
 
-              {/* Right Col: Live Interactive UPI QR Preview Card */}
+              {/* Right Col: UPI QR Image Upload & Preview Card */}
               <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center">
+                <input
+                  ref={qrInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleQrFileSelect}
+                  className="hidden"
+                />
+
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                  Invoice QR Code Preview
+                  UPI QR Code (Invoice & Reminder)
                 </span>
-                {settings.bankUpiId ? (
-                  <UpiQrCode
-                    upiId={settings.bankUpiId}
-                    payeeName={settings.name || 'Merchant Store'}
-                    amount={2499}
-                    invoiceNumber="INV-SAMPLE"
-                    size={140}
-                  />
+
+                {settings.upiQrImageUrl ? (
+                  <div className="space-y-3 flex flex-col items-center">
+                    <div className="w-36 h-36 bg-white p-2 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center overflow-hidden">
+                      <img
+                        src={settings.upiQrImageUrl}
+                        alt="Saved UPI QR Code"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={uploadingQr}
+                        onClick={() => qrInputRef.current?.click()}
+                        className="px-2.5 py-1 bg-slate-900 text-white rounded-lg text-[10.5px] font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        {uploadingQr ? 'Uploading...' : 'Replace QR'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={uploadingQr}
+                        onClick={handleRemoveQr}
+                        className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10.5px] font-semibold hover:bg-rose-100 transition-colors cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 font-bold block">✓ Custom QR Saved</span>
+                  </div>
+                ) : settings.bankUpiId ? (
+                  <div className="space-y-3 flex flex-col items-center">
+                    <UpiQrCode
+                      upiId={settings.bankUpiId}
+                      payeeName={settings.upiBeneficiaryName || settings.name || 'Merchant Store'}
+                      amount={2499}
+                      invoiceNumber="INV-SAMPLE"
+                      size={130}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingQr}
+                      onClick={() => qrInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-[#EA580C] hover:bg-[#D94E00] text-white rounded-lg text-[10.5px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>{uploadingQr ? 'Uploading...' : 'Upload QR Image'}</span>
+                    </button>
+                    <p className="text-[10px] text-slate-400">PNG, JPG, WebP (Max 3MB)</p>
+                  </div>
                 ) : (
                   <div className="py-6 px-4 text-center space-y-2">
                     <div className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center mx-auto text-slate-400">
                       <QrCode className="w-6 h-6" />
                     </div>
-                    <p className="text-xs text-slate-500 font-medium">Enter a UPI ID to preview live QR</p>
+                    <p className="text-xs text-slate-500 font-medium">Enter a UPI ID or upload your QR</p>
+                    <button
+                      type="button"
+                      disabled={uploadingQr}
+                      onClick={() => qrInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10.5px] font-bold hover:bg-slate-800 transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                    >
+                      <Upload className="w-3 h-3 text-emerald-400" />
+                      <span>{uploadingQr ? 'Uploading...' : 'Upload QR Image'}</span>
+                    </button>
                     <p className="text-[10px] text-slate-400">Scannable by Google Pay, PhonePe, Paytm, etc.</p>
                   </div>
                 )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface CinematicIntroProps {
   onComplete?: () => void;
@@ -16,8 +16,6 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
   const [shouldRender, setShouldRender] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
 
   const onCompleteRef = useRef(onComplete);
@@ -40,6 +38,16 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
 
       const alreadySeenThisTab = sessionStorage.getItem('pc_intro_v4_seen') === 'true';
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isAndroidApp =
+        typeof navigator !== 'undefined' &&
+        /PakkachitthaApp/i.test(navigator.userAgent);
+
+      // In the native Android app, open directly into the interface without video delay
+      if (isAndroidApp && !forceIntro) {
+        setIsDismissed(true);
+        onCompleteRef.current?.();
+        return;
+      }
 
       if (noIntro) {
         setIsDismissed(true);
@@ -111,6 +119,7 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
+    video.playbackRate = 2.0; // 2x speed for 4–5 second completion
     video.setAttribute('muted', '');
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', 'true');
@@ -120,26 +129,26 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
       if (!video) return;
       try {
         video.muted = true;
+        video.playbackRate = 2.0;
         const playPromise = video.play();
         if (playPromise !== undefined) {
           await playPromise;
           if (mounted) {
             setHasStartedPlaying(true);
-            setAutoplayBlocked(false);
           }
         }
       } catch (err) {
         if (mounted) {
-          console.warn('Autoplay restricted by browser policy, awaiting user gesture:', err);
-          setAutoplayBlocked(true);
+          // Gracefully complete if autoplay is blocked
+          finishIntro();
         }
       }
     };
 
     const handlePlaying = () => {
       if (mounted) {
+        video.playbackRate = 2.0;
         setHasStartedPlaying(true);
-        setAutoplayBlocked(false);
       }
     };
 
@@ -149,8 +158,7 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
       }
     };
 
-    const handleError = (e: any) => {
-      console.warn('Intro video error, gracefully advancing to site:', e);
+    const handleError = (_e: any) => {
       if (mounted) {
         finishIntro();
       }
@@ -162,20 +170,18 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
     video.addEventListener('ended', handleEnded);
     video.addEventListener('error', handleError);
 
-    // If readyState is already prepared, trigger attempt immediately
     if (video.readyState >= 2) {
       attemptPlay();
     } else {
-      // Also try initial play immediately
       attemptPlay();
     }
 
-    // Safety timeout: Video duration is 10.0s. If playback is hung for > 13s, advance safely
+    // Strict 4.5s total duration limit
     const safetyTimeout = setTimeout(() => {
       if (mounted && !isDismissed) {
         finishIntro();
       }
-    }, 13500);
+    }, 4600);
 
     return () => {
       mounted = false;
@@ -193,28 +199,6 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
 
   if (!shouldRender || isDismissed) return null;
 
-  const handleScreenClick = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (video.paused) {
-      video.play().then(() => {
-        setHasStartedPlaying(true);
-        setAutoplayBlocked(false);
-      }).catch(() => {
-        finishIntro();
-      });
-    }
-  };
-
-  const toggleSound = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
-  };
-
   const handleSkip = (e: React.MouseEvent) => {
     e.stopPropagation();
     finishIntro();
@@ -223,7 +207,7 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
   return (
     <div
       aria-label="Welcome Intro"
-      onClick={handleScreenClick}
+      onClick={handleSkip}
       className={`fixed inset-0 z-[999999] w-screen h-screen max-w-full max-h-full overflow-hidden bg-white flex items-center justify-center select-none transition-opacity duration-500 ease-out ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
       }`}
@@ -231,69 +215,29 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
         backgroundColor: '#FFFFFF',
       }}
     >
-      {/* Top Controls: Sound Toggle and Skip Button */}
+      {/* Top Skip Button */}
       <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-50 flex items-center gap-2 sm:gap-3">
-        {hasStartedPlaying && (
-          <button
-            type="button"
-            onClick={toggleSound}
-            aria-label={isMuted ? 'Unmute intro video' : 'Mute intro video'}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/10 hover:bg-slate-900/20 text-slate-700 text-xs font-semibold backdrop-blur-md transition-all cursor-pointer border border-slate-300/40"
-          >
-            {isMuted ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-slate-500" />
-                <span className="hidden sm:inline">Muted</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-[#EA580C]" />
-                <span className="hidden sm:inline text-[#EA580C]">Sound On</span>
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Skip Button */}
         <button
           type="button"
           onClick={handleSkip}
-          aria-label="Skip intro animation"
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#071F38] hover:bg-[#EA580C] text-white text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer group"
+          aria-label="Skip into application"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900/10 hover:bg-slate-900/20 text-slate-800 text-xs font-bold backdrop-blur-md transition-all cursor-pointer border border-slate-300/40"
         >
           <span>Skip</span>
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Main Full-Viewport Video Canvas (object-contain on pure white background prevents cropping) */}
-      <div className="relative w-full h-full flex items-center justify-center p-2 sm:p-4">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted={isMuted}
-          preload="auto"
-          className="w-full h-full max-w-full max-h-full object-contain pointer-events-none"
-        >
-          <source src="/intro-video.mp4" type="video/mp4" />
-          <source src="/lenden-welcome.mp4" type="video/mp4" />
-        </video>
-
-        {/* Browser Autoplay Blocked Fallback Overlay */}
-        {autoplayBlocked && !hasStartedPlaying && (
-          <div
-            onClick={handleScreenClick}
-            className="absolute inset-0 bg-white/85 backdrop-blur-xs flex flex-col items-center justify-center cursor-pointer p-4 z-40 transition-opacity"
-          >
-            <div className="w-16 h-16 rounded-full bg-[#EA580C] text-white flex items-center justify-center shadow-2xl animate-bounce mb-3">
-              <Play className="w-7 h-7 fill-current ml-1" />
-            </div>
-            <p className="font-bold text-base text-[#071F38]">Click anywhere to play intro</p>
-            <p className="text-xs text-slate-500 mt-1">Tap to start the cinematic preview</p>
-          </div>
-        )}
-      </div>
+      {/* Video Player Running at 2x Speed */}
+      <video
+        ref={videoRef}
+        src="/intro.mp4"
+        playsInline
+        muted
+        autoPlay
+        preload="auto"
+        className="w-full h-full object-contain pointer-events-none"
+      />
     </div>
   );
 }

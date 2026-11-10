@@ -59,9 +59,11 @@ local.properties
 .idea/
 *.iml
 android/.gradle/
+android/.kotlin/
 android/build/
 android/app/build/
 android/local.properties
+build-deliverables/
 
 .vercel
 .env*

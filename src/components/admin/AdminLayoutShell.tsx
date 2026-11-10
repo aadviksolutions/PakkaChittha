@@ -20,6 +20,7 @@ import {
   X,
   ShieldAlert,
   ExternalLink,
+  Tag,
 } from 'lucide-react';
 
 interface AdminLayoutShellProps {
@@ -40,7 +41,8 @@ const NAV_ITEMS = [
   { href: '/platform-admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
   { href: '/platform-admin/payments', label: 'Payments', icon: Receipt },
   { href: '/platform-admin/reports', label: 'Revenue & Reports', icon: BarChart3 },
-  { href: '/platform-admin/plans', label: 'Plans & Features', icon: Layers },
+  { href: '/platform-admin/plans', label: 'Pricing & Packages', icon: Layers },
+  { href: '/platform-admin/discounts', label: 'Discount Management', icon: Tag },
   { href: '/platform-admin/audit-logs', label: 'Audit Logs', icon: ShieldCheck },
   { href: '/platform-admin/settings', label: 'Platform Settings', icon: Settings },
 ];

@@ -1,6 +1,6 @@
 import { TranslationDictionary } from './en';
 
-export const gu: TranslationDictionary = {
+export const gu: any = {
   common: {
     appName: 'પક્કા ચિઠ્ઠા',
     tagline: 'બિલિંગ • ઇન્વેન્ટરી • ઉધારી • રિપોર્ટ્સ',

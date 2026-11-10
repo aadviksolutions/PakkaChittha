@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -22,6 +22,13 @@ import {
   TrendingUp,
   CreditCard,
   UserPlus,
+  Filter,
+  Download,
+  Share2,
+  Banknote,
+  Building,
+  QrCode,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { TransactionModal, ContactOption } from '@/components/free-khata/TransactionModal';
 import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
@@ -29,6 +36,7 @@ import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
 import { useTranslation } from '@/i18n/context';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
+import { PaymentMethod } from '@prisma/client';
 
 interface KhataContactSummary {
   id: string;
@@ -36,13 +44,20 @@ interface KhataContactSummary {
   phone: string | null;
   email: string | null;
   notes: string | null;
-  totalGave: number;
-  totalReceived: number;
-  gaveOutstanding: number;
-  receivedOutstanding: number;
-  netBalance: number;
+  totalGiven: number;
+  totalTaken: number;
+  totalReceivedBack: number;
+  totalReturned: number;
+  amountToReceive: number;
+  amountToPay: number;
+  netPosition: number;
+  status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED';
+  statusLabel: string;
   transactionCount: number;
   lastActivityDate: string;
+  // Aliases
+  gaveOutstanding: number;
+  receivedOutstanding: number;
 }
 
 interface KhataTransactionItem {
@@ -57,12 +72,17 @@ interface KhataTransactionItem {
   date: string;
   dueDate: string | null;
   description: string | null;
+  paymentMode: PaymentMethod;
+  paymentRef: string | null;
+  paymentDetails: string | null;
   status: 'PENDING' | 'PARTIAL' | 'SETTLED';
   repayments: Array<{
     id: string;
     amount: number;
     date: string;
-    paymentMode: string;
+    paymentMode: PaymentMethod;
+    paymentRef: string | null;
+    paymentDetails: string | null;
     notes: string | null;
   }>;
   createdAt: string;
@@ -82,38 +102,58 @@ interface OverdueEntryItem {
   daysOverdue: number;
 }
 
+interface PaymentModeSummary {
+  mode: PaymentMethod;
+  label: string;
+  totalGiven: number;
+  totalReceived: number;
+  count: number;
+}
+
 interface DashboardData {
   kpis: {
-    totalGave: number;
-    totalReceived: number;
-    moneyToCollect: number;
-    moneyToRepay: number;
+    amountToReceive: number;
+    amountToPay: number;
     netPosition: number;
+    netPositionDescription: string;
+    totalGiven: number;
+    totalTaken: number;
+    totalReceivedBack: number;
+    totalReturned: number;
     totalContacts: number;
     overdueCount: number;
+    // Aliases
+    moneyToCollect?: number;
+    moneyToRepay?: number;
   };
+  modeSummaries: PaymentModeSummary[];
   recentTransactions: KhataTransactionItem[];
   overdueEntries: OverdueEntryItem[];
   contacts: KhataContactSummary[];
 }
 
-function FreeKhataDashboardContent() {
+function PersonalKhataDashboardContent() {
   const searchParams = useSearchParams();
   const { t } = useTranslation();
   const filterParam = searchParams.get('filter') || 'ALL'; // 'ALL', 'GAVE', 'RECEIVED'
-  const viewParam = searchParams.get('view'); // 'reminders'
+  const viewParam = searchParams.get('view');
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'PEOPLE' | 'TRANSACTIONS' | 'OVERDUE'>(
-    viewParam === 'reminders' ? 'OVERDUE' : 'PEOPLE'
+  const [activeTab, setActiveTab] = useState<'CONTACTS' | 'TRANSACTIONS' | 'MODES' | 'OVERDUE'>(
+    viewParam === 'reminders' ? 'OVERDUE' : 'CONTACTS'
   );
+
+  // Contact list filters & sorting
+  const [contactStatusFilter, setContactStatusFilter] = useState<'ALL' | 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED'>('ALL');
+  const [contactSortBy, setContactSortBy] = useState<'NAME' | 'RECEIVE_HIGH' | 'PAY_HIGH' | 'RECENT'>('RECEIVE_HIGH');
+  const [modeFilter, setModeFilter] = useState<string>('ALL');
 
   // Modals state
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [txModalType, setTxModalType] = useState<'GAVE' | 'RECEIVED'>('GAVE');
+  const [txPrimaryIntent, setTxPrimaryIntent] = useState<'GAVE' | 'RECEIVED'>('GAVE');
   const [repayModalOpen, setRepayModalOpen] = useState(false);
   const [repayTarget, setRepayTarget] = useState<RepaymentTransactionTarget | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -126,7 +166,7 @@ function FreeKhataDashboardContent() {
       const res = await fetch('/api/free-khata/dashboard');
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to load Khata dashboard');
+        throw new Error(json.error || 'Failed to load Personal Khata dashboard');
       }
       setData(json.data);
     } catch (err: unknown) {
@@ -140,14 +180,14 @@ function FreeKhataDashboardContent() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Quick action triggers
+  // Primary Action Button Handlers
   const handleOpenGave = () => {
-    setTxModalType('GAVE');
+    setTxPrimaryIntent('GAVE');
     setTxModalOpen(true);
   };
 
   const handleOpenReceived = () => {
-    setTxModalType('RECEIVED');
+    setTxPrimaryIntent('RECEIVED');
     setTxModalOpen(true);
   };
 
@@ -179,106 +219,134 @@ function FreeKhataDashboardContent() {
   };
 
   const handleOpenContactWhatsApp = (c: KhataContactSummary) => {
+    const outstanding = c.amountToReceive > 0 ? c.amountToReceive : c.amountToPay;
     setWaTarget({
       contactId: c.id,
       contactName: c.name,
       phone: c.phone,
-      amount: Math.abs(c.netBalance),
+      amount: outstanding,
       date: c.lastActivityDate,
-      type: c.netBalance >= 0 ? 'GAVE' : 'RECEIVED',
+      type: c.amountToReceive >= c.amountToPay ? 'GAVE' : 'RECEIVED',
     });
     setWaModalOpen(true);
   };
 
-  // Filtered contacts based on search query
-  const filteredContacts = (data?.contacts || []).filter((c) => {
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !query ||
-      c.name.toLowerCase().includes(query) ||
-      (c.phone && c.phone.includes(query));
+  // Filtered & Sorted Contacts List
+  const filteredContacts = useMemo(() => {
+    let list = (data?.contacts || []).filter((c) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        (c.phone && c.phone.includes(q));
 
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    if (filterParam === 'GAVE') return c.gaveOutstanding > 0;
-    if (filterParam === 'RECEIVED') return c.receivedOutstanding > 0;
-    return true;
-  });
+      if (contactStatusFilter === 'TO_RECEIVE') return c.amountToReceive > 0;
+      if (contactStatusFilter === 'TO_PAY') return c.amountToPay > 0;
+      if (contactStatusFilter === 'SETTLED') return c.amountToReceive === 0 && c.amountToPay === 0;
 
-  // Filtered transactions based on search query & filter
-  const filteredTransactions = (data?.recentTransactions || []).filter((t) => {
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !query ||
-      t.contactName.toLowerCase().includes(query) ||
-      (t.contactPhone && t.contactPhone.includes(query)) ||
-      (t.description && t.description.toLowerCase().includes(query));
+      return true;
+    });
 
-    if (!matchesSearch) return false;
+    list.sort((a, b) => {
+      if (contactSortBy === 'RECEIVE_HIGH') return b.amountToReceive - a.amountToReceive;
+      if (contactSortBy === 'PAY_HIGH') return b.amountToPay - a.amountToPay;
+      if (contactSortBy === 'NAME') return a.name.localeCompare(b.name);
+      return new Date(b.lastActivityDate).getTime() - new Date(a.lastActivityDate).getTime();
+    });
 
-    if (filterParam === 'GAVE') return t.type === 'GAVE';
-    if (filterParam === 'RECEIVED') return t.type === 'RECEIVED';
-    return true;
-  });
+    return list;
+  }, [data?.contacts, searchQuery, contactStatusFilter, contactSortBy]);
 
-  // Extract contact options for dropdown
+  // Filtered Transactions
+  const filteredTransactions = useMemo(() => {
+    return (data?.recentTransactions || []).filter((t) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        t.contactName.toLowerCase().includes(q) ||
+        (t.contactPhone && t.contactPhone.includes(q)) ||
+        (t.description && t.description.toLowerCase().includes(q));
+
+      if (!matchesSearch) return false;
+
+      if (modeFilter !== 'ALL' && t.paymentMode !== modeFilter) return false;
+      if (filterParam === 'GAVE') return t.type === 'GAVE';
+      if (filterParam === 'RECEIVED') return t.type === 'RECEIVED';
+
+      return true;
+    });
+  }, [data?.recentTransactions, searchQuery, modeFilter, filterParam]);
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    if (!data?.recentTransactions?.length) return;
+    const headers = ['Date', 'Person', 'Phone', 'Type', 'Amount', 'Payment Mode', 'Reference', 'Status', 'Balance'];
+    const rows = data.recentTransactions.map((tx) => [
+      formatDate(tx.date),
+      `"${tx.contactName}"`,
+      tx.contactPhone || '',
+      tx.type === 'GAVE' ? 'दी गई रकम' : 'ली गई रकम',
+      tx.amount,
+      tx.paymentMode,
+      `"${tx.paymentRef || ''}"`,
+      tx.status === 'SETTLED' ? 'हिसाब पूरा' : tx.status === 'PARTIAL' ? 'आंशिक' : 'बाकी',
+      tx.balanceAmount,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Personal_Khata_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const existingContacts: ContactOption[] = (data?.contacts || []).map((c) => ({
     id: c.id,
     name: c.name,
     phone: c.phone,
+    amountToReceive: c.amountToReceive,
+    amountToPay: c.amountToPay,
   }));
 
   const kpis = data?.kpis || {
-    totalGave: 0,
-    totalReceived: 0,
-    moneyToCollect: 0,
-    moneyToRepay: 0,
+    amountToReceive: 0,
+    amountToPay: 0,
     netPosition: 0,
+    netPositionDescription: 'आपका कुल हिसाब बराबर है।',
+    totalGiven: 0,
+    totalTaken: 0,
+    totalReceivedBack: 0,
+    totalReturned: 0,
     totalContacts: 0,
     overdueCount: 0,
   };
 
   return (
-    <div className="space-y-5 pb-24 md:pb-12 max-w-5xl mx-auto">
-      {/* Top Banner & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+    <div className="space-y-6 pb-24 md:pb-12 max-w-5xl mx-auto">
+      {/* 1. Top Header & Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-black text-[#071F38] tracking-tight">
-              {t('freeKhata.title')}
+              Personal Khata
             </h1>
             <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
               <Sparkles className="w-3 h-3 text-[#00B887]" />
               <span>100% Free Forever</span>
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            {t('freeKhata.tagline')}
+          <p className="text-xs font-medium text-slate-500 mt-1">
+            Har paise ka hisaab, bilkul aasaan.
           </p>
         </div>
 
-        {/* Desktop Quick Actions */}
-        <div className="hidden sm:flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <LanguageSelector variant="compact" />
-
-          <button
-            type="button"
-            onClick={handleOpenGave}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            <span>+ {t('freeKhata.youWillGive')}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenReceived}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
-          >
-            <ArrowDownLeft className="w-4 h-4" />
-            <span>+ {t('freeKhata.youWillGet')}</span>
-          </button>
-
           <button
             type="button"
             onClick={fetchDashboardData}
@@ -301,556 +369,637 @@ function FreeKhataDashboardContent() {
             onClick={fetchDashboardData}
             className="font-bold underline text-xs cursor-pointer ml-3"
           >
-            Retry
+            पुनः प्रयास करें (Retry)
           </button>
         </div>
       )}
 
-      {/* 4 Primary KPI Summary Balance Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Money I Have to Collect (You Will Get) */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-[#009E74] text-white shadow-md shadow-emerald-500/10 flex flex-col justify-between relative overflow-hidden">
+      {/* 2. THE 3 MAIN DASHBOARD SUMMARY CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        {/* Card 1: कुल लेने वाली रकम (Amount to Receive) - GREEN */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#00B887] to-[#009E74] text-white shadow-md shadow-emerald-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">
-              {t('freeKhata.youWillGet')}
+            <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">
+              कुल लेने वाली रकम
             </span>
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-white" />
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight block">
-              ₹{kpis.moneyToCollect.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[10px] text-emerald-100 block mt-0.5 font-medium">
-              Lene Hai (Receivable)
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Money I Have to Repay (You Will Pay) */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/10 flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-rose-100 uppercase tracking-wider">
-              {t('freeKhata.youWillGive')}
-            </span>
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
               <ArrowDownLeft className="w-4 h-4 text-white" />
             </div>
           </div>
 
           <div className="mt-3">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight block">
-              ₹{kpis.moneyToRepay.toLocaleString('en-IN')}
+            <span className="text-2xl sm:text-3xl font-black tracking-tight block">
+              ₹{kpis.amountToReceive.toLocaleString('en-IN')}
             </span>
-            <span className="text-[10px] text-rose-100 block mt-0.5 font-medium">
-              Dene Hai (Payable)
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Total I Gave (Original Sum Given) */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Total I Gave
-            </span>
-            <span className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-              <CreditCard className="w-4 h-4" />
-            </span>
-          </div>
-
-          <div className="mt-3">
-            <span className="text-lg sm:text-xl font-black text-[#071F38] block">
-              ₹{kpis.totalGave.toLocaleString('en-IN')}
-            </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              Original lending sum
+            <span className="text-[11px] text-emerald-100 block mt-1 font-medium">
+              लोगों से मिलने वाली बाकी रकम
             </span>
           </div>
         </div>
 
-        {/* Card 4: Total I Received (Original Sum Received) */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        {/* Card 2: कुल देने वाली रकम (Amount to Pay) - RED */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Total I Received
+            <span className="text-xs font-bold text-rose-100 uppercase tracking-wider">
+              कुल देने वाली रकम
             </span>
-            <span className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-              <TrendingUp className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+              <ArrowUpRight className="w-4 h-4 text-white" />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <span className="text-2xl sm:text-3xl font-black tracking-tight block">
+              ₹{kpis.amountToPay.toLocaleString('en-IN')}
+            </span>
+            <span className="text-[11px] text-rose-100 block mt-1 font-medium">
+              लोगों को देने वाली बाकी रकम
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: मेरी वर्तमान स्थिति (Net Position) */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              मेरी वर्तमान स्थिति (Net Position)
+            </span>
+            <span
+              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                kpis.netPosition > 0
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : kpis.netPosition < 0
+                  ? 'bg-rose-100 text-rose-800'
+                  : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {kpis.netPosition > 0 ? '+ लेने हैं' : kpis.netPosition < 0 ? '- देने हैं' : 'बराबर'}
             </span>
           </div>
 
           <div className="mt-3">
-            <span className="text-lg sm:text-xl font-black text-[#071F38] block">
-              ₹{kpis.totalReceived.toLocaleString('en-IN')}
+            <span
+              className={`text-2xl sm:text-3xl font-black tracking-tight block ${
+                kpis.netPosition > 0
+                  ? 'text-emerald-600'
+                  : kpis.netPosition < 0
+                  ? 'text-rose-600'
+                  : 'text-slate-700'
+              }`}
+            >
+              {kpis.netPosition > 0 && '+ '}
+              {kpis.netPosition < 0 && '- '}₹
+              {Math.abs(kpis.netPosition).toLocaleString('en-IN')}
             </span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">
-              Original borrowing sum
+            <span className="text-[11px] text-slate-600 block mt-1 font-medium leading-relaxed">
+              {kpis.netPositionDescription}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Overdue Entries Warning Alert (If Any) */}
-      {kpis.overdueCount > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs animate-in fade-in">
-          <div className="flex items-start gap-2.5">
-            <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="font-bold">
-                {kpis.overdueCount} Overdue {kpis.overdueCount === 1 ? 'Entry' : 'Entries'}
-              </strong>
-              <p className="text-[11.5px] text-amber-800 mt-0.5">
-                Some repayment dates have passed. You can send free reminder messages via WhatsApp.
-              </p>
-            </div>
+      {/* 3. HISTORICAL CUMULATIVE TOTALS */}
+      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+        <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
+          ऐतिहासिक कुल हिसाब (Cumulative Historical Totals)
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+            <span className="text-[10.5px] text-slate-500 block">कुल दी गई रकम</span>
+            <strong className="text-sm font-black text-[#071F38] block mt-0.5">
+              ₹{kpis.totalGiven.toLocaleString('en-IN')}
+            </strong>
+            <span className="text-[9.5px] text-slate-400 block mt-0.5">Original Lent</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setActiveTab('OVERDUE')}
-            className="self-start sm:self-auto px-3.5 py-1.5 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl transition-colors cursor-pointer text-xs shrink-0"
-          >
-            Review Overdue ({kpis.overdueCount})
-          </button>
+
+          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+            <span className="text-[10.5px] text-slate-500 block">कुल ली गई रकम</span>
+            <strong className="text-sm font-black text-[#071F38] block mt-0.5">
+              ₹{kpis.totalTaken.toLocaleString('en-IN')}
+            </strong>
+            <span className="text-[9.5px] text-slate-400 block mt-0.5">Original Borrowed</span>
+          </div>
+
+          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+            <span className="text-[10.5px] text-slate-500 block">कुल वापस मिली रकम</span>
+            <strong className="text-sm font-black text-emerald-600 block mt-0.5">
+              ₹{kpis.totalReceivedBack.toLocaleString('en-IN')}
+            </strong>
+            <span className="text-[9.5px] text-slate-400 block mt-0.5">Repayments Received</span>
+          </div>
+
+          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
+            <span className="text-[10.5px] text-slate-500 block">कुल वापस की गई रकम</span>
+            <strong className="text-sm font-black text-rose-600 block mt-0.5">
+              ₹{kpis.totalReturned.toLocaleString('en-IN')}
+            </strong>
+            <span className="text-[9.5px] text-slate-400 block mt-0.5">Repayments Returned</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. ONLY TWO PRIMARY TRANSACTION BUTTONS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {/* Button A: मैंने रकम दी */}
+        <button
+          type="button"
+          onClick={handleOpenGave}
+          className="p-4 sm:p-5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98"
+        >
+          <div className="text-left">
+            <span className="text-base sm:text-lg font-black block">
+              मैंने रकम दी
+            </span>
+            <span className="text-xs text-rose-100 font-medium block mt-0.5">
+              पैसे मेरे पास से गए
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+            <ArrowUpRight className="w-6 h-6 text-white" />
+          </div>
+        </button>
+
+        {/* Button B: मुझे रकम मिली */}
+        <button
+          type="button"
+          onClick={handleOpenReceived}
+          className="p-4 sm:p-5 rounded-2xl bg-[#00B887] hover:bg-[#009E74] text-white shadow-md shadow-emerald-600/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98"
+        >
+          <div className="text-left">
+            <span className="text-base sm:text-lg font-black block">
+              मुझे रकम मिली
+            </span>
+            <span className="text-xs text-emerald-100 font-medium block mt-0.5">
+              पैसे मेरे पास आए
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
+            <ArrowDownLeft className="w-6 h-6 text-white" />
+          </div>
+        </button>
+      </div>
+
+      {/* 5. PAYMENT MODE SUMMARY BREAKDOWN (Additional Feature) */}
+      {data?.modeSummaries && data.modeSummaries.length > 0 && (
+        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+              माध्यम अनुसार हिसाब (Payment Mode Breakdown)
+            </span>
+            <span className="text-[10px] text-slate-400">
+              5 Modes Tracked
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+            {data.modeSummaries.map((m) => (
+              <div
+                key={m.mode}
+                className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 text-[11px]">{m.label.split(' ')[0]}</span>
+                  <span className="text-[10px] text-slate-400">{m.count} tx</span>
+                </div>
+                <div className="mt-2 space-y-0.5">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">दी:</span>
+                    <strong className="text-rose-600">₹{m.totalGiven.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">मिली:</span>
+                    <strong className="text-emerald-600">₹{m.totalReceived.toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Main Container: Search, Tabs & Content */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-        {/* Search & Tab Filter Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between gap-4">
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, mobile number or note..."
-              className="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#00B887]/30 focus:border-[#00B887] transition-all"
-            />
+      {/* 6. NAVIGATION TABS */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('CONTACTS')}
+          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'CONTACTS'
+              ? 'bg-[#071F38] text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          मेरे संपर्क ({data?.contacts?.length || 0})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('TRANSACTIONS')}
+          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'TRANSACTIONS'
+              ? 'bg-[#071F38] text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          हिसाब का पूरा रिकॉर्ड ({data?.recentTransactions?.length || 0})
+        </button>
+
+        {kpis.overdueCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('OVERDUE')}
+            className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'OVERDUE'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+            }`}
+          >
+            समय से बाकी ({kpis.overdueCount})
+          </button>
+        )}
+      </div>
+
+      {/* 7. TAB CONTENT: CONTACTS (मेरे संपर्क) */}
+      {activeTab === 'CONTACTS' && (
+        <div className="space-y-4">
+          {/* Controls: Search, Filter, Sort */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="नाम या मोबाइल नंबर से खोजें..."
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Status Filter */}
+              <select
+                value={contactStatusFilter}
+                onChange={(e) => setContactStatusFilter(e.target.value as any)}
+                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+              >
+                <option value="ALL">सभी संपर्क (All)</option>
+                <option value="TO_RECEIVE">मुझे लेने हैं (Receivable)</option>
+                <option value="TO_PAY">मुझे देने हैं (Payable)</option>
+                <option value="SETTLED">हिसाब पूरा (Settled)</option>
+              </select>
+
+              {/* Sort By */}
+              <select
+                value={contactSortBy}
+                onChange={(e) => setContactSortBy(e.target.value as any)}
+                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+              >
+                <option value="RECEIVE_HIGH">सबसे अधिक लेने हैं</option>
+                <option value="PAY_HIGH">सबसे अधिक देने हैं</option>
+                <option value="NAME">नाम (A-Z)</option>
+                <option value="RECENT">हाल की गतिविधि</option>
+              </select>
+            </div>
           </div>
 
-          {/* View Mode Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab('PEOPLE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'PEOPLE'
-                  ? 'bg-white text-[#071F38] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              People ({data?.contacts.length || 0})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('TRANSACTIONS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'TRANSACTIONS'
-                  ? 'bg-white text-[#071F38] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Recent Entries
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('OVERDUE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                activeTab === 'OVERDUE'
-                  ? 'bg-white text-[#071F38] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span>Overdue</span>
-              {kpis.overdueCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-rose-500 text-white font-extrabold">
-                  {kpis.overdueCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Tab 1: People / Contacts List */}
-        {activeTab === 'PEOPLE' && (
-          <div className="divide-y divide-slate-100">
-            {filteredContacts.length === 0 ? (
-              <div className="p-12 text-center">
-                <div className="w-14 h-14 rounded-3xl bg-emerald-50 text-[#00B887] border border-emerald-100 flex items-center justify-center mx-auto mb-3">
-                  <Users className="w-7 h-7 text-[#00B887]" />
-                </div>
-                <h3 className="font-bold text-sm text-[#071F38]">No Contacts Found</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  {searchQuery
-                    ? `No person matches "${searchQuery}". Try a different name or number.`
-                    : 'Start your personal ledger by adding someone you gave money to or received money from.'}
-                </p>
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleOpenGave}
-                    className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-                  >
-                    + I Gave Money
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenReceived}
-                    className="px-3.5 py-2 bg-[#00B887] hover:bg-[#009E74] text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
-                  >
-                    + I Received Money
-                  </button>
-                </div>
-              </div>
-            ) : (
-              filteredContacts.map((contact) => {
-                const initials = contact.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join('')
-                  .toUpperCase();
-
-                const willGet = contact.netBalance > 0;
-                const willPay = contact.netBalance < 0;
-                const isSettled = contact.netBalance === 0;
+          {/* Contact Cards List */}
+          {filteredContacts.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
+              <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="font-bold text-slate-700">कोई संपर्क नहीं मिला।</p>
+              <p className="mt-1 text-slate-400">
+                नया लेन-देन दर्ज करने के लिए ऊपर &quot;मैंने रकम दी&quot; या &quot;मुझे रकम मिली&quot; पर क्लिक करें।
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredContacts.map((c) => {
+                const isToReceive = c.amountToReceive > 0;
+                const isToPay = c.amountToPay > 0;
+                const isSettled = !isToReceive && !isToPay;
 
                 return (
                   <div
-                    key={contact.id}
-                    className="p-4 sm:p-5 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3 group"
+                    key={c.id}
+                    className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-slate-300 transition-all shadow-xs flex flex-col justify-between"
                   >
-                    {/* Left: Avatar, Name & Phone */}
-                    <Link
-                      href={`/free-khata/person/${contact.id}`}
-                      className="flex items-center gap-3.5 min-w-0 flex-1"
-                    >
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-200/80 text-[#071F38] font-black text-xs flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                        {initials}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-xs sm:text-sm text-[#071F38] truncate group-hover:text-[#008F91] transition-colors">
-                            {contact.name}
-                          </h4>
-                          {contact.phone && (
-                            <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-                              {contact.phone}
+                    <div>
+                      {/* Top Row: Name, Phone & Status Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <Link
+                            href={`/free-khata/person/${c.id}`}
+                            className="font-bold text-sm text-[#071F38] hover:text-[#EA580C] transition-colors"
+                          >
+                            {c.name}
+                          </Link>
+                          {c.phone && (
+                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{c.phone}</span>
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                          <span>{contact.transactionCount} entries</span>
-                          <span>•</span>
-                          <span>Last: {formatDate(contact.lastActivityDate)}</span>
+                        {/* Status Badge */}
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                            c.status === 'TO_RECEIVE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : c.status === 'TO_PAY'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {c.statusLabel}
+                        </span>
+                      </div>
+
+                      {/* Balances Display */}
+                      <div className="mt-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">मिलने वाली रकम:</span>
+                          <strong className="text-xs font-black text-emerald-700 block mt-0.5">
+                            ₹{c.amountToReceive.toLocaleString('en-IN')}
+                          </strong>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-500 block">देने वाली रकम:</span>
+                          <strong className="text-xs font-black text-rose-700 block mt-0.5">
+                            ₹{c.amountToPay.toLocaleString('en-IN')}
+                          </strong>
                         </div>
                       </div>
-                    </Link>
 
-                    {/* Right: Net Balance & Quick Actions */}
-                    <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
-                      {/* Amount & Status Badge */}
-                      <div className="text-right">
-                        {willGet && (
-                          <>
-                            <span className="text-xs sm:text-sm font-black text-[#00B887] block">
-                              ₹{contact.netBalance.toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded-md">
-                              You'll Get
-                            </span>
-                          </>
-                        )}
+                      {/* Net Position if both exist */}
+                      {isToReceive && isToPay && (
+                        <div className="mt-1.5 px-1 flex items-center justify-between text-[10.5px]">
+                          <span className="text-slate-500">मेरी वर्तमान स्थिति:</span>
+                          <strong
+                            className={`font-black ${
+                              c.netPosition >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                            }`}
+                          >
+                            {c.netPosition >= 0 ? '+ ' : '- '}₹
+                            {Math.abs(c.netPosition).toLocaleString('en-IN')}
+                          </strong>
+                        </div>
+                      )}
+                    </div>
 
-                        {willPay && (
-                          <>
-                            <span className="text-xs sm:text-sm font-black text-rose-600 block">
-                              ₹{Math.abs(contact.netBalance).toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md">
-                              You'll Pay
-                            </span>
-                          </>
+                    {/* Bottom Actions */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {c.phone && (c.amountToReceive > 0 || c.amountToPay > 0) && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenContactWhatsApp(c)}
+                            title="WhatsApp तगादा / Reminder"
+                            className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline text-[10.5px]">Reminder</span>
+                          </button>
                         )}
-
-                        {isSettled && (
-                          <>
-                            <span className="text-xs sm:text-sm font-black text-slate-400 block">
-                              ₹0.00
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded-md">
-                              Settled
-                            </span>
-                          </>
-                        )}
+                        <span className="text-[10px] text-slate-400">
+                          {c.transactionCount} लेन-देन
+                        </span>
                       </div>
 
-                      {/* WhatsApp Reminder Shortcut (if person owes money) */}
-                      {willGet && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenContactWhatsApp(contact)}
-                          title="Remind on WhatsApp"
-                          className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer"
-                        >
-                          <MessageSquare className="w-4 h-4 text-[#00B887]" />
-                        </button>
-                      )}
-
-                      {/* Arrow to Person Ledger */}
                       <Link
-                        href={`/free-khata/person/${contact.id}`}
-                        className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                        href={`/free-khata/person/${c.id}`}
+                        className="px-3 py-1.5 bg-[#071F38] hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
                       >
-                        <ChevronRight className="w-5 h-5" />
+                        <span>खाता देखें</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                     </div>
                   </div>
                 );
-              })
-            )}
-          </div>
-        )}
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Tab 2: Recent Transactions Feed */}
-        {activeTab === 'TRANSACTIONS' && (
-          <div className="divide-y divide-slate-100">
-            {filteredTransactions.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-400">
-                No transactions recorded yet. Use "+ I Gave" or "+ I Received" to create an entry.
-              </div>
-            ) : (
-              filteredTransactions.map((tx) => {
+      {/* 8. TAB CONTENT: TRANSACTION HISTORY (हिसाब का पूरा रिकॉर्ड) */}
+      {activeTab === 'TRANSACTIONS' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="खोजें (व्यक्ति, विवरण, आदि)..."
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={modeFilter}
+                onChange={(e) => setModeFilter(e.target.value)}
+                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+              >
+                <option value="ALL">सभी माध्यम (All Modes)</option>
+                <option value="CASH">Cash (नकद)</option>
+                <option value="UPI">UPI</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="OTHER">Other</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Excel / CSV Export"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                <span className="hidden sm:inline">Excel Export</span>
+              </button>
+            </div>
+          </div>
+
+          {filteredTransactions.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
+              कोई लेन-देन रिकॉर्ड नहीं मिला।
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
+              {filteredTransactions.map((tx) => {
                 const isGave = tx.type === 'GAVE';
-                const hasPendingBalance = tx.balanceAmount > 0;
 
                 return (
                   <div
                     key={tx.id}
-                    className="p-4 sm:p-5 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-3.5 sm:p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 text-xs"
                   >
-                    {/* Left: Contact, Date, Note */}
-                    <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex items-start gap-3">
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          isGave
-                            ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                            : 'bg-emerald-50 text-[#00B887] border border-emerald-200'
+                          isGave ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {isGave ? (
-                          <ArrowUpRight className="w-4 h-4" />
-                        ) : (
-                          <ArrowDownLeft className="w-4 h-4" />
-                        )}
+                        {isGave ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
                       </div>
 
-                      <div className="min-w-0">
+                      <div>
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/free-khata/person/${tx.contactId}`}
-                            className="font-bold text-xs sm:text-sm text-[#071F38] hover:underline truncate"
+                            className="font-bold text-sm text-[#071F38] hover:text-[#EA580C]"
                           >
                             {tx.contactName}
                           </Link>
                           <span
-                            className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
-                              isGave
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${
+                              tx.paymentMode === 'UPI'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                : tx.paymentMode === 'CASH'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
                             }`}
                           >
-                            {isGave ? 'I Gave' : 'I Received'}
+                            {tx.paymentMode}
                           </span>
                         </div>
 
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <span className="text-[11px] text-slate-500 block mt-0.5">
                           {formatDate(tx.date)}
-                          {tx.dueDate && (
-                            <span className="text-amber-700 ml-2 font-medium">
-                              (Due: {formatDate(tx.dueDate)})
-                            </span>
-                          )}
-                          {tx.description && (
-                            <span className="text-slate-400 ml-2 italic">
-                              "{tx.description}"
-                            </span>
-                          )}
-                        </p>
+                          {tx.description ? ` • ${tx.description}` : ''}
+                          {tx.paymentRef ? ` • Ref: ${tx.paymentRef}` : ''}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Right: Amounts & Action Buttons */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3.5 pl-12 sm:pl-0">
-                      <div className="text-right">
-                        <span className="text-xs sm:text-sm font-black text-slate-800 block">
-                          ₹{tx.amount.toLocaleString('en-IN')}
-                        </span>
-                        <div className="text-[10.5px]">
-                          {tx.status === 'SETTLED' ? (
-                            <span className="font-bold text-emerald-600">Settled Full</span>
-                          ) : (
-                            <span className="text-slate-500">
-                              Bal: <strong className="text-rose-600 font-bold">₹{tx.balanceAmount}</strong>
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`font-black text-sm block ${
+                          isGave ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {isGave ? '- ' : '+ '}₹{tx.amount.toLocaleString('en-IN')}
+                      </span>
 
-                      {/* Repayment and WhatsApp buttons */}
-                      <div className="flex items-center gap-1.5">
-                        {hasPendingBalance && (
+                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                        <span
+                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${
+                            tx.status === 'SETTLED'
+                              ? 'bg-slate-100 text-slate-600'
+                              : tx.status === 'PARTIAL'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {tx.status === 'SETTLED' ? 'हिसाब पूरा' : tx.status === 'PARTIAL' ? 'आंशिक' : 'बाकी'}
+                        </span>
+
+                        {tx.balanceAmount > 0 && (
                           <button
                             type="button"
                             onClick={() => handleOpenRepay(tx)}
-                            className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer"
+                            className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer ml-1"
                           >
-                            Repay
-                          </button>
-                        )}
-
-                        {hasPendingBalance && isGave && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenWhatsApp(tx)}
-                            title="Remind on WhatsApp"
-                            className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#00B887]" />
+                            वापसी दर्ज करें
                           </button>
                         )}
                       </div>
                     </div>
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 9. TAB CONTENT: OVERDUE (समय से बाकी) */}
+      {activeTab === 'OVERDUE' && (
+        <div className="space-y-3">
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>
+              नीचे दी गई प्रविष्टियों की देय तिथि (Due Date) समाप्त हो चुकी है और रकम अभी बाकी है।
+            </span>
           </div>
-        )}
 
-        {/* Tab 3: Overdue Entries */}
-        {activeTab === 'OVERDUE' && (
-          <div className="divide-y divide-slate-100">
-            {data?.overdueEntries.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-400">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                <span>Great job! No overdue entries found. All payments are on schedule.</span>
-              </div>
-            ) : (
-              data?.overdueEntries.map((od) => (
-                <div
-                  key={od.id}
-                  className="p-4 sm:p-5 hover:bg-amber-50/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
-                      <Clock className="w-4 h-4 text-amber-700" />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/free-khata/person/${od.contactId}`}
-                          className="font-bold text-xs sm:text-sm text-[#071F38] hover:underline"
-                        >
-                          {od.contactName}
-                        </Link>
-                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded">
-                          {od.daysOverdue} days overdue
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        Due Date was: <strong>{formatDate(od.dueDate)}</strong>
-                        {od.description && ` • "${od.description}"`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pl-12 sm:pl-0">
-                    <div className="text-right">
-                      <span className="text-xs sm:text-sm font-black text-rose-600 block">
-                        ₹{od.balanceAmount.toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] text-slate-400">Outstanding</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenWhatsApp(od)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Remind on WhatsApp</span>
-                    </button>
-                  </div>
+          <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+            {(data?.overdueEntries || []).map((o) => (
+              <div key={o.id} className="p-4 flex items-center justify-between gap-3 text-xs">
+                <div>
+                  <Link
+                    href={`/free-khata/person/${o.contactId}`}
+                    className="font-bold text-sm text-[#071F38] hover:text-[#EA580C]"
+                  >
+                    {o.contactName}
+                  </Link>
+                  <span className="text-rose-600 text-[11px] block mt-0.5 font-semibold">
+                    {o.daysOverdue} दिन पहले देय थी (Due: {formatDate(o.dueDate)})
+                  </span>
                 </div>
-              ))
-            )}
+
+                <div className="text-right">
+                  <span className="font-black text-sm text-rose-600 block">
+                    ₹{o.balanceAmount.toLocaleString('en-IN')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenWhatsApp(o)}
+                    className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    <span>WhatsApp तगादा</span>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Floating Bottom Action Bar for Mobile Screens */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 sm:hidden flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleOpenGave}
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl bg-rose-600 active:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 active:scale-95 transition-all cursor-pointer"
-        >
-          <ArrowUpRight className="w-4 h-4" />
-          <span>+ I Gave</span>
-        </button>
+      {/* MODALS */}
+      {txModalOpen && (
+        <TransactionModal
+          isOpen={txModalOpen}
+          onClose={() => setTxModalOpen(false)}
+          onSuccess={fetchDashboardData}
+          primaryIntent={txPrimaryIntent}
+          existingContacts={existingContacts}
+        />
+      )}
 
-        <button
-          type="button"
-          onClick={handleOpenReceived}
-          className="flex-1 flex items-center justify-center gap-1.5 py-3 px-3 rounded-2xl bg-[#00B887] active:bg-[#009E74] text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
-        >
-          <ArrowDownLeft className="w-4 h-4" />
-          <span>+ I Received</span>
-        </button>
-      </div>
+      {repayModalOpen && (
+        <RepaymentModal
+          isOpen={repayModalOpen}
+          onClose={() => {
+            setRepayModalOpen(false);
+            setRepayTarget(null);
+          }}
+          onSuccess={fetchDashboardData}
+          transaction={repayTarget}
+        />
+      )}
 
-      {/* Modals */}
-      <TransactionModal
-        isOpen={txModalOpen}
-        onClose={() => setTxModalOpen(false)}
-        onSuccess={fetchDashboardData}
-        defaultType={txModalType}
-        existingContacts={existingContacts}
-      />
-
-      <RepaymentModal
-        isOpen={repayModalOpen}
-        onClose={() => setRepayModalOpen(false)}
-        onSuccess={fetchDashboardData}
-        transaction={repayTarget}
-      />
-
-      <WhatsAppReminderModal
-        isOpen={waModalOpen}
-        onClose={() => setWaModalOpen(false)}
-        target={waTarget}
-        onPhoneUpdated={fetchDashboardData}
-      />
+      {waModalOpen && waTarget && (
+        <WhatsAppReminderModal
+          isOpen={waModalOpen}
+          onClose={() => {
+            setWaModalOpen(false);
+            setWaTarget(null);
+          }}
+          target={waTarget}
+        />
+      )}
     </div>
   );
 }
 
-export default function FreeKhataDashboardPage() {
+export default function FreeKhataPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-xs text-slate-400">Loading Free Khata...</div>}>
-      <FreeKhataDashboardContent />
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Personal Khata...</div>}>
+      <PersonalKhataDashboardContent />
     </Suspense>
   );
 }

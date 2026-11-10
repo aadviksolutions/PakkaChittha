@@ -21,13 +21,20 @@ export interface CreateKhataTransactionInput {
   date?: string | Date;
   dueDate?: string | Date | null;
   description?: string | null;
+  paymentMode?: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
 }
 
 export interface RecordKhataRepaymentInput {
-  transactionId: string;
+  transactionId?: string;
+  contactId?: string;
+  targetType?: 'GAVE' | 'RECEIVED';
   amount: number;
   date?: string | Date;
   paymentMode?: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
   notes?: string | null;
 }
 
@@ -72,14 +79,13 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
- * Retrieves the complete Khata Dashboard metrics for a tenant workspace:
- * - Total I Gave (Original amount given)
- * - Total I Received (Original amount received)
- * - Money I Have to Collect (Outstanding on I Gave entries)
- * - Money I Have to Repay (Outstanding on I Received entries)
- * - Recent transactions
- * - Overdue entries
- * - Person-wise contacts summary
+ * Retrieves the complete Personal Khata Dashboard metrics for a workspace:
+ * - Card 1: कुल लेने वाली रकम (Amount to Receive / Outstanding Receivable)
+ * - Card 2: कुल देने वाली रकम (Amount to Pay / Outstanding Payable)
+ * - Card 3: मेरी वर्तमान स्थिति (Net Position = Receivable - Payable)
+ * - Cumulative Historical Totals: कुल दी गई रकम (totalGiven) & कुल ली गई रकम (totalTaken)
+ * - Payment Mode Summaries: Cash, UPI, Bank Transfer, Cheque, Other
+ * - Contact List: Contact summaries with individual ledgers
  */
 export async function getKhataDashboardSummary(businessId: string) {
   const [contacts, transactions] = await Promise.all([
@@ -106,41 +112,115 @@ export async function getKhataDashboardSummary(businessId: string) {
         },
       },
       orderBy: { date: 'desc' },
-      take: 20,
+      take: 50,
     }),
   ]);
 
-  // Aggregate metrics across all contacts
-  let totalGave = 0;
-  let totalReceived = 0;
-  let moneyToCollect = 0;
-  let moneyToRepay = 0;
+  // Historical cumulative totals
+  let totalGiven = 0;
+  let totalTaken = 0;
+  let totalReceivedBack = 0;
+  let totalReturned = 0;
+
+  // Outstanding balances
+  let amountToReceive = 0; // Sum of gaveOutstanding
+  let amountToPay = 0;     // Sum of receivedOutstanding
+
+  // Payment mode summaries
+  const modeStats: Record<
+    PaymentMethod,
+    { mode: PaymentMethod; label: string; totalGiven: number; totalReceived: number; count: number }
+  > = {
+    CASH: { mode: 'CASH', label: 'Cash (नकद)', totalGiven: 0, totalReceived: 0, count: 0 },
+    UPI: { mode: 'UPI', label: 'UPI', totalGiven: 0, totalReceived: 0, count: 0 },
+    BANK_TRANSFER: { mode: 'BANK_TRANSFER', label: 'Bank Transfer (बैंक ट्रांसफर)', totalGiven: 0, totalReceived: 0, count: 0 },
+    CHEQUE: { mode: 'CHEQUE', label: 'Cheque (चेक)', totalGiven: 0, totalReceived: 0, count: 0 },
+    OTHER: { mode: 'OTHER', label: 'Other (अन्य)', totalGiven: 0, totalReceived: 0, count: 0 },
+  };
+
   const now = new Date();
 
   // Contact summaries
   const contactSummaries = contacts.map((c) => {
-    let personGave = 0;
-    let personReceived = 0;
+    let personTotalGiven = 0;
+    let personTotalTaken = 0;
+    let personReceivedBack = 0;
+    let personReturned = 0;
     let personGaveOutstanding = 0;
     let personReceivedOutstanding = 0;
 
     for (const tx of c.transactions) {
+      const mode = (tx.paymentMode as PaymentMethod) || 'CASH';
+      if (modeStats[mode]) {
+        modeStats[mode].count += 1;
+      }
+
       if (tx.type === 'GAVE') {
-        personGave += tx.amount;
+        personTotalGiven += tx.amount;
         personGaveOutstanding += tx.balanceAmount;
+        if (modeStats[mode]) {
+          modeStats[mode].totalGiven += tx.amount;
+        }
+
+        // Tally repayments received back from this person
+        for (const rep of tx.repayments) {
+          personReceivedBack += rep.amount;
+          const repMode = (rep.paymentMode as PaymentMethod) || 'CASH';
+          if (modeStats[repMode]) {
+            modeStats[repMode].totalReceived += rep.amount;
+            modeStats[repMode].count += 1;
+          }
+        }
       } else {
-        personReceived += tx.amount;
+        personTotalTaken += tx.amount;
         personReceivedOutstanding += tx.balanceAmount;
+        if (modeStats[mode]) {
+          modeStats[mode].totalReceived += tx.amount;
+        }
+
+        // Tally repayments returned to this person
+        for (const rep of tx.repayments) {
+          personReturned += rep.amount;
+          const repMode = (rep.paymentMode as PaymentMethod) || 'CASH';
+          if (modeStats[repMode]) {
+            modeStats[repMode].totalGiven += rep.amount;
+            modeStats[repMode].count += 1;
+          }
+        }
       }
     }
 
-    totalGave += personGave;
-    totalReceived += personReceived;
-    moneyToCollect += personGaveOutstanding;
-    moneyToRepay += personReceivedOutstanding;
+    totalGiven += personTotalGiven;
+    totalTaken += personTotalTaken;
+    totalReceivedBack += personReceivedBack;
+    totalReturned += personReturned;
+    amountToReceive += personGaveOutstanding;
+    amountToPay += personReceivedOutstanding;
 
-    // Net balance: positive means person owes user (You will get), negative means user owes person (You will give)
-    const netBalance = round2(personGaveOutstanding - personReceivedOutstanding);
+    // Person Net position: Positive means user has to receive, negative means user has to pay
+    const personNetPosition = round2(personGaveOutstanding - personReceivedOutstanding);
+
+    let status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED' = 'SETTLED';
+    let statusLabel = 'हिसाब पूरा';
+
+    if (personGaveOutstanding > 0 && personReceivedOutstanding === 0) {
+      status = 'TO_RECEIVE';
+      statusLabel = 'मुझे लेने हैं';
+    } else if (personReceivedOutstanding > 0 && personGaveOutstanding === 0) {
+      status = 'TO_PAY';
+      statusLabel = 'मुझे देने हैं';
+    } else if (personGaveOutstanding > 0 || personReceivedOutstanding > 0) {
+      if (personNetPosition > 0) {
+        status = 'TO_RECEIVE';
+        statusLabel = 'मुझे लेने हैं';
+      } else if (personNetPosition < 0) {
+        status = 'TO_PAY';
+        statusLabel = 'मुझे देने हैं';
+      } else {
+        status = 'SETTLED';
+        statusLabel = 'हिसाब पूरा';
+      }
+    }
 
     return {
       id: c.id,
@@ -148,16 +228,38 @@ export async function getKhataDashboardSummary(businessId: string) {
       phone: c.phone,
       email: c.email,
       notes: c.notes,
-      totalGave: round2(personGave),
-      totalReceived: round2(personReceived),
+      // Cumulative historical totals
+      totalGiven: round2(personTotalGiven),
+      totalTaken: round2(personTotalTaken),
+      totalReceivedBack: round2(personReceivedBack),
+      totalReturned: round2(personReturned),
+      // Current outstanding balances
+      amountToReceive: round2(personGaveOutstanding),
+      amountToPay: round2(personReceivedOutstanding),
+      // Net position
+      netPosition: personNetPosition,
+      status,
+      statusLabel,
+      // Backward compatibility aliases
       gaveOutstanding: round2(personGaveOutstanding),
       receivedOutstanding: round2(personReceivedOutstanding),
-      netBalance, // > 0: You'll get; < 0: You'll give; 0: settled
+      totalGave: round2(personTotalGiven),
+      totalReceived: round2(personTotalTaken),
+      netBalance: personNetPosition,
       transactionCount: c.transactions.length,
       lastActivityDate: c.transactions[0]?.date || c.createdAt,
       createdAt: c.createdAt,
     };
   });
+
+  const netPosition = round2(amountToReceive - amountToPay);
+
+  let netPositionDescription = 'आपका कुल हिसाब बराबर है।';
+  if (netPosition > 0) {
+    netPositionDescription = `आपको कुल ₹${netPosition.toLocaleString('en-IN')} अधिक मिलने बाकी हैं।`;
+  } else if (netPosition < 0) {
+    netPositionDescription = `आपको कुल ₹${Math.abs(netPosition).toLocaleString('en-IN')} अधिक देने बाकी हैं।`;
+  }
 
   // Overdue entries: Transactions where dueDate < now and balanceAmount > 0
   const overdueTransactions = await prisma.khataTransaction.findMany({
@@ -177,14 +279,32 @@ export async function getKhataDashboardSummary(businessId: string) {
 
   return {
     kpis: {
-      totalGave: round2(totalGave),
-      totalReceived: round2(totalReceived),
-      moneyToCollect: round2(moneyToCollect),
-      moneyToRepay: round2(moneyToRepay),
-      netPosition: round2(moneyToCollect - moneyToRepay),
+      // 3 Main Dashboard Cards
+      amountToReceive: round2(amountToReceive), // Card 1: कुल लेने वाली रकम (Green)
+      amountToPay: round2(amountToPay),         // Card 2: कुल देने वाली रकम (Red)
+      netPosition,                             // Card 3: मेरी वर्तमान स्थिति
+      netPositionDescription,
+      // Cumulative Historical Totals
+      totalGiven: round2(totalGiven),          // कुल दी गई रकम
+      totalTaken: round2(totalTaken),          // कुल ली गई रकम
+      totalReceivedBack: round2(totalReceivedBack), // कुल वापस मिली रकम
+      totalReturned: round2(totalReturned),    // कुल वापस की गई रकम
+      // Counts
       totalContacts: contacts.length,
       overdueCount: overdueTransactions.length,
+      // Backward compatibility aliases
+      moneyToCollect: round2(amountToReceive),
+      moneyToRepay: round2(amountToPay),
+      totalGave: round2(totalGiven),
+      totalReceived: round2(totalTaken),
     },
+    modeSummaries: Object.values(modeStats).map((m) => ({
+      mode: m.mode,
+      label: m.label,
+      totalGiven: round2(m.totalGiven),
+      totalReceived: round2(m.totalReceived),
+      count: m.count,
+    })),
     recentTransactions: transactions.map((t) => ({
       id: t.id,
       contactId: t.contactId,
@@ -197,12 +317,17 @@ export async function getKhataDashboardSummary(businessId: string) {
       date: t.date,
       dueDate: t.dueDate,
       description: t.description,
+      paymentMode: (t.paymentMode as PaymentMethod) || 'CASH',
+      paymentRef: t.paymentRef,
+      paymentDetails: t.paymentDetails,
       status: t.status,
       repayments: t.repayments.map((r) => ({
         id: r.id,
         amount: round2(r.amount),
         date: r.date,
-        paymentMode: r.paymentMode,
+        paymentMode: (r.paymentMode as PaymentMethod) || 'CASH',
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
         notes: r.notes,
       })),
       createdAt: t.createdAt,
@@ -254,22 +379,49 @@ export async function getKhataContacts(businessId: string, search?: string) {
   });
 
   return contacts.map((c) => {
-    let totalGave = 0;
-    let totalReceived = 0;
-    let gaveOutstanding = 0;
-    let receivedOutstanding = 0;
+    let personTotalGiven = 0;
+    let personTotalTaken = 0;
+    let personReceivedBack = 0;
+    let personReturned = 0;
+    let personGaveOutstanding = 0;
+    let personReceivedOutstanding = 0;
 
     for (const tx of c.transactions) {
       if (tx.type === 'GAVE') {
-        totalGave += tx.amount;
-        gaveOutstanding += tx.balanceAmount;
+        personTotalGiven += tx.amount;
+        personGaveOutstanding += tx.balanceAmount;
+        for (const rep of tx.repayments) {
+          personReceivedBack += rep.amount;
+        }
       } else {
-        totalReceived += tx.amount;
-        receivedOutstanding += tx.balanceAmount;
+        personTotalTaken += tx.amount;
+        personReceivedOutstanding += tx.balanceAmount;
+        for (const rep of tx.repayments) {
+          personReturned += rep.amount;
+        }
       }
     }
 
-    const netBalance = round2(gaveOutstanding - receivedOutstanding);
+    const netPosition = round2(personGaveOutstanding - personReceivedOutstanding);
+
+    let status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED' = 'SETTLED';
+    let statusLabel = 'हिसाब पूरा';
+
+    if (personGaveOutstanding > 0 && personReceivedOutstanding === 0) {
+      status = 'TO_RECEIVE';
+      statusLabel = 'मुझे लेने हैं';
+    } else if (personReceivedOutstanding > 0 && personGaveOutstanding === 0) {
+      status = 'TO_PAY';
+      statusLabel = 'मुझे देने हैं';
+    } else if (personGaveOutstanding > 0 || personReceivedOutstanding > 0) {
+      if (netPosition > 0) {
+        status = 'TO_RECEIVE';
+        statusLabel = 'मुझे लेने हैं';
+      } else if (netPosition < 0) {
+        status = 'TO_PAY';
+        statusLabel = 'मुझे देने हैं';
+      }
+    }
 
     return {
       id: c.id,
@@ -277,11 +429,21 @@ export async function getKhataContacts(businessId: string, search?: string) {
       phone: c.phone,
       email: c.email,
       notes: c.notes,
-      totalGave: round2(totalGave),
-      totalReceived: round2(totalReceived),
-      gaveOutstanding: round2(gaveOutstanding),
-      receivedOutstanding: round2(receivedOutstanding),
-      netBalance,
+      totalGiven: round2(personTotalGiven),
+      totalTaken: round2(personTotalTaken),
+      totalReceivedBack: round2(personReceivedBack),
+      totalReturned: round2(personReturned),
+      amountToReceive: round2(personGaveOutstanding),
+      amountToPay: round2(personReceivedOutstanding),
+      netPosition,
+      status,
+      statusLabel,
+      // Backward compatibility aliases
+      gaveOutstanding: round2(personGaveOutstanding),
+      receivedOutstanding: round2(personReceivedOutstanding),
+      totalGave: round2(personTotalGiven),
+      totalReceived: round2(personTotalTaken),
+      netBalance: netPosition,
       transactionCount: c.transactions.length,
       lastActivityDate: c.transactions[0]?.date || c.createdAt,
       createdAt: c.createdAt,
@@ -291,7 +453,7 @@ export async function getKhataContacts(businessId: string, search?: string) {
 }
 
 /**
- * Retrieves detailed person ledger with all transactions and repayments
+ * Retrieves detailed person ledger with 6 independent figures and complete history
  */
 export async function getKhataContactDetail(businessId: string, contactId: string) {
   const contact = await prisma.khataContact.findFirst({
@@ -318,32 +480,43 @@ export async function getKhataContactDetail(businessId: string, contactId: strin
     throw new Error('Contact not found or access denied.');
   }
 
-  let totalGave = 0;
-  let totalReceived = 0;
-  let gaveOutstanding = 0;
-  let receivedOutstanding = 0;
+  let totalGiven = 0;
+  let totalTaken = 0;
+  let totalReceivedBack = 0;
+  let totalReturned = 0;
+  let amountToReceive = 0;
+  let amountToPay = 0;
 
   for (const tx of contact.transactions) {
     if (tx.type === 'GAVE') {
-      totalGave += tx.amount;
-      gaveOutstanding += tx.balanceAmount;
+      totalGiven += tx.amount;
+      amountToReceive += tx.balanceAmount;
+      for (const r of tx.repayments) {
+        totalReceivedBack += r.amount;
+      }
     } else {
-      totalReceived += tx.amount;
-      receivedOutstanding += tx.balanceAmount;
+      totalTaken += tx.amount;
+      amountToPay += tx.balanceAmount;
+      for (const r of tx.repayments) {
+        totalReturned += r.amount;
+      }
     }
   }
 
-  const netBalance = round2(gaveOutstanding - receivedOutstanding);
+  const netPosition = round2(amountToReceive - amountToPay);
 
   // Build unified chronological activity ledger
   const activityLedger: Array<{
     id: string;
     date: Date;
-    activityType: 'TRANSACTION_GAVE' | 'TRANSACTION_RECEIVED' | 'REPAYMENT';
+    activityType: 'GAVE_NEW' | 'RECEIVED_NEW' | 'LENT_REPAY' | 'BORROWED_REPAY';
     title: string;
+    moneyDirection: 'OUT' | 'IN'; // OUT (red) or IN (green)
     amount: number;
     balanceAfter?: number;
-    paymentMode?: PaymentMethod;
+    paymentMode: PaymentMethod;
+    paymentRef?: string | null;
+    paymentDetails?: string | null;
     notes?: string | null;
     dueDate?: Date | null;
     status?: KhataEntryStatus;
@@ -351,35 +524,104 @@ export async function getKhataContactDetail(businessId: string, contactId: strin
   }> = [];
 
   for (const tx of contact.transactions) {
-    activityLedger.push({
-      id: tx.id,
-      date: tx.date,
-      activityType: tx.type === 'GAVE' ? 'TRANSACTION_GAVE' : 'TRANSACTION_RECEIVED',
-      title: tx.type === 'GAVE' ? 'I Gave (Maine Diye)' : 'I Received (Maine Liye)',
-      amount: round2(tx.amount),
-      balanceAfter: round2(tx.balanceAmount),
-      dueDate: tx.dueDate,
-      notes: tx.description,
-      status: tx.status,
-      transactionId: tx.id,
-    });
+    const mode = (tx.paymentMode as PaymentMethod) || 'CASH';
+    if (tx.type === 'GAVE') {
+      activityLedger.push({
+        id: tx.id,
+        date: tx.date,
+        activityType: 'GAVE_NEW',
+        title: 'नई रकम दी (Lent)',
+        moneyDirection: 'OUT',
+        amount: round2(tx.amount),
+        balanceAfter: round2(tx.balanceAmount),
+        paymentMode: mode,
+        paymentRef: tx.paymentRef,
+        paymentDetails: tx.paymentDetails,
+        dueDate: tx.dueDate,
+        notes: tx.description,
+        status: tx.status,
+        transactionId: tx.id,
+      });
+    } else {
+      activityLedger.push({
+        id: tx.id,
+        date: tx.date,
+        activityType: 'RECEIVED_NEW',
+        title: 'नई रकम ली (Borrowed)',
+        moneyDirection: 'IN',
+        amount: round2(tx.amount),
+        balanceAfter: round2(tx.balanceAmount),
+        paymentMode: mode,
+        paymentRef: tx.paymentRef,
+        paymentDetails: tx.paymentDetails,
+        dueDate: tx.dueDate,
+        notes: tx.description,
+        status: tx.status,
+        transactionId: tx.id,
+      });
+    }
   }
 
   for (const r of contact.repayments) {
-    activityLedger.push({
-      id: r.id,
-      date: r.date,
-      activityType: 'REPAYMENT',
-      title: r.transaction.type === 'GAVE' ? 'Payment Received / Returned' : 'Repayment Made',
-      amount: round2(r.amount),
-      paymentMode: r.paymentMode,
-      notes: r.notes,
-      transactionId: r.transactionId,
-    });
+    const repMode = (r.paymentMode as PaymentMethod) || 'CASH';
+    const isLentRepay = r.transaction.type === 'GAVE';
+
+    if (isLentRepay) {
+      // User lent money earlier and now received repayment back -> money came IN
+      activityLedger.push({
+        id: r.id,
+        date: r.date,
+        activityType: 'LENT_REPAY',
+        title: 'पहले दी गई रकम वापस मिली (Received Back)',
+        moneyDirection: 'IN',
+        amount: round2(r.amount),
+        balanceAfter: round2(r.transaction.balanceAmount),
+        paymentMode: repMode,
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
+        notes: r.notes,
+        transactionId: r.transactionId,
+      });
+    } else {
+      // User borrowed money earlier and is now returning repayment -> money went OUT
+      activityLedger.push({
+        id: r.id,
+        date: r.date,
+        activityType: 'BORROWED_REPAY',
+        title: 'पहले ली गई रकम वापस की (Returned)',
+        moneyDirection: 'OUT',
+        amount: round2(r.amount),
+        balanceAfter: round2(r.transaction.balanceAmount),
+        paymentMode: repMode,
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
+        notes: r.notes,
+        transactionId: r.transactionId,
+      });
+    }
   }
 
   // Sort unified ledger by date descending
   activityLedger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  let status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED' = 'SETTLED';
+  let statusLabel = 'हिसाब पूरा';
+
+  if (amountToReceive > 0 && amountToPay === 0) {
+    status = 'TO_RECEIVE';
+    statusLabel = 'मुझे लेने हैं';
+  } else if (amountToPay > 0 && amountToReceive === 0) {
+    status = 'TO_PAY';
+    statusLabel = 'मुझे देने हैं';
+  } else if (amountToReceive > 0 || amountToPay > 0) {
+    if (netPosition > 0) {
+      status = 'TO_RECEIVE';
+      statusLabel = 'मुझे लेने हैं';
+    } else if (netPosition < 0) {
+      status = 'TO_PAY';
+      statusLabel = 'मुझे देने हैं';
+    }
+  }
 
   return {
     contact: {
@@ -391,12 +633,23 @@ export async function getKhataContactDetail(businessId: string, contactId: strin
       createdAt: contact.createdAt,
       updatedAt: contact.updatedAt,
     },
+    // The 6 Independent Figures + Net Position
     summary: {
-      totalGave: round2(totalGave),
-      totalReceived: round2(totalReceived),
-      gaveOutstanding: round2(gaveOutstanding),
-      receivedOutstanding: round2(receivedOutstanding),
-      netBalance, // > 0: You'll get; < 0: You'll give; 0: Settled
+      totalGiven: round2(totalGiven),                   // 1. कुल दी गई रकम
+      totalTaken: round2(totalTaken),                   // 2. कुल ली गई रकम
+      totalReceivedBack: round2(totalReceivedBack),     // 3. कुल वापस मिली रकम
+      totalReturned: round2(totalReturned),             // 4. कुल वापस की गई रकम
+      amountToReceive: round2(amountToReceive),         // 5. मुझे लेने हैं
+      amountToPay: round2(amountToPay),                 // 6. मुझे देने हैं
+      netPosition,                                     // 7. मेरी वर्तमान स्थिति
+      status,
+      statusLabel,
+      // Backward compatibility aliases
+      gaveOutstanding: round2(amountToReceive),
+      receivedOutstanding: round2(amountToPay),
+      totalGave: round2(totalGiven),
+      totalReceived: round2(totalTaken),
+      netBalance: netPosition,
     },
     transactions: contact.transactions.map((tx) => ({
       id: tx.id,
@@ -407,12 +660,17 @@ export async function getKhataContactDetail(businessId: string, contactId: strin
       date: tx.date,
       dueDate: tx.dueDate,
       description: tx.description,
+      paymentMode: (tx.paymentMode as PaymentMethod) || 'CASH',
+      paymentRef: tx.paymentRef,
+      paymentDetails: tx.paymentDetails,
       status: tx.status,
       repayments: tx.repayments.map((r) => ({
         id: r.id,
         amount: round2(r.amount),
         date: r.date,
-        paymentMode: r.paymentMode,
+        paymentMode: (r.paymentMode as PaymentMethod) || 'CASH',
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
         notes: r.notes,
       })),
       createdAt: tx.createdAt,
@@ -449,7 +707,7 @@ export async function createKhataContact(
 }
 
 /**
- * Creates a new "I Gave" or "I Received" entry
+ * Creates a new "मैंने रकम दी" (GAVE) or "मुझे रकम मिली" (RECEIVED) entry
  */
 export async function createKhataTransaction(
   businessId: string,
@@ -462,7 +720,7 @@ export async function createKhataTransaction(
 
   const numAmount = Number(input.amount);
   if (isNaN(numAmount) || numAmount <= 0) {
-    throw new Error('Amount must be a positive number greater than 0.');
+    throw new Error('रकम 0 से अधिक होनी चाहिए। (Amount must be greater than ₹0).');
   }
 
   const roundedAmount = round2(numAmount);
@@ -472,12 +730,11 @@ export async function createKhataTransaction(
   if (!contactId) {
     const personName = input.personName?.trim();
     if (!personName || personName.length < 2) {
-      throw new Error('Please select an existing person or enter their name.');
+      throw new Error('कृपया व्यक्ति का नाम दर्ज करें या चुनें।');
     }
 
     const rawPhone = input.phone?.trim() || null;
 
-    // Check if a contact with matching name or phone exists
     let existingContact = await prisma.khataContact.findFirst({
       where: {
         businessId,
@@ -500,15 +757,13 @@ export async function createKhataTransaction(
     }
     contactId = existingContact.id;
   } else {
-    // Verify contact belongs to business
     const contact = await prisma.khataContact.findFirst({
       where: { id: contactId, businessId },
     });
     if (!contact) {
-      throw new Error('Contact not found or access denied.');
+      throw new Error('संपर्क नहीं मिला या अनुमति नहीं है।');
     }
 
-    // If new phone was passed, update contact phone if not already set
     if (input.phone && !contact.phone) {
       await prisma.khataContact.update({
         where: { id: contactId },
@@ -519,6 +774,7 @@ export async function createKhataTransaction(
 
   const txDate = input.date ? new Date(input.date) : new Date();
   const txDueDate = input.dueDate ? new Date(input.dueDate) : null;
+  const paymentMode: PaymentMethod = input.paymentMode || 'CASH';
 
   const transaction = await prisma.khataTransaction.create({
     data: {
@@ -530,6 +786,9 @@ export async function createKhataTransaction(
       date: txDate,
       dueDate: txDueDate,
       description: input.description?.trim() || null,
+      paymentMode,
+      paymentRef: input.paymentRef?.trim() || null,
+      paymentDetails: input.paymentDetails?.trim() || null,
       status: 'PENDING',
       settledAmount: 0,
       balanceAmount: roundedAmount,
@@ -539,7 +798,6 @@ export async function createKhataTransaction(
     },
   });
 
-  // Touch contact updatedAt
   await prisma.khataContact.update({
     where: { id: contactId },
     data: { updatedAt: new Date() },
@@ -549,7 +807,7 @@ export async function createKhataTransaction(
 }
 
 /**
- * Updates an existing transaction (e.g. note, date, dueDate, or amount)
+ * Updates an existing transaction
  */
 export async function updateKhataTransaction(
   businessId: string,
@@ -559,6 +817,9 @@ export async function updateKhataTransaction(
     date?: string | Date;
     dueDate?: string | Date | null;
     description?: string | null;
+    paymentMode?: PaymentMethod;
+    paymentRef?: string | null;
+    paymentDetails?: string | null;
   }
 ) {
   const existing = await prisma.khataTransaction.findFirst({
@@ -579,6 +840,15 @@ export async function updateKhataTransaction(
   }
   if (input.dueDate !== undefined) {
     dataToUpdate.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+  }
+  if (input.paymentMode !== undefined) {
+    dataToUpdate.paymentMode = input.paymentMode;
+  }
+  if (input.paymentRef !== undefined) {
+    dataToUpdate.paymentRef = input.paymentRef?.trim() || null;
+  }
+  if (input.paymentDetails !== undefined) {
+    dataToUpdate.paymentDetails = input.paymentDetails?.trim() || null;
   }
 
   if (input.amount !== undefined) {
@@ -614,8 +884,9 @@ export async function updateKhataTransaction(
 }
 
 /**
- * Records a full or partial repayment towards an outstanding transaction.
+ * Records a full or partial repayment towards an outstanding balance.
  * Strictly prevents negative balances by enforcing repaymentAmount <= balanceAmount.
+ * Supports passing either a specific transactionId OR a contactId with targetType ('GAVE' | 'RECEIVED').
  */
 export async function recordKhataRepayment(
   businessId: string,
@@ -624,74 +895,163 @@ export async function recordKhataRepayment(
 ) {
   const numAmount = Number(input.amount);
   if (isNaN(numAmount) || numAmount <= 0) {
-    throw new Error('Repayment amount must be a positive number greater than 0.');
+    throw new Error('वापसी रकम 0 से अधिक होनी चाहिए। (Repayment amount must be > 0).');
   }
 
   const repaymentAmount = round2(numAmount);
-
-  const transaction = await prisma.khataTransaction.findFirst({
-    where: { id: input.transactionId, businessId },
-    include: { contact: true },
-  });
-
-  if (!transaction) {
-    throw new Error('Transaction not found or access denied.');
-  }
-
-  if (transaction.status === 'SETTLED' || transaction.balanceAmount <= 0) {
-    throw new Error('This transaction is already fully settled. No balance remaining.');
-  }
-
-  // Prevent negative balance
-  if (repaymentAmount > transaction.balanceAmount) {
-    throw new Error(
-      `Repayment amount (₹${repaymentAmount}) cannot exceed the remaining outstanding balance of ₹${transaction.balanceAmount}.`
-    );
-  }
-
-  const newSettledAmount = round2(transaction.settledAmount + repaymentAmount);
-  const newBalanceAmount = round2(transaction.amount - newSettledAmount);
-  const newStatus: KhataEntryStatus = newBalanceAmount === 0 ? 'SETTLED' : 'PARTIAL';
   const repaymentDate = input.date ? new Date(input.date) : new Date();
+  const paymentMode: PaymentMethod = input.paymentMode || 'CASH';
 
-  const [repayment, updatedTx] = await prisma.$transaction([
-    prisma.khataRepayment.create({
-      data: {
-        businessId,
-        userId,
-        contactId: transaction.contactId,
-        transactionId: transaction.id,
-        amount: repaymentAmount,
-        date: repaymentDate,
-        paymentMode: input.paymentMode || 'CASH',
-        notes: input.notes?.trim() || null,
-      },
-    }),
-    prisma.khataTransaction.update({
-      where: { id: transaction.id },
-      data: {
-        settledAmount: newSettledAmount,
-        balanceAmount: newBalanceAmount,
-        status: newStatus,
-        updatedAt: new Date(),
-      },
-      include: {
-        contact: true,
-        repayments: {
-          orderBy: { date: 'desc' },
+  // 1. Direct transaction repayment
+  if (input.transactionId) {
+    const transaction = await prisma.khataTransaction.findFirst({
+      where: { id: input.transactionId, businessId },
+      include: { contact: true },
+    });
+
+    if (!transaction) {
+      throw new Error('प्रविष्टि नहीं मिली या अनुमति नहीं है।');
+    }
+
+    if (transaction.status === 'SETTLED' || transaction.balanceAmount <= 0) {
+      throw new Error('यह हिसाब पहले ही पूरा हो चुका है। (Already settled).');
+    }
+
+    if (repaymentAmount > transaction.balanceAmount) {
+      throw new Error(
+        `वापसी रकम (₹${repaymentAmount}) बाकी रकम (₹${transaction.balanceAmount}) से अधिक नहीं हो सकती।`
+      );
+    }
+
+    const newSettledAmount = round2(transaction.settledAmount + repaymentAmount);
+    const newBalanceAmount = round2(transaction.amount - newSettledAmount);
+    const newStatus: KhataEntryStatus = newBalanceAmount === 0 ? 'SETTLED' : 'PARTIAL';
+
+    const [repayment, updatedTx] = await prisma.$transaction([
+      prisma.khataRepayment.create({
+        data: {
+          businessId,
+          userId,
+          contactId: transaction.contactId,
+          transactionId: transaction.id,
+          amount: repaymentAmount,
+          date: repaymentDate,
+          paymentMode,
+          paymentRef: input.paymentRef?.trim() || null,
+          paymentDetails: input.paymentDetails?.trim() || null,
+          notes: input.notes?.trim() || null,
         },
-      },
-    }),
-    prisma.khataContact.update({
-      where: { id: transaction.contactId },
-      data: { updatedAt: new Date() },
-    }),
-  ]);
+      }),
+      prisma.khataTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          settledAmount: newSettledAmount,
+          balanceAmount: newBalanceAmount,
+          status: newStatus,
+          updatedAt: new Date(),
+        },
+        include: {
+          contact: true,
+          repayments: {
+            orderBy: { date: 'desc' },
+          },
+        },
+      }),
+      prisma.khataContact.update({
+        where: { id: transaction.contactId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
 
-  return {
-    repayment,
-    transaction: updatedTx,
-  };
+    return {
+      repayment,
+      transaction: updatedTx,
+    };
+  }
+
+  // 2. Contact-level repayment across open transactions (FIFO)
+  if (input.contactId && input.targetType) {
+    const openTransactions = await prisma.khataTransaction.findMany({
+      where: {
+        businessId,
+        contactId: input.contactId,
+        type: input.targetType,
+        balanceAmount: { gt: 0 },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    if (openTransactions.length === 0) {
+      throw new Error('इस संपर्क का कोई बाकी हिसाब नहीं है। (No outstanding balance to repay).');
+    }
+
+    const totalOutstanding = round2(
+      openTransactions.reduce((acc, tx) => acc + tx.balanceAmount, 0)
+    );
+
+    if (repaymentAmount > totalOutstanding) {
+      throw new Error(
+        `वापसी रकम (₹${repaymentAmount}) कुल बाकी रकम (₹${totalOutstanding}) से अधिक नहीं हो सकती।`
+      );
+    }
+
+    let remainingToAllocate = repaymentAmount;
+    const createdRepayments = [];
+    let lastUpdatedTx = null;
+
+    for (const tx of openTransactions) {
+      if (remainingToAllocate <= 0) break;
+
+      const allocation = Math.min(tx.balanceAmount, remainingToAllocate);
+      const newSettled = round2(tx.settledAmount + allocation);
+      const newBalance = round2(tx.amount - newSettled);
+      const newStatus: KhataEntryStatus = newBalance === 0 ? 'SETTLED' : 'PARTIAL';
+
+      const [rep, updatedTx] = await prisma.$transaction([
+        prisma.khataRepayment.create({
+          data: {
+            businessId,
+            userId,
+            contactId: tx.contactId,
+            transactionId: tx.id,
+            amount: round2(allocation),
+            date: repaymentDate,
+            paymentMode,
+            paymentRef: input.paymentRef?.trim() || null,
+            paymentDetails: input.paymentDetails?.trim() || null,
+            notes: input.notes?.trim() || null,
+          },
+        }),
+        prisma.khataTransaction.update({
+          where: { id: tx.id },
+          data: {
+            settledAmount: newSettled,
+            balanceAmount: newBalance,
+            status: newStatus,
+            updatedAt: new Date(),
+          },
+          include: { contact: true, repayments: true },
+        }),
+      ]);
+
+      createdRepayments.push(rep);
+      lastUpdatedTx = updatedTx;
+      remainingToAllocate = round2(remainingToAllocate - allocation);
+    }
+
+    await prisma.khataContact.update({
+      where: { id: input.contactId },
+      data: { updatedAt: new Date() },
+    });
+
+    return {
+      repayment: createdRepayments[0],
+      repayments: createdRepayments,
+      transaction: lastUpdatedTx,
+    };
+  }
+
+  throw new Error('कृपया प्रविष्टि या संपर्क का चयन करें। (transactionId or contactId required).');
 }
 
 /**
@@ -734,7 +1094,6 @@ export async function deleteKhataContact(businessId: string, contactId: string) 
 
 /**
  * Prepares the manual WhatsApp reminder text and generates the wa.me URL.
- * Includes preview, user editing capability, and zero Meta API requirements.
  */
 export function prepareWhatsAppReminder(params: {
   contactName: string;
@@ -752,13 +1111,15 @@ export function prepareWhatsAppReminder(params: {
   let defaultMessage = '';
 
   if (params.type === 'GAVE') {
-    defaultMessage = `Namaste ${params.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedTxDate}${
-      formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-    }.\n\nPlease arrange for the payment at your earliest convenience.\n\nThank you! 🙏\n- Sent via Pakka Chittha`;
+    defaultMessage = `नमस्ते ${params.contactName} जी,\n\nयह आपके ₹${params.amount.toLocaleString(
+      'en-IN'
+    )} के बाकी हिसाब का एक विनम्र स्मरण है (${formattedTxDate}${
+      formattedDueDate ? `, देय तिथि: ${formattedDueDate}` : ''
+    })।\n\nकृपया सुविधानुसार भुगतान व्यवस्थित करें। धन्यवाद! 🙏\n- भेजा गया: पक्का चिट्ठा पर्सनल खाता`;
   } else {
-    defaultMessage = `Namaste ${params.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedTxDate}${
-      formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-    }. I am preparing to arrange repayment soon.\n\nThank you! 🙏\n- Sent via Pakka Chittha`;
+    defaultMessage = `नमस्ते ${params.contactName} जी,\n\nयह आपके ₹${params.amount.toLocaleString(
+      'en-IN'
+    )} के बाकी हिसाब के संबंध में है (${formattedTxDate})। मैं शीघ्र भुगतान की व्यवस्था कर रहा हूँ।\n\nधन्यवाद! 🙏\n- भेजा गया: पक्का चिट्ठा पर्सनल खाता`;
   }
 
   const finalMessage = params.customMessage?.trim() || defaultMessage;

@@ -104,6 +104,16 @@ export default function SubscriptionPage() {
   const [autoPay, setAutoPay] = useState<AutoPayInfo | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<CustomerPaymentItem | null>(null);
   const [interval, setInterval] = useState<BillingInterval>('YEARLY');
+  const [dynamicPlans, setDynamicPlans] = useState<Record<PlanKey, any>>(OFFICIAL_PLANS);
+  const [discountCodeInput, setDiscountCodeInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    discountAmount: number;
+    finalPayable: number;
+    description?: string;
+  } | null>(null);
+  const [validatingDiscount, setValidatingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
 
   const isDemo = Boolean(activeBusiness?.id?.startsWith('demo_') || (activeBusiness as any)?.isDemo);
 
@@ -114,19 +124,77 @@ export default function SubscriptionPage() {
   const fetchSubscription = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/subscription');
-      if (!res.ok) throw new Error('Failed to load subscription info');
-      const data = await res.json();
+      const [subRes, plansRes] = await Promise.all([
+        fetch('/api/subscription'),
+        fetch('/api/subscription/plans')
+      ]);
+
+      if (!subRes.ok) throw new Error('Failed to load subscription info');
+      const data = await subRes.json();
       setSubscription(data.subscription);
       setUsage(data.usage);
       setCustomerIdentity(data.customerIdentity || null);
       setPayments(data.payments || []);
       setAutoPay(data.autoPay || null);
+
+      if (plansRes.ok) {
+        const plansData = await plansRes.json();
+        if (plansData.plans) {
+          setDynamicPlans(plansData.plans);
+        }
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Error loading subscription');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApplyDiscount = async (targetPlanKey: PlanKey = 'GROWTH') => {
+    const code = discountCodeInput.trim().toUpperCase();
+    if (!code) {
+      setDiscountError('Please enter a discount code');
+      return;
+    }
+
+    try {
+      setValidatingDiscount(true);
+      setDiscountError(null);
+      const res = await fetch('/api/subscription/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          planKey: targetPlanKey,
+          interval,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        setDiscountError(data.error || 'Invalid or expired discount code.');
+        setAppliedDiscount(null);
+      } else {
+        setAppliedDiscount({
+          code,
+          discountAmount: data.discountAmount,
+          finalPayable: data.finalPayable,
+          description: data.description,
+        });
+        toast.success(`Discount code ${code} applied! Save ₹${data.discountAmount}`);
+      }
+    } catch (err: unknown) {
+      setDiscountError(err instanceof Error ? err.message : 'Failed to validate discount');
+    } finally {
+      setValidatingDiscount(false);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountCodeInput('');
+    setDiscountError(null);
+    toast.info('Discount code removed');
   };
 
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -176,7 +244,11 @@ export default function SubscriptionPage() {
       const checkoutRes = await fetch('/api/subscription/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planKey, interval }),
+        body: JSON.stringify({
+          planKey,
+          interval,
+          discountCode: appliedDiscount?.code,
+        }),
       });
 
       const checkoutData = await checkoutRes.json();
@@ -483,12 +555,71 @@ export default function SubscriptionPage() {
 
           return (
             <div className="space-y-6">
+              {/* Discount Code Input Banner */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-[#EA580C]">
+                    <Zap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs text-[#071F38] block">Have a Promo or Discount Code?</span>
+                    <span className="text-[11px] text-slate-500">Apply an official coupon to get an instant discount on your package.</span>
+                  </div>
+                </div>
+
+                {appliedDiscount ? (
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-mono font-bold text-emerald-800 uppercase">{appliedDiscount.code}</span>
+                    <span className="text-xs font-bold text-emerald-700">(-₹{appliedDiscount.discountAmount})</span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveDiscount}
+                      className="text-slate-400 hover:text-rose-600 ml-1 p-0.5 rounded cursor-pointer"
+                      title="Remove discount"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <input
+                      type="text"
+                      value={discountCodeInput}
+                      onChange={(e) => {
+                        setDiscountCodeInput(e.target.value.toUpperCase());
+                        setDiscountError(null);
+                      }}
+                      placeholder="ENTER COUPON CODE"
+                      className="px-3 py-1.5 text-xs font-mono font-bold uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#EA580C] w-full sm:w-44"
+                    />
+                    <button
+                      type="button"
+                      disabled={validatingDiscount || !discountCodeInput.trim()}
+                      onClick={() => handleApplyDiscount(upgradePlans[0] || 'GROWTH')}
+                      className="px-3 py-1.5 bg-[#071F38] hover:bg-[#0D2C4D] text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      {validatingDiscount ? 'Validating...' : 'Apply'}
+                    </button>
+                  </div>
+                )}
+              </div>
+              {discountError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>{discountError}</span>
+                </div>
+              )}
+
               {/* Upgrade Plans Grid */}
               <div className={`grid grid-cols-1 ${upgradePlans.length === 1 ? 'max-w-md mx-auto' : upgradePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'} gap-6`}>
                 {upgradePlans.map((key) => {
-                  const plan = OFFICIAL_PLANS[key];
+                  const plan = dynamicPlans[key] || OFFICIAL_PLANS[key];
                   const pricing = plan.pricing[interval];
                   const isGrowth = key === 'GROWTH';
+                  const effectivePrice = appliedDiscount
+                    ? Math.max(0, pricing.totalPrice - appliedDiscount.discountAmount)
+                    : pricing.totalPrice;
 
                   return (
                     <div
@@ -515,14 +646,25 @@ export default function SubscriptionPage() {
                           </span>
                         </div>
 
-                        <div className="flex items-baseline gap-1 my-3">
+                        <div className="flex items-baseline gap-1.5 my-3 flex-wrap">
+                          {appliedDiscount && (
+                            <span className="text-lg font-bold text-slate-400 line-through">
+                              ₹{pricing.totalPrice.toLocaleString('en-IN')}
+                            </span>
+                          )}
                           <span className="text-3xl font-black text-[#071F38]">
-                            ₹{pricing.totalPrice.toLocaleString('en-IN')}
+                            ₹{effectivePrice.toLocaleString('en-IN')}
                           </span>
                           <span className="text-xs text-slate-500 font-semibold">
                             / {pricing.durationMonths === 1 ? 'mo' : `${pricing.durationMonths} mo`}
                           </span>
                         </div>
+
+                        {appliedDiscount && (
+                          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md mb-2 border border-emerald-200 inline-block">
+                            Coupon {appliedDiscount.code} applied (-₹{appliedDiscount.discountAmount})
+                          </div>
+                        )}
 
                         {/* Savings Pill */}
                         <div className="text-xs text-slate-600 mb-3 flex items-center gap-1.5 flex-wrap">
@@ -551,7 +693,7 @@ export default function SubscriptionPage() {
                             <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>Locations: {plan.limits.maxLocations}</span>
                           </div>
-                          {plan.features.slice(0, 4).map((f, i) => (
+                          {plan.features.slice(0, 4).map((f: string, i: number) => (
                             <div key={i} className="flex items-center gap-2 text-slate-600">
                               <Check className="w-3.5 h-3.5 text-[#EA580C] shrink-0" />
                               <span>{f}</span>

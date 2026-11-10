@@ -1,6 +1,6 @@
 import { TranslationDictionary } from './en';
 
-export const ta: TranslationDictionary = {
+export const ta: any = {
   common: {
     appName: 'பக்கா சிட்டா',
     tagline: 'பில்லிங் • சரக்கு இருப்பு • கடன் கணக்கு • அறிக்கைகள்',

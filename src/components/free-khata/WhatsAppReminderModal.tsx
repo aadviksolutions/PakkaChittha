@@ -51,18 +51,41 @@ export function WhatsAppReminderModal({
       const formattedDueDate = target.dueDate ? formatDate(target.dueDate) : null;
       const isGave = target.type !== 'RECEIVED';
 
-      let defaultMsg = '';
-      if (isGave) {
-        defaultMsg = `Namaste ${target.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedDate}${
-          formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-        }.\n\nPlease arrange for the payment at your convenience. Thank you! 🙏\n- Sent via Pakka Chittha`;
-      } else {
-        defaultMsg = `Namaste ${target.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedDate}${
-          formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
-        }. I am arranging to return this soon. Thank you! 🙏\n- Sent via Pakka Chittha`;
-      }
+      // Fetch payment details to include UPI ID in reminder
+      fetch('/api/user/payment-details')
+        .then((res) => res.json())
+        .then((data) => {
+          const upiId = data.paymentDetails?.upiId;
+          const upiName = data.paymentDetails?.upiBeneficiaryName;
+          const paymentNote = upiId
+            ? `\n\nYou can pay directly via UPI: ${upiId}${upiName ? ` (${upiName})` : ''}`
+            : '';
 
-      setMessage(defaultMsg);
+          let msg = '';
+          if (isGave) {
+            msg = `Namaste ${target.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedDate}${
+              formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
+            }.${paymentNote}\n\nPlease arrange for the payment at your convenience. Thank you! 🙏\n- Sent via Pakka Chittha`;
+          } else {
+            msg = `Namaste ${target.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedDate}${
+              formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
+            }. I am arranging to return this soon. Thank you! 🙏\n- Sent via Pakka Chittha`;
+          }
+          setMessage(msg);
+        })
+        .catch(() => {
+          let fallbackMsg = '';
+          if (isGave) {
+            fallbackMsg = `Namaste ${target.contactName} ji,\n\nThis is a friendly reminder regarding the pending amount of ${formattedAmount} given on ${formattedDate}${
+              formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
+            }.\n\nPlease arrange for the payment at your convenience. Thank you! 🙏\n- Sent via Pakka Chittha`;
+          } else {
+            fallbackMsg = `Namaste ${target.contactName} ji,\n\nThis message is regarding the balance of ${formattedAmount} borrowed on ${formattedDate}${
+              formattedDueDate ? ` (Due Date: ${formattedDueDate})` : ''
+            }. I am arranging to return this soon. Thank you! 🙏\n- Sent via Pakka Chittha`;
+          }
+          setMessage(fallbackMsg);
+        });
     }
   }, [isOpen, target]);
 
@@ -75,6 +98,17 @@ export function WhatsAppReminderModal({
     if (!cleaned || cleaned.length < 10) {
       setError('Please provide a valid 10-digit mobile number for WhatsApp.');
       return;
+    }
+
+    // Log reminder timestamp
+    if (target.contactId) {
+      fetch('/api/free-khata/reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: target.contactId }),
+      }).catch(() => {
+        fetch(`/api/customers/${target.contactId}/reminder`, { method: 'POST' }).catch(() => {});
+      });
     }
 
     // If phone was changed/added and contactId exists, update the contact in background

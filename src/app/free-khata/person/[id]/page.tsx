@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, use } from 'react';
+import React, { useState, useEffect, useCallback, use, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,22 +16,32 @@ import {
   Trash2,
   CheckCircle2,
   CreditCard,
-  Edit,
   Sparkles,
+  Download,
+  Printer,
+  Share2,
+  Search,
+  Filter,
+  FileSpreadsheet,
+  Check,
 } from 'lucide-react';
-import { TransactionModal } from '@/components/free-khata/TransactionModal';
+import { TransactionModal, ContactOption } from '@/components/free-khata/TransactionModal';
 import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
+import { PaymentMethod } from '@prisma/client';
 
 interface ActivityLedgerItem {
   id: string;
   date: string;
-  activityType: 'TRANSACTION_GAVE' | 'TRANSACTION_RECEIVED' | 'REPAYMENT';
+  activityType: 'GAVE_NEW' | 'RECEIVED_NEW' | 'LENT_REPAY' | 'BORROWED_REPAY';
   title: string;
+  moneyDirection: 'OUT' | 'IN';
   amount: number;
   balanceAfter?: number;
-  paymentMode?: string;
+  paymentMode: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
   notes?: string | null;
   dueDate?: string | null;
   status?: 'PENDING' | 'PARTIAL' | 'SETTLED';
@@ -49,11 +59,15 @@ interface PersonDetailData {
     updatedAt: string;
   };
   summary: {
-    totalGave: number;
-    totalReceived: number;
-    gaveOutstanding: number;
-    receivedOutstanding: number;
-    netBalance: number;
+    totalGiven: number;
+    totalTaken: number;
+    totalReceivedBack: number;
+    totalReturned: number;
+    amountToReceive: number;
+    amountToPay: number;
+    netPosition: number;
+    status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED';
+    statusLabel: string;
   };
   transactions: Array<{
     id: string;
@@ -64,12 +78,17 @@ interface PersonDetailData {
     date: string;
     dueDate: string | null;
     description: string | null;
+    paymentMode: PaymentMethod;
+    paymentRef: string | null;
+    paymentDetails: string | null;
     status: 'PENDING' | 'PARTIAL' | 'SETTLED';
     repayments: Array<{
       id: string;
       amount: number;
       date: string;
-      paymentMode: string;
+      paymentMode: PaymentMethod;
+      paymentRef: string | null;
+      paymentDetails: string | null;
       notes: string | null;
     }>;
   }>;
@@ -89,9 +108,14 @@ export default function PersonLedgerPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filters for History
+  const [searchFilter, setSearchFilter] = useState('');
+  const [modeFilter, setModeFilter] = useState<string>('ALL');
+  const [directionFilter, setDirectionFilter] = useState<'ALL' | 'OUT' | 'IN'>('ALL');
+
   // Modals state
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [txModalType, setTxModalType] = useState<'GAVE' | 'RECEIVED'>('GAVE');
+  const [txPrimaryIntent, setTxPrimaryIntent] = useState<'GAVE' | 'RECEIVED'>('GAVE');
   const [repayModalOpen, setRepayModalOpen] = useState(false);
   const [repayTarget, setRepayTarget] = useState<RepaymentTransactionTarget | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -119,12 +143,12 @@ export default function PersonLedgerPage({
   }, [fetchContactDetail]);
 
   const handleOpenGave = () => {
-    setTxModalType('GAVE');
+    setTxPrimaryIntent('GAVE');
     setTxModalOpen(true);
   };
 
   const handleOpenReceived = () => {
-    setTxModalType('RECEIVED');
+    setTxPrimaryIntent('RECEIVED');
     setTxModalOpen(true);
   };
 
@@ -147,38 +171,87 @@ export default function PersonLedgerPage({
   const handleOpenWhatsAppReminder = () => {
     if (!data) return;
     const pendingTx = data.transactions.find((t) => t.balanceAmount > 0 && t.type === 'GAVE');
+    const outstanding = data.summary.amountToReceive > 0 ? data.summary.amountToReceive : data.summary.amountToPay;
 
     setWaTarget({
       transactionId: pendingTx?.id,
       contactId: data.contact.id,
       contactName: data.contact.name,
       phone: data.contact.phone,
-      amount: Math.abs(data.summary.netBalance || pendingTx?.balanceAmount || 0),
+      amount: outstanding,
       date: pendingTx?.date || new Date().toISOString(),
       dueDate: pendingTx?.dueDate || null,
-      type: 'GAVE',
+      type: data.summary.amountToReceive >= data.summary.amountToPay ? 'GAVE' : 'RECEIVED',
     });
     setWaModalOpen(true);
   };
 
-  const handleDeleteTransaction = async (txId: string) => {
-    if (!confirm('Are you sure you want to delete this transaction entry? This cannot be undone.')) {
-      return;
-    }
-    try {
-      const res = await fetch(`/api/free-khata/transactions/${txId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete transaction');
-      fetchContactDetail();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error deleting transaction');
-    }
+  // Filtered Activity Ledger
+  const filteredActivities = useMemo(() => {
+    return (data?.activityLedger || []).filter((item) => {
+      const q = searchFilter.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        item.title.toLowerCase().includes(q) ||
+        (item.notes && item.notes.toLowerCase().includes(q)) ||
+        (item.paymentRef && item.paymentRef.toLowerCase().includes(q));
+
+      if (!matchesSearch) return false;
+
+      if (modeFilter !== 'ALL' && item.paymentMode !== modeFilter) return false;
+      if (directionFilter !== 'ALL' && item.moneyDirection !== directionFilter) return false;
+
+      return true;
+    });
+  }, [data?.activityLedger, searchFilter, modeFilter, directionFilter]);
+
+  // Print Statement
+  const handlePrintStatement = () => {
+    window.print();
+  };
+
+  // Export Statement to CSV
+  const handleExportStatementCSV = () => {
+    if (!data || !data.activityLedger.length) return;
+    const headers = ['Date', 'Activity', 'Direction', 'Amount', 'Mode', 'Ref', 'Note', 'Balance After'];
+    const rows = data.activityLedger.map((a) => [
+      formatDate(a.date),
+      `"${a.title}"`,
+      a.moneyDirection === 'OUT' ? 'पैसे गए (Given)' : 'पैसे आए (Received)',
+      a.amount,
+      a.paymentMode,
+      `"${a.paymentRef || ''}"`,
+      `"${a.notes || ''}"`,
+      a.balanceAfter ?? '',
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [
+        `"Statement for ${data.contact.name}"`,
+        `"Phone: ${data.contact.phone || 'N/A'}"`,
+        `"Receivable: ₹${data.summary.amountToReceive}"`,
+        `"Payable: ₹${data.summary.amountToPay}"`,
+        `"Net Position: ₹${data.summary.netPosition}"`,
+        '',
+        headers.join(','),
+        ...rows.map((e) => e.join(',')),
+      ].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${data.contact.name}_Khata_Statement.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading && !data) {
     return (
       <div className="p-12 text-center text-xs text-slate-400">
         <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-        <span>Loading person ledger...</span>
+        <span>लोड हो रहा है... (Loading person ledger...)</span>
       </div>
     );
   }
@@ -187,14 +260,14 @@ export default function PersonLedgerPage({
     return (
       <div className="p-8 text-center max-w-md mx-auto space-y-4">
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs">
-          {error || 'Contact not found'}
+          {error || 'संपर्क नहीं मिला'}
         </div>
         <Link
           href="/free-khata"
           className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Khata</span>
+          <span>पर्सनल खाता में वापस जाएं</span>
         </Link>
       </div>
     );
@@ -202,362 +275,388 @@ export default function PersonLedgerPage({
 
   const contact = data.contact;
   const summary = data.summary;
-  const willGet = summary.netBalance > 0;
-  const willPay = summary.netBalance < 0;
-  const isSettled = summary.netBalance === 0;
+
+  const contactOption: ContactOption = {
+    id: contact.id,
+    name: contact.name,
+    phone: contact.phone,
+    amountToReceive: summary.amountToReceive,
+    amountToPay: summary.amountToPay,
+  };
 
   return (
-    <div className="space-y-5 pb-24 md:pb-12 max-w-4xl mx-auto">
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined' && window.history.length > 1) {
-              router.back();
-            } else {
-              router.push('/free-khata');
-            }
-          }}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Previous Screen</span>
-        </button>
-
-        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-          <Sparkles className="w-3 h-3 text-[#00B887]" />
-          <span>Personal Khata</span>
-        </span>
-      </div>
-
-      {/* Person Profile & Net Position Card */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-200 text-[#071F38] font-black text-lg flex items-center justify-center shrink-0 shadow-2xs">
-            {contact.name.slice(0, 2).toUpperCase()}
-          </div>
+    <div className="space-y-6 pb-24 md:pb-12 max-w-4xl mx-auto">
+      {/* 1. Header with Back Button and Quick Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push('/free-khata');
+              }
+            }}
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
 
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#071F38]">
-              {contact.name}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-[#071F38]">
+                {contact.name}
+              </h1>
+              <span
+                className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${summary.status === 'TO_RECEIVE'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : summary.status === 'TO_PAY'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-slate-100 text-slate-700'
+                  }`}
+              >
+                {summary.statusLabel}
+              </span>
+            </div>
+            {contact.phone && (
+              <span className="text-xs text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                <Phone className="w-3 h-3 text-slate-400" />
+                <span>{contact.phone}</span>
+              </span>
+            )}
+          </div>
+        </div>
 
-            <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-              {contact.phone ? (
-                <span className="flex items-center gap-1 font-mono text-slate-700 font-semibold">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{contact.phone}</span>
-                </span>
-              ) : (
-                <span className="text-slate-400 italic">No mobile number added</span>
-              )}
+        {/* Action Buttons: WhatsApp & Statement */}
+        <div className="flex items-center gap-2">
+          {contact.phone && (summary.amountToReceive > 0 || summary.amountToPay > 0) && (
+            <button
+              type="button"
+              onClick={handleOpenWhatsAppReminder}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>WhatsApp Reminder</span>
+            </button>
+          )}
 
-              {contact.notes && (
-                <>
-                  <span className="text-slate-300">•</span>
-                  <span className="italic">{contact.notes}</span>
-                </>
-              )}
+          <button
+            type="button"
+            onClick={handleExportStatementCSV}
+            className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+            title="Download Statement (CSV)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            <span className="hidden sm:inline">Statement</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintStatement}
+            className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+            title="Print Statement"
+          >
+            <Printer className="w-4 h-4 text-slate-600" />
+            <span className="hidden sm:inline">Print</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. THE 6 INDEPENDENT FIGURES + NET POSITION (Section 6) */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs space-y-4">
+        {/* A. Current Outstanding Balances & Net Position */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* 5. मुझे लेने हैं */}
+          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-100 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+              मुझे लेने हैं (Receivable)
+            </span>
+            <div className="mt-2">
+              <strong className="text-2xl font-black text-emerald-700 block">
+                ₹{summary.amountToReceive.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[10px] text-emerald-600 block mt-0.5">
+                इस व्यक्ति से बाकी रकम
+              </span>
+            </div>
+          </div>
+
+          {/* 6. मुझे देने हैं */}
+          <div className="p-4 rounded-2xl bg-rose-50/80 border border-rose-100 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">
+              मुझे देने हैं (Payable)
+            </span>
+            <div className="mt-2">
+              <strong className="text-2xl font-black text-rose-700 block">
+                ₹{summary.amountToPay.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[10px] text-rose-600 block mt-0.5">
+                इस व्यक्ति को बाकी रकम
+              </span>
+            </div>
+          </div>
+
+          {/* 7. मेरी वर्तमान स्थिति (Net Position) */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              मेरी वर्तमान स्थिति (Net Position)
+            </span>
+            <div className="mt-2">
+              <strong
+                className={`text-2xl font-black block ${summary.netPosition > 0
+                  ? 'text-emerald-700'
+                  : summary.netPosition < 0
+                    ? 'text-rose-700'
+                    : 'text-slate-700'
+                  }`}
+              >
+                {summary.netPosition > 0 && '+ '}
+                {summary.netPosition < 0 && '- '}₹
+                {Math.abs(summary.netPosition).toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[10px] text-slate-500 block mt-0.5">
+                {summary.netPosition > 0
+                  ? `कुल ₹${summary.netPosition.toLocaleString('en-IN')} अधिक मिलने हैं`
+                  : summary.netPosition < 0
+                    ? `कुल ₹${Math.abs(summary.netPosition).toLocaleString('en-IN')} अधिक देने हैं`
+                    : 'हिसाब पूरा (बराबर)'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Net Status Banner */}
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 min-w-[200px] text-right">
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 block">
-            Net Balance Status
+        {/* B. The 4 Historical Cumulative Totals */}
+        <div className="pt-3 border-t border-slate-100">
+          <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+            ऐतिहासिक कुल हिसाब (Historical Totals)
           </span>
-          {willGet && (
-            <div className="mt-1">
-              <span className="text-2xl font-black text-[#00B887] block">
-                ₹{summary.netBalance.toLocaleString('en-IN')}
-              </span>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
-                You will collect (Lene Hai)
-              </span>
-            </div>
-          )}
 
-          {willPay && (
-            <div className="mt-1">
-              <span className="text-2xl font-black text-rose-600 block">
-                ₹{Math.abs(summary.netBalance).toLocaleString('en-IN')}
-              </span>
-              <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-block mt-1">
-                You will repay (Dene Hai)
-              </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+              <span className="text-[10px] text-slate-500 block">1. कुल दी गई रकम</span>
+              <strong className="text-xs font-black text-[#071F38] block mt-0.5">
+                ₹{summary.totalGiven.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[9px] text-slate-400">Total Original Given</span>
             </div>
-          )}
 
-          {isSettled && (
-            <div className="mt-1">
-              <span className="text-2xl font-black text-slate-500 block">
-                ₹0.00
-              </span>
-              <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block mt-1">
-                All Settled (Hisab Barabar)
-              </span>
+            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+              <span className="text-[10px] text-slate-500 block">2. कुल ली गई रकम</span>
+              <strong className="text-xs font-black text-[#071F38] block mt-0.5">
+                ₹{summary.totalTaken.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[9px] text-slate-400">Total Original Taken</span>
             </div>
-          )}
+
+            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+              <span className="text-[10px] text-slate-500 block">3. कुल वापस मिली रकम</span>
+              <strong className="text-xs font-black text-emerald-700 block mt-0.5">
+                ₹{summary.totalReceivedBack.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[9px] text-slate-400">Repayments Received</span>
+            </div>
+
+            <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+              <span className="text-[10px] text-slate-500 block">4. कुल वापस की गई रकम</span>
+              <strong className="text-xs font-black text-rose-700 block mt-0.5">
+                ₹{summary.totalReturned.toLocaleString('en-IN')}
+              </strong>
+              <span className="text-[9px] text-slate-400">Repayments Returned</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Sub-Metrics Cards: Total Given, Total Received, Repayments, Outstanding */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
-          <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
-            Total I Gave
-          </span>
-          <span className="text-base font-black text-[#071F38] mt-1 block">
-            ₹{summary.totalGave.toLocaleString('en-IN')}
-          </span>
-        </div>
-
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
-          <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
-            Total I Received
-          </span>
-          <span className="text-base font-black text-[#071F38] mt-1 block">
-            ₹{summary.totalReceived.toLocaleString('en-IN')}
-          </span>
-        </div>
-
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
-          <span className="text-[10.5px] font-bold text-emerald-600 uppercase tracking-wider block">
-            To Collect
-          </span>
-          <span className="text-base font-black text-[#00B887] mt-1 block">
-            ₹{summary.gaveOutstanding.toLocaleString('en-IN')}
-          </span>
-        </div>
-
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
-          <span className="text-[10.5px] font-bold text-rose-600 uppercase tracking-wider block">
-            To Repay
-          </span>
-          <span className="text-base font-black text-rose-600 mt-1 block">
-            ₹{summary.receivedOutstanding.toLocaleString('en-IN')}
-          </span>
-        </div>
-      </div>
-
-      {/* Action Buttons Row */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      {/* 3. TWO PRIMARY TRANSACTION BUTTONS FOR THIS PERSON */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           type="button"
           onClick={handleOpenGave}
-          className="flex-1 min-w-[140px] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+          className="p-3.5 sm:p-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center justify-between group transition-all cursor-pointer active:scale-98"
         >
-          <ArrowUpRight className="w-4 h-4" />
-          <span>+ I Gave to {contact.name}</span>
+          <div className="text-left">
+            <span className="text-sm sm:text-base font-black block">
+              मैंने रकम दी
+            </span>
+            <span className="text-[11px] text-rose-100 font-medium block mt-0.5">
+              पैसे मेरे पास से गए
+            </span>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-white" />
         </button>
 
         <button
           type="button"
           onClick={handleOpenReceived}
-          className="flex-1 min-w-[140px] flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-[#00B887] hover:bg-[#009E74] text-white font-bold text-xs shadow-sm transition-all cursor-pointer active:scale-95"
+          className="p-3.5 sm:p-4 rounded-2xl bg-[#00B887] hover:bg-[#009E74] text-white shadow-sm flex items-center justify-between group transition-all cursor-pointer active:scale-98"
         >
-          <ArrowDownLeft className="w-4 h-4" />
-          <span>+ I Received from {contact.name}</span>
+          <div className="text-left">
+            <span className="text-sm sm:text-base font-black block">
+              मुझे रकम मिली
+            </span>
+            <span className="text-[11px] text-emerald-100 font-medium block mt-0.5">
+              पैसे मेरे पास आए
+            </span>
+          </div>
+          <ArrowDownLeft className="w-5 h-5 text-white" />
         </button>
-
-        {willGet && (
-          <button
-            type="button"
-            onClick={handleOpenWhatsAppReminder}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs transition-colors cursor-pointer"
-          >
-            <MessageSquare className="w-4 h-4 text-[#00B887]" />
-            <span>Remind on WhatsApp</span>
-          </button>
-        )}
       </div>
 
-      {/* Detailed Chronological Activity Ledger */}
+      {/* 4. हिसाब का पूरा रिकॉर्ड (PERSON-WISE COMPLETE TRANSACTION HISTORY) */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="font-black text-sm text-[#071F38]">Complete Ledger Timeline</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Chronological history of all lending, borrowing and repayments
-            </p>
+            <h3 className="text-base font-black text-[#071F38]">
+              हिसाब का पूरा रिकॉर्ड (Transaction History)
+            </h3>
+            <span className="text-[11px] text-slate-500">
+              {filteredActivities.length} लेन-देन दर्ज
+            </span>
           </div>
-          <span className="text-xs text-slate-500 font-semibold">
-            {data.transactions.length} Transactions
-          </span>
+
+          {/* Filters */}
+          <div className="flex items-center gap-2">
+            <select
+              value={directionFilter}
+              onChange={(e) => setDirectionFilter(e.target.value as any)}
+              className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none"
+            >
+              <option value="ALL">सभी दिशाएं (All)</option>
+              <option value="OUT">पैसे गए (Out / Given)</option>
+              <option value="IN">पैसे आए (In / Received)</option>
+            </select>
+
+            <select
+              value={modeFilter}
+              onChange={(e) => setModeFilter(e.target.value)}
+              className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none"
+            >
+              <option value="ALL">सभी माध्यम (All Modes)</option>
+              <option value="CASH">Cash (नकद)</option>
+              <option value="UPI">UPI</option>
+              <option value="BANK_TRANSFER">Bank Transfer</option>
+              <option value="CHEQUE">Cheque</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {data.transactions.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-400">
-              No entries recorded for this person yet.
-            </div>
-          ) : (
-            data.transactions.map((tx) => {
-              const isGave = tx.type === 'GAVE';
-              const hasBalance = tx.balanceAmount > 0;
+        {/* History List */}
+        {filteredActivities.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-500">
+            इस संपर्क के लिए कोई लेन-देन नहीं मिला।
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filteredActivities.map((act) => {
+              const isOut = act.moneyDirection === 'OUT';
 
               return (
-                <div key={tx.id} className="p-4 sm:p-5 hover:bg-slate-50/50 transition-colors space-y-3">
-                  {/* Transaction Main Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          isGave
-                            ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                            : 'bg-emerald-50 text-[#00B887] border border-emerald-200'
+                <div
+                  key={act.id}
+                  className="p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isOut ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
                         }`}
-                      >
-                        {isGave ? (
-                          <ArrowUpRight className="w-4 h-4" />
-                        ) : (
-                          <ArrowDownLeft className="w-4 h-4" />
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs sm:text-sm text-[#071F38]">
-                            {isGave ? 'I Gave (Maine Diye)' : 'I Received (Maine Liye)'}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.2 rounded ${
-                              tx.status === 'SETTLED'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : tx.status === 'PARTIAL'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}
-                          >
-                            {tx.status === 'SETTLED'
-                              ? 'Fully Settled'
-                              : tx.status === 'PARTIAL'
-                              ? 'Partially Settled'
-                              : 'Pending'}
-                          </span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                          <span>{formatDate(tx.date)}</span>
-                          {tx.dueDate && (
-                            <>
-                              <span>•</span>
-                              <span className="text-amber-700 font-semibold">
-                                Due: {formatDate(tx.dueDate)}
-                              </span>
-                            </>
-                          )}
-                          {tx.description && (
-                            <>
-                              <span>•</span>
-                              <span className="italic">"{tx.description}"</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                    >
+                      {isOut ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
                     </div>
 
-                    {/* Amount & Remaining Balance */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 pl-12 sm:pl-0">
-                      <div className="text-right">
-                        <span className="text-base font-black text-slate-800 block">
-                          ₹{tx.amount.toLocaleString('en-IN')}
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          Balance Due:{' '}
-                          <strong
-                            className={`font-black ${
-                              tx.balanceAmount > 0 ? 'text-rose-600' : 'text-emerald-600'
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-xs text-slate-800">
+                          {act.title}
+                        </strong>
+                        <span
+                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${act.paymentMode === 'UPI'
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : act.paymentMode === 'CASH'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
                             }`}
-                          >
-                            ₹{tx.balanceAmount.toLocaleString('en-IN')}
-                          </strong>
+                        >
+                          {act.paymentMode}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
-                        {hasBalance && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRepayForTx(tx.id)}
-                            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-2xs transition-all cursor-pointer"
-                          >
-                            Record Repayment
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTransaction(tx.id)}
-                          title="Delete Entry"
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      <div className="text-[11px] text-slate-500 mt-0.5 space-x-1">
+                        <span>{formatDate(act.date)}</span>
+                        {act.notes && <span>• {act.notes}</span>}
+                        {act.paymentRef && <span>• Ref: {act.paymentRef}</span>}
+                        {act.dueDate && <span>• Due: {formatDate(act.dueDate)}</span>}
                       </div>
                     </div>
                   </div>
 
-                  {/* Sub-list of Repayments if any */}
-                  {tx.repayments && tx.repayments.length > 0 && (
-                    <div className="ml-12 pl-3 border-l-2 border-emerald-200 space-y-1.5 py-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
-                        Repayments Logged:
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`font-black text-sm block ${isOut ? 'text-rose-600' : 'text-emerald-600'
+                        }`}
+                    >
+                      {isOut ? '- ' : '+ '}₹{act.amount.toLocaleString('en-IN')}
+                    </span>
+
+                    {act.balanceAfter !== undefined && (
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        बाकी: ₹{act.balanceAfter.toLocaleString('en-IN')}
                       </span>
-                      {tx.repayments.map((r) => (
-                        <div
-                          key={r.id}
-                          className="flex items-center justify-between text-xs text-slate-600 bg-emerald-50/50 p-2 rounded-xl"
-                        >
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>
-                              {formatDate(r.date)} via <strong>{r.paymentMode}</strong>
-                              {r.notes && ` • "${r.notes}"`}
-                            </span>
-                          </div>
-                          <strong className="text-emerald-700 font-bold">
-                            + ₹{r.amount.toLocaleString('en-IN')}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    )}
+
+                    {act.transactionId && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenRepayForTx(act.transactionId!)}
+                        className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer block mt-0.5 ml-auto"
+                      >
+                        वापसी दर्ज करें
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
-      <TransactionModal
-        isOpen={txModalOpen}
-        onClose={() => setTxModalOpen(false)}
-        onSuccess={fetchContactDetail}
-        defaultType={txModalType}
-        preselectedContact={{
-          id: contact.id,
-          name: contact.name,
-          phone: contact.phone,
-        }}
-      />
+      {txModalOpen && (
+        <TransactionModal
+          isOpen={txModalOpen}
+          onClose={() => setTxModalOpen(false)}
+          onSuccess={fetchContactDetail}
+          primaryIntent={txPrimaryIntent}
+          preselectedContact={contactOption}
+          existingContacts={[contactOption]}
+        />
+      )}
 
-      <RepaymentModal
-        isOpen={repayModalOpen}
-        onClose={() => setRepayModalOpen(false)}
-        onSuccess={fetchContactDetail}
-        transaction={repayTarget}
-      />
+      {repayModalOpen && (
+        <RepaymentModal
+          isOpen={repayModalOpen}
+          onClose={() => {
+            setRepayModalOpen(false);
+            setRepayTarget(null);
+          }}
+          onSuccess={fetchContactDetail}
+          transaction={repayTarget}
+        />
+      )}
 
-      <WhatsAppReminderModal
-        isOpen={waModalOpen}
-        onClose={() => setWaModalOpen(false)}
-        target={waTarget}
-        onPhoneUpdated={fetchContactDetail}
-      />
+      {waModalOpen && waTarget && (
+        <WhatsAppReminderModal
+          isOpen={waModalOpen}
+          onClose={() => {
+            setWaModalOpen(false);
+            setWaTarget(null);
+          }}
+          target={waTarget}
+        />
+      )}
     </div>
   );
 }

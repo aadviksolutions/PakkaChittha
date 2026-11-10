@@ -9,6 +9,7 @@ import {
 } from '@/lib/subscription/plans';
 import { verifyPaymentSignature } from '@/lib/razorpay/client';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { redeemDiscountCode } from '@/lib/subscription/pricingService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -176,6 +177,29 @@ export async function POST(request: NextRequest) {
 
       return [sub, pay];
     });
+
+    // Record discount code redemption if applicable
+    if (pendingPayment?.discountCode) {
+      try {
+        const disc = await prisma.discountCode.findUnique({
+          where: { code: pendingPayment.discountCode },
+        });
+        if (disc) {
+          await redeemDiscountCode({
+            discountCodeId: disc.id,
+            userId: authContext.session.user.id,
+            businessId,
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            originalAmount: pendingPayment.originalAmount || pendingPayment.amount,
+            discountAmount: pendingPayment.discountAmount || 0,
+            finalAmount: pendingPayment.amount,
+          });
+        }
+      } catch (discErr) {
+        console.warn('Failed to record discount redemption:', discErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

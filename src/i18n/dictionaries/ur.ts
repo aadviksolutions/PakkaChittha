@@ -1,6 +1,6 @@
 import { TranslationDictionary } from './en';
 
-export const ur: TranslationDictionary = {
+export const ur: any = {
   common: {
     appName: 'پکا چٹھا',
     tagline: 'بلنگ • انوینٹری • ادھار کھاتہ • رپورٹس',

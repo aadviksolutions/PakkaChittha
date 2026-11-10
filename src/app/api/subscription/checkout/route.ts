@@ -9,11 +9,15 @@ import {
 } from '@/lib/subscription/plans';
 import { getRazorpayClient, isRazorpayConfigured } from '@/lib/razorpay/client';
 import { createYoupiPaymentSession, isYoupiTestConfigured } from '@/lib/youpi/client';
+import { getAuthoritativePricing, validateDiscountCode } from '@/lib/subscription/pricingService';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const authContext = await requireTenantAccess(undefined, ['BUSINESS_OWNER']);
     const businessId = authContext.business.id;
+    const userId = authContext.session.user.id;
 
     if (businessId.startsWith('demo_') || (authContext.business as any).isDemo) {
       return NextResponse.json(
@@ -26,10 +30,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { planKey, interval = 'MONTHLY', gateway = 'RAZORPAY' } = body as {
+    const {
+      planKey,
+      interval = 'MONTHLY',
+      gateway = 'RAZORPAY',
+      discountCode,
+    } = body as {
       planKey: PlanKey;
       interval: BillingInterval;
       gateway?: string;
+      discountCode?: string;
     };
 
     if (!planKey || !OFFICIAL_PLANS[planKey]) {
@@ -80,16 +90,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Authoritative dynamic pricing from DB
+    const authoritativePricing = await getAuthoritativePricing();
     const planConfig = OFFICIAL_PLANS[planKey];
-    const pricing = planConfig.pricing[interval];
-    const totalPriceInInr = pricing.totalPrice;
-    const amountInPaise = Math.round(totalPriceInInr * 100);
+    const pricing = authoritativePricing[planKey]?.[interval] || planConfig.pricing[interval];
+    const originalPriceInInr = pricing.totalPrice;
 
-    if (amountInPaise <= 0) {
-      return NextResponse.json({ error: 'Plan pricing must be greater than zero' }, { status: 400 });
+    let discountAmountInInr = 0;
+    let finalPayableInInr = originalPriceInInr;
+    let appliedDiscountCode: string | null = null;
+    let appliedDiscountId: string | null = null;
+
+    if (discountCode && discountCode.trim()) {
+      const discountValidation = await validateDiscountCode({
+        code: discountCode,
+        planKey,
+        interval,
+        totalPrice: originalPriceInInr,
+        userId,
+        businessId,
+      });
+
+      if (!discountValidation.valid) {
+        return NextResponse.json(
+          { error: discountValidation.error || 'Invalid discount code.' },
+          { status: 400 }
+        );
+      }
+
+      discountAmountInInr = discountValidation.discountAmount;
+      finalPayableInInr = discountValidation.finalAmount;
+      appliedDiscountCode = discountValidation.code || null;
+      appliedDiscountId = discountValidation.discountCodeId || null;
     }
 
-    // Isolated test integration for YOUPI PG (guarded by environment and test flag)
+    const amountInPaise = Math.round(finalPayableInInr * 100);
+
+    if (amountInPaise <= 0) {
+      return NextResponse.json({ error: 'Payable amount must be greater than zero' }, { status: 400 });
+    }
+
+    // Isolated test integration for YOUPI PG
     if (gateway === 'YOUPI_PG' || gateway === 'YOUPI') {
       if (process.env.NODE_ENV === 'production') {
         return NextResponse.json(
@@ -109,11 +150,13 @@ export async function POST(request: NextRequest) {
 
       const youpiOrderId = `youpi_ord_${businessId.slice(-6)}_${Date.now()}`;
 
-      // Record PENDING payment record with unique idempotencyKey
       await (prisma as any).subscriptionPayment.create({
         data: {
           businessId,
-          amount: totalPriceInInr,
+          amount: finalPayableInInr,
+          originalAmount: originalPriceInInr,
+          discountAmount: discountAmountInInr,
+          discountCode: appliedDiscountCode,
           currency: 'INR',
           plan: planConfig.prismaEnum,
           status: 'PENDING',
@@ -121,13 +164,13 @@ export async function POST(request: NextRequest) {
           gatewayOrderId: youpiOrderId,
           idempotencyKey: `order_${youpiOrderId}`,
           billingPeriod: interval,
-          notes: `Test Checkout via YOUPI PG for ${planConfig.name} (${interval}) - ₹${totalPriceInInr}`,
+          notes: `Test Checkout via YOUPI PG for ${planConfig.name} (${interval}) - ₹${finalPayableInInr}`,
         },
       });
 
       const session = await createYoupiPaymentSession({
         orderId: youpiOrderId,
-        amountInRupees: totalPriceInInr,
+        amountInRupees: finalPayableInInr,
         currency: 'INR',
         customerName: authContext.business.name,
         customerEmail: authContext.session.user.email,
@@ -138,6 +181,7 @@ export async function POST(request: NextRequest) {
           prismaEnum: planConfig.prismaEnum,
           interval,
           durationMonths: String(pricing.durationMonths),
+          discountCodeId: appliedDiscountId,
         },
       });
 
@@ -147,6 +191,9 @@ export async function POST(request: NextRequest) {
         orderId: session.orderId,
         paymentId: session.paymentId,
         amount: amountInPaise,
+        originalAmount: originalPriceInInr,
+        discountAmount: discountAmountInInr,
+        finalAmount: finalPayableInInr,
         currency: 'INR',
         checkoutUrl: session.checkoutUrl,
         planName: planConfig.name,
@@ -161,7 +208,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Default Gateway: RAZORPAY (remains 100% production-facing and default)
+    // Production Default: RAZORPAY
     if (!isRazorpayConfigured()) {
       return NextResponse.json(
         {
@@ -189,6 +236,10 @@ export async function POST(request: NextRequest) {
         durationMonths: String(pricing.durationMonths),
         businessName: authContext.business.name,
         userEmail: authContext.session.user.email,
+        discountCode: appliedDiscountCode || '',
+        discountAmount: String(discountAmountInInr),
+        originalAmount: String(originalPriceInInr),
+        discountCodeId: appliedDiscountId || '',
       },
     });
 
@@ -196,7 +247,10 @@ export async function POST(request: NextRequest) {
     await (prisma as any).subscriptionPayment.create({
       data: {
         businessId,
-        amount: totalPriceInInr,
+        amount: finalPayableInInr,
+        originalAmount: originalPriceInInr,
+        discountAmount: discountAmountInInr,
+        discountCode: appliedDiscountCode,
         currency: 'INR',
         plan: planConfig.prismaEnum,
         status: 'PENDING',
@@ -204,7 +258,9 @@ export async function POST(request: NextRequest) {
         gatewayOrderId: order.id,
         idempotencyKey: `order_${order.id}`,
         billingPeriod: interval,
-        notes: `Checkout for ${planConfig.name} (${interval}) - ₹${totalPriceInInr}`,
+        notes: `Checkout for ${planConfig.name} (${interval}) - ₹${finalPayableInInr}${
+          appliedDiscountCode ? ` (Code: ${appliedDiscountCode}, Saved: ₹${discountAmountInInr})` : ''
+        }`,
       },
     });
 
@@ -214,11 +270,16 @@ export async function POST(request: NextRequest) {
       success: true,
       orderId: order.id,
       amount: order.amount,
+      originalAmount: originalPriceInInr,
+      discountAmount: discountAmountInInr,
+      finalAmount: finalPayableInInr,
       currency: order.currency,
       keyId,
       planName: planConfig.name,
       interval,
       durationMonths: pricing.durationMonths,
+      discountApplied: Boolean(appliedDiscountCode),
+      discountCode: appliedDiscountCode,
       business: {
         id: businessId,
         name: authContext.business.name,

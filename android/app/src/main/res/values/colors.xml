@@ -1,12 +1,17 @@
 <resources>
-    <!-- Brand Colors: Deep Navy, Restrained Emerald, Warm Off-White -->
-    <color name="primary_navy">#0F172A</color>
-    <color name="secondary_navy">#1E293B</color>
-    <color name="accent_emerald">#059669</color>
-    <color name="accent_emerald_light">#10B981</color>
-    <color name="surface_warm">#F8FAFC</color>
-    <color name="surface_card">#FFFFFF</color>
-    <color name="text_primary">#0F172A</color>
-    <color name="text_secondary">#64748B</color>
-    <color name="border_subtle">#E2E8F0</color>
+    <!-- Pakkachittha Branding Colors -->
+    <color name="brand_primary">#071F38</color>
+    <color name="brand_primary_dark">#041324</color>
+    <color name="brand_primary_light">#0D2F54</color>
+    <color name="brand_accent">#10B981</color>
+    <color name="brand_accent_dark">#059669</color>
+    <color name="brand_surface">#0F172A</color>
+    <color name="brand_surface_card">#1E293B</color>
+    <color name="brand_text_primary">#FFFFFF</color>
+    <color name="brand_text_secondary">#94A3B8</color>
+    <color name="brand_border">#334155</color>
+    <color name="brand_error">#EF4444</color>
+
+    <!-- Legacy compatibility alias -->
+    <color name="primary_navy">#071F38</color>
 </resources>

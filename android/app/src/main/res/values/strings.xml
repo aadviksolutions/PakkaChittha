@@ -1,4 +1,11 @@
 <resources>
-    <string name="app_name">Lenden</string>
-    <string name="tagline">Har Hisab, Ab Aasaan.</string>
+    <string name="app_name">Pakkachittha</string>
+    <string name="offline_title">No Internet Connection</string>
+    <string name="offline_desc">Please verify your mobile data or Wi-Fi connection and tap Try Again.</string>
+    <string name="btn_retry">Try Again</string>
+    <string name="exit_prompt">Press back again to exit</string>
+    <string name="download_started">Downloading file...</string>
+    <string name="download_completed">Download completed</string>
+    <string name="permission_camera_required">Camera permission is required to capture photos or scan codes.</string>
+    <string name="permission_storage_required">Storage permission is required to save downloads.</string>
 </resources>

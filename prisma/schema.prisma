@@ -93,6 +93,9 @@ model User {
   isSuspended  Boolean      @default(false)
   suspendedReason String?
   preferredLanguage String   @default("en")
+  upiId             String?
+  upiQrImageUrl     String?
+  upiBeneficiaryName String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -128,6 +131,8 @@ model Business {
   bankAccountNumber  String?
   bankIfsc           String?
   bankUpiId          String?
+  upiQrImageUrl      String?
+  upiBeneficiaryName String?
   invoiceTerms       String?
   invoiceLanguage    String?            @default("en")
   allowNegativeStock Boolean            @default(false)
@@ -231,6 +236,7 @@ model Customer {
   openingBalance  Float        @default(0)
   notes           String?
   optedOutWhatsApp Boolean     @default(false)
+  lastReminderSentAt DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -670,6 +676,7 @@ model KhataContact {
   phone        String?
   email        String?
   notes        String?
+  lastReminderSentAt DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
@@ -694,6 +701,9 @@ model KhataTransaction {
   date          DateTime             @default(now())
   dueDate       DateTime?
   description   String?
+  paymentMode   PaymentMethod        @default(CASH)
+  paymentRef    String?
+  paymentDetails String?
   status        KhataEntryStatus     @default(PENDING)
   settledAmount Float                @default(0)
   balanceAmount Float
@@ -712,6 +722,7 @@ model KhataTransaction {
   @@index([status])
   @@index([date])
   @@index([dueDate])
+  @@index([paymentMode])
 }
 
 model KhataRepayment {
@@ -723,6 +734,8 @@ model KhataRepayment {
   amount        Float
   date          DateTime         @default(now())
   paymentMode   PaymentMethod    @default(CASH)
+  paymentRef    String?
+  paymentDetails String?
   notes         String?
   createdAt     DateTime         @default(now())
 
@@ -756,6 +769,9 @@ model SubscriptionPayment {
   refundedAt       DateTime?
   refundAmount     Float?           @default(0)
   reconciledBy     String?
+  discountCode     String?
+  discountAmount   Float?           @default(0)
+  originalAmount   Float?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -1229,6 +1245,66 @@ model QuotationItem {
 
   @@index([quotationId])
   @@index([productId])
+}
+
+model SubscriptionPlanPricing {
+  id             String   @id @default(cuid())
+  planKey        String   // "STARTER", "GROWTH", "SCALE"
+  interval       String   // "MONTHLY", "THREE_MONTHS", "SIX_MONTHS", "YEARLY"
+  durationMonths Int      // 1, 3, 6, 12
+  price          Float    // Price in INR
+  isActive       Boolean  @default(true)
+  updatedBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([planKey, interval])
+  @@index([planKey])
+}
+
+model DiscountCode {
+  id                  String          @id @default(cuid())
+  code                String          @unique
+  description         String?
+  type                String          @default("PERCENTAGE") // "PERCENTAGE", "FIXED"
+  value               Float           // e.g. 20 for 20% or 100 for Rs.100
+  applicablePlans     String          @default("ALL") // "ALL" or "STARTER,GROWTH,SCALE"
+  applicableDurations String          @default("ALL") // "ALL" or "MONTHLY,THREE_MONTHS,SIX_MONTHS,YEARLY"
+  maxDiscountAmount   Float?          // Maximum cap for percentage discounts
+  minPurchaseAmount   Float?          @default(0)
+  totalUsageLimit     Int?            // Total times code can be redeemed across all users
+  usedCount           Int             @default(0)
+  perCustomerLimit    Int?            @default(1)
+  startDate           DateTime?
+  expiryDate          DateTime?
+  newCustomersOnly    Boolean         @default(false)
+  isActive            Boolean         @default(true)
+  createdBy           String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  usages              DiscountUsage[]
+  @@index([code])
+  @@index([isActive])
+}
+
+model DiscountUsage {
+  id             String       @id @default(cuid())
+  discountCodeId String
+  userId         String
+  businessId     String?
+  orderId        String?
+  paymentId      String?
+  originalAmount Float
+  discountAmount Float
+  finalAmount    Float
+  usedAt         DateTime     @default(now())
+
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+
+  @@index([discountCodeId])
+  @@index([userId])
+  @@index([businessId])
 }
 
 
