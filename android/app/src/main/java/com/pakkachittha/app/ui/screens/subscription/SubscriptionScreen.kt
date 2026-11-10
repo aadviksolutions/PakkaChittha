@@ -284,7 +284,7 @@ fun SubscriptionScreen(
                     onSubscribe = {
                         val browserIntent = Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://pakkachittha.com/subscription")
+                            Uri.parse("https://www.pakkachittha.com/subscription")
                         )
                         context.startActivity(browserIntent)
                     }

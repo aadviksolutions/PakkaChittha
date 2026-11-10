@@ -66,10 +66,14 @@ fun AppNavHost(
                 currentRoute = currentRoute,
                 onNavigate = { route ->
                     coroutineScope.launch { drawerState.close() }
-                    navController.navigate(route) {
-                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    try {
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    } catch (_: Exception) {
+                        navController.navigate(route)
                     }
                 },
                 onLogout = {
