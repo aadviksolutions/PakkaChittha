@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   ArrowLeft,
@@ -50,10 +50,16 @@ interface LineItemState {
   taxRate: number;
 }
 
-export default function NewQuotationPage() {
+function NewQuotationContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editQuotationId = searchParams.get('edit') || '';
+  const isEditMode = Boolean(editQuotationId);
   const { activeBusiness } = useAuth();
   const { toast } = useToast();
+
+  const [loadingQuotation, setLoadingQuotation] = useState(false);
+  const [editQuotationNumber, setEditQuotationNumber] = useState('');
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -111,6 +117,67 @@ export default function NewQuotationPage() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!editQuotationId) return;
+    let active = true;
+    setLoadingQuotation(true);
+    fetch(`/api/quotations/${editQuotationId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!active) return;
+        if (!d.success || !d.quotation) {
+          throw new Error(d.error || 'Quotation not found');
+        }
+        const q = d.quotation;
+        setEditQuotationNumber(q.quotationNumber || '');
+        setIsNewCustomer(false);
+        setSelectedCustomerId(q.customerId || '');
+        if (q.quotationDate) setQuotationDate(String(q.quotationDate).slice(0, 10));
+        if (q.validUntil) setValidUntil(String(q.validUntil).slice(0, 10));
+        if (q.gstType === 'CGST_SGST' || q.gstType === 'IGST' || q.gstType === 'EXEMPT') {
+          setGstType(q.gstType);
+        }
+        setIsTaxInclusive(Boolean(q.isTaxInclusive));
+        setNotes(q.notes || '');
+        setTerms(q.termsAndConditions || '');
+        if (Array.isArray(q.items) && q.items.length > 0) {
+          setItems(
+            q.items.map((it: {
+              id?: string;
+              productId?: string | null;
+              description: string;
+              hsnCode?: string | null;
+              quantity: number;
+              unit?: string;
+              rate: number;
+              discount?: number;
+              taxRate?: number;
+            }, idx: number) => ({
+              id: it.id || String(idx + 1),
+              productId: it.productId || undefined,
+              description: it.description || '',
+              hsnCode: it.hsnCode || '',
+              quantity: Number(it.quantity) || 1,
+              unit: it.unit || 'Pcs',
+              rate: Number(it.rate) || 0,
+              discount: Number(it.discount) || 0,
+              taxRate: Number(it.taxRate) || 0,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        toast.error(err instanceof Error ? err.message : 'Failed to load quotation');
+      })
+      .finally(() => {
+        if (active) setLoadingQuotation(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [editQuotationId, toast]);
 
   const handleAddItem = () => {
     setItems((prev) => [
@@ -269,21 +336,25 @@ export default function NewQuotationPage() {
         })),
       };
 
-      const res = await fetch('/api/quotations', {
-        method: 'POST',
+      const res = await fetch(isEditMode ? `/api/quotations/${editQuotationId}` : '/api/quotations', {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create quotation');
+        throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'create'} quotation`);
       }
 
-      toast.success(`Quotation ${data.quotation.quotationNumber} created successfully!`);
+      toast.success(
+        isEditMode
+          ? `Quotation ${data.quotation.quotationNumber} updated successfully!`
+          : `Quotation ${data.quotation.quotationNumber} created successfully!`
+      );
       router.push(`/quotations/${data.quotation.id}`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error creating quotation');
+      toast.error(err instanceof Error ? err.message : 'Error saving quotation');
     } finally {
       setSubmitting(false);
     }
@@ -302,7 +373,9 @@ export default function NewQuotationPage() {
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Create New Quotation
+              {isEditMode
+                ? `Edit Quotation${editQuotationNumber ? ` (${editQuotationNumber})` : ''}`
+                : 'Create New Quotation'}
             </h1>
             <p className="text-xs text-slate-500">
               Generate a formal commercial quote with branding, price estimates &amp; tax breakdown.
@@ -325,10 +398,22 @@ export default function NewQuotationPage() {
             disabled={submitting}
             className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            {submitting ? 'Creating...' : 'Create & Send'}
+            {submitting
+              ? isEditMode
+                ? 'Updating...'
+                : 'Creating...'
+              : isEditMode
+                ? 'Update & Send'
+                : 'Create & Send'}
           </button>
         </div>
       </div>
+
+      {loadingQuotation && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 font-medium">
+          Loading quotation details...
+        </div>
+      )}
 
       <form className="space-y-6">
         {/* 1. Customer & Quotation Meta */}
@@ -724,10 +809,24 @@ export default function NewQuotationPage() {
             disabled={submitting}
             className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 cursor-pointer"
           >
-            {submitting ? 'Creating Quotation...' : 'Create &amp; Finalize Quotation'}
+            {submitting
+              ? isEditMode
+                ? 'Updating Quotation...'
+                : 'Creating Quotation...'
+              : isEditMode
+                ? 'Update & Finalize Quotation'
+                : 'Create & Finalize Quotation'}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewQuotationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading quotation editor...</div>}>
+      <NewQuotationContent />
+    </Suspense>
   );
 }

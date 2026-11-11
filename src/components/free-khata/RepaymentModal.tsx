@@ -25,18 +25,35 @@ export interface RepaymentTransactionTarget {
   date: string | Date;
 }
 
+export interface EditingKhataRepayment {
+  id: string;
+  transactionId: string;
+  contactName: string;
+  type: 'GAVE' | 'RECEIVED';
+  transactionAmount: number;
+  transactionSettledAmount: number;
+  amount: number;
+  date: string | Date;
+  paymentMode: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
+  notes?: string | null;
+}
+
 interface RepaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  transaction: RepaymentTransactionTarget | null;
+  transaction?: RepaymentTransactionTarget | null;
+  editingRepayment?: EditingKhataRepayment | null;
 }
 
 export function RepaymentModal({
   isOpen,
   onClose,
   onSuccess,
-  transaction,
+  transaction = null,
+  editingRepayment = null,
 }: RepaymentModalProps) {
   const { t, locale } = useTranslation();
   const isHi = locale === 'hi';
@@ -53,6 +70,35 @@ export function RepaymentModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isOpen && editingRepayment) {
+      setAmount(editingRepayment.amount.toString());
+      setDate(new Date(editingRepayment.date).toISOString().split('T')[0]);
+      setPaymentMode(editingRepayment.paymentMode || 'CASH');
+      setPaymentRef(editingRepayment.paymentRef || '');
+      let parsedUpi = '';
+      let parsedBank = '';
+      let parsedCheque = '';
+      let parsedOther = '';
+      if (editingRepayment.paymentDetails) {
+        try {
+          const det = JSON.parse(editingRepayment.paymentDetails);
+          if (det?.app) parsedUpi = det.app;
+          if (det?.bank) parsedBank = det.bank;
+          if (det?.chequeDate) parsedCheque = det.chequeDate;
+          if (det?.note) parsedOther = det.note;
+        } catch {
+          parsedOther = editingRepayment.paymentDetails;
+        }
+      }
+      setUpiApp(parsedUpi);
+      setBankName(parsedBank);
+      setChequeDate(parsedCheque);
+      setOtherModeDetails(parsedOther);
+      setNotes(editingRepayment.notes || '');
+      setError(null);
+      return;
+    }
+
     if (isOpen && transaction) {
       setAmount(transaction.balanceAmount.toString());
       setDate(new Date().toISOString().split('T')[0]);
@@ -65,16 +111,35 @@ export function RepaymentModal({
       setNotes('');
       setError(null);
     }
-  }, [isOpen, transaction]);
+  }, [isOpen, transaction, editingRepayment]);
 
-  if (!isOpen || !transaction) return null;
+  if (!isOpen || (!transaction && !editingRepayment)) return null;
 
-  const isLent = transaction.type === 'GAVE'; // User gave money, now contact is returning it (Received Back)
+  const effectiveType = editingRepayment ? editingRepayment.type : transaction!.type;
+  const effectiveContactName = editingRepayment
+    ? editingRepayment.contactName
+    : transaction!.contactName;
+  const effectiveOriginalAmount = editingRepayment
+    ? editingRepayment.transactionAmount
+    : transaction!.amount;
+  const maxAllowedAmount = editingRepayment
+    ? Math.max(
+        0,
+        Number(
+          (
+            editingRepayment.transactionAmount -
+            (editingRepayment.transactionSettledAmount - editingRepayment.amount)
+          ).toFixed(2)
+        )
+      )
+    : transaction!.balanceAmount;
+
+  const isLent = effectiveType === 'GAVE'; // User gave money, now contact is returning it (Received Back)
   const parsedAmount = parseFloat(amount) || 0;
-  const remainingBalance = Math.max(0, transaction.balanceAmount - parsedAmount);
+  const remainingBalance = Math.max(0, Number((maxAllowedAmount - parsedAmount).toFixed(2)));
 
   const handleSetFull = () => {
-    setAmount(transaction.balanceAmount.toString());
+    setAmount(maxAllowedAmount.toString());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,9 +151,9 @@ export function RepaymentModal({
       return;
     }
 
-    if (parsedAmount > transaction.balanceAmount) {
+    if (parsedAmount > maxAllowedAmount) {
       setError(
-        `वापसी रकम (₹${parsedAmount}) बाकी रकम (₹${transaction.balanceAmount}) से अधिक नहीं हो सकती।`
+        `वापसी रकम (₹${parsedAmount}) बाकी रकम (₹${maxAllowedAmount}) से अधिक नहीं हो सकती।`
       );
       return;
     }
@@ -108,22 +173,34 @@ export function RepaymentModal({
       }
 
       const res = await fetch('/api/free-khata/repayments', {
-        method: 'POST',
+        method: editingRepayment ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactionId: transaction.id,
-          amount: parsedAmount,
-          date: new Date(date).toISOString(),
-          paymentMode,
-          paymentRef: paymentRef.trim() || null,
-          paymentDetails: paymentDetailsPayload,
-          notes: notes.trim() || null,
-        }),
+        body: JSON.stringify(
+          editingRepayment
+            ? {
+                id: editingRepayment.id,
+                amount: parsedAmount,
+                date: new Date(date).toISOString(),
+                paymentMode,
+                paymentRef: paymentRef.trim() || null,
+                paymentDetails: paymentDetailsPayload,
+                notes: notes.trim() || null,
+              }
+            : {
+                transactionId: transaction!.id,
+                amount: parsedAmount,
+                date: new Date(date).toISOString(),
+                paymentMode,
+                paymentRef: paymentRef.trim() || null,
+                paymentDetails: paymentDetailsPayload,
+                notes: notes.trim() || null,
+              }
+        ),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to record repayment');
+        throw new Error(data.error || 'Failed to save repayment');
       }
 
       onSuccess();
@@ -143,10 +220,20 @@ export function RepaymentModal({
           }`}>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#071F38] bg-white px-2 py-0.5 rounded border border-slate-200">
-              {isLent ? (isHi ? 'पहले दी गई रकम वापस मिली' : 'Received Lent Money Back') : (isHi ? 'पहले ली गई रकम वापस की' : 'Repaid Borrowed Amount')}
+              {editingRepayment
+                ? isHi
+                  ? 'वापसी एंट्री संपादित करें (Edit Repayment)'
+                  : 'Edit Repayment'
+                : isLent
+                ? isHi
+                  ? 'पहले दी गई रकम वापस मिली'
+                  : 'Received Lent Money Back'
+                : isHi
+                ? 'पहले ली गई रकम वापस की'
+                : 'Repaid Borrowed Amount'}
             </span>
             <h3 className="text-base font-black text-[#071F38] mt-1">
-              {transaction.contactName}
+              {effectiveContactName}
             </h3>
           </div>
           <button
@@ -164,14 +251,16 @@ export function RepaymentModal({
             <div>
               <span className="text-slate-500 block text-[10.5px]">{isHi ? 'मूल रकम (Original)' : 'Original Amount'}</span>
               <strong className="text-slate-800 font-bold">
-                ₹{transaction.amount.toLocaleString('en-IN')}
+                ₹{effectiveOriginalAmount.toLocaleString('en-IN')}
               </strong>
             </div>
 
             <div className="text-right">
-              <span className="text-slate-500 block text-[10.5px]">{isHi ? 'वर्तमान बाकी रकम' : 'Current Balance'}</span>
+              <span className="text-slate-500 block text-[10.5px]">
+                {editingRepayment ? (isHi ? 'अधिकतम मान्य वापसी' : 'Max Allowed') : isHi ? 'वर्तमान बाकी रकम' : 'Current Balance'}
+              </span>
               <span className="font-black text-sm text-[#071F38]">
-                ₹{transaction.balanceAmount.toLocaleString('en-IN')}
+                ₹{maxAllowedAmount.toLocaleString('en-IN')}
               </span>
             </div>
           </div>
@@ -197,7 +286,7 @@ export function RepaymentModal({
                 onClick={handleSetFull}
                 className="text-[10.5px] font-bold text-[#EA580C] hover:underline cursor-pointer"
               >
-                {isHi ? `पूरा हिसाब (Full: ₹${transaction.balanceAmount.toLocaleString('en-IN')})` : `Full (₹${transaction.balanceAmount.toLocaleString('en-IN')})`}
+                {isHi ? `पूरा हिसाब (Full: ₹${maxAllowedAmount.toLocaleString('en-IN')})` : `Full (₹${maxAllowedAmount.toLocaleString('en-IN')})`}
               </button>
             </div>
 
@@ -209,7 +298,7 @@ export function RepaymentModal({
                 type="number"
                 step="any"
                 min="1"
-                max={transaction.balanceAmount}
+                max={maxAllowedAmount}
                 required
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -219,7 +308,7 @@ export function RepaymentModal({
             </div>
 
             {/* Remaining Balance Indicator */}
-            {parsedAmount > 0 && parsedAmount <= transaction.balanceAmount && (
+            {parsedAmount > 0 && parsedAmount <= maxAllowedAmount && (
               <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600 px-1">
                 <span>वापसी के बाद बाकी रकम:</span>
                 <strong className={`font-bold ${remainingBalance === 0 ? 'text-emerald-700' : 'text-slate-800'}`}>
@@ -376,11 +465,13 @@ export function RepaymentModal({
             </button>
             <button
               type="submit"
-              disabled={loading || parsedAmount <= 0 || parsedAmount > transaction.balanceAmount}
+              disabled={loading || parsedAmount <= 0 || parsedAmount > maxAllowedAmount}
               className="px-5 py-2.5 bg-[#071F38] hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-2"
             >
               {loading ? (
                 <span>{isHi ? 'सहेजा जा रहा है...' : 'Saving...'}</span>
+              ) : editingRepayment ? (
+                <span>{isHi ? 'अपडेट सहेजें' : 'Update Repayment'}</span>
               ) : (
                 <span>{isHi ? 'हिसाब दर्ज करें' : 'Record Repayment'}</span>
               )}

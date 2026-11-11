@@ -27,6 +27,8 @@ import {
   CreditCard,
   Scale,
   BarChart3,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/context';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
@@ -95,8 +97,10 @@ export default function GharKharchaDashboardPage() {
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   );
 
-  // Quick Add Transaction Modal State
+  // Quick Add / Edit Transaction Modal State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTxId, setEditingTxId] = useState<string | null>(null);
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
   const [txType, setTxType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [txAmount, setTxAmount] = useState('');
   const [txCategoryName, setTxCategoryName] = useState('');
@@ -169,6 +173,37 @@ export default function GharKharchaDashboardPage() {
     );
   };
 
+  const handleOpenEditTx = (tx: DashboardData['recentTransactions'][number]) => {
+    setEditingTxId(tx.id);
+    setTxType(tx.type);
+    setTxAmount(String(tx.amount));
+    setTxCategoryName(tx.categoryName || (tx.type === 'INCOME' ? 'Salary' : 'Grocery & Ration'));
+    setTxDate(new Date(tx.date).toISOString().split('T')[0]);
+    setTxPaymentMethod(tx.paymentMethod || 'CASH');
+    setTxDescription(tx.description || '');
+    setTxPayee(tx.payeeMerchant || '');
+    setShowAddModal(true);
+  };
+
+  const handleDeleteTx = async (txId: string) => {
+    if (!confirm('Are you sure you want to delete this transaction record?')) return;
+    setDeletingTxId(txId);
+    try {
+      const res = await fetch(`/api/household/transactions/${txId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete transaction.');
+      }
+      fetchDashboard(selectedMonth);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Error deleting transaction');
+    } finally {
+      setDeletingTxId(null);
+    }
+  };
+
   const handleQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!txAmount || parseFloat(txAmount) <= 0) {
@@ -178,12 +213,21 @@ export default function GharKharchaDashboardPage() {
 
     setSubmittingTx(true);
     try {
-      const res = await fetch('/api/household/transactions', {
-        method: 'POST',
+      const matchedCat = categories.find(
+        (c) => c.name === txCategoryName && c.type === txType
+      );
+      const url = editingTxId
+        ? `/api/household/transactions/${editingTxId}`
+        : '/api/household/transactions';
+      const method = editingTxId ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: txType,
           amount: parseFloat(txAmount),
+          categoryId: matchedCat?.id || null,
           categoryName: txCategoryName || (txType === 'INCOME' ? 'Salary' : 'Grocery & Ration'),
           date: txDate,
           paymentMethod: txPaymentMethod,
@@ -194,16 +238,17 @@ export default function GharKharchaDashboardPage() {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to record entry.');
+        throw new Error(json.error || 'Failed to save entry.');
       }
 
       setShowAddModal(false);
+      setEditingTxId(null);
       setTxAmount('');
       setTxDescription('');
       setTxPayee('');
       fetchDashboard(selectedMonth);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Error adding transaction');
+      alert(err instanceof Error ? err.message : 'Error saving transaction');
     } finally {
       setSubmittingTx(false);
     }
@@ -579,6 +624,7 @@ export default function GharKharchaDashboardPage() {
                   <th className="py-2.5 px-3">Payment</th>
                   <th className="py-2.5 px-3">By</th>
                   <th className="py-2.5 px-3 text-right">Amount</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -612,6 +658,27 @@ export default function GharKharchaDashboardPage() {
                         {formatInr(tx.amount)}
                       </span>
                     </td>
+                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditTx(tx)}
+                          title="Edit Transaction"
+                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingTxId === tx.id}
+                          onClick={() => handleDeleteTx(tx.id)}
+                          title="Delete Transaction"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -636,7 +703,7 @@ export default function GharKharchaDashboardPage() {
 
       {/* 5. Quick Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-base font-black text-slate-900 tracking-tight">
@@ -770,7 +837,7 @@ export default function GharKharchaDashboardPage() {
                   disabled={submittingTx}
                   className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-60"
                 >
-                  {submittingTx ? 'Recording...' : 'Save Transaction'}
+                  {submittingTx ? 'Saving...' : editingTxId ? 'Update Transaction' : 'Save Transaction'}
                 </button>
               </div>
             </form>

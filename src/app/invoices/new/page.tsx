@@ -64,6 +64,8 @@ function InvoiceCreationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCustomerId = searchParams.get('customerId') || '';
+  const editInvoiceId = searchParams.get('edit') || '';
+  const isEditMode = Boolean(editInvoiceId);
 
   const { activeBusiness } = useAuth();
   const { toast } = useToast();
@@ -140,10 +142,50 @@ function InvoiceCreationForm() {
   const [loading, setLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<'save' | 'print' | 'share' | 'draft' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [existingPaidAmount, setExistingPaidAmount] = useState(0);
 
-  // Initial Date Setup
+  // Initial Date Setup or Edit Prefill
   useEffect(() => {
     if (!canAccessCommercial) return;
+
+    if (editInvoiceId) {
+      fetch(`/api/invoices/${editInvoiceId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.success && data.invoice) {
+            const inv = data.invoice;
+            setEstimatedInvoiceNumber(inv.invoiceNumber);
+            setInvoiceDate(new Date(inv.invoiceDate).toISOString().split('T')[0]);
+            setDueDate(new Date(inv.dueDate).toISOString().split('T')[0]);
+            setGstType((inv.gstType as GstType) || 'CGST_SGST');
+            setIsTaxInclusive(Boolean(inv.isTaxInclusive));
+            setIsGstInvoice(inv.isGstInvoice !== false);
+            setSelectedCustomerId(inv.customerId);
+            setNotes(inv.notes || '');
+            setTerms(inv.termsAndConditions || '');
+            setExistingPaidAmount(inv.paidAmount || 0);
+            setPaidAmount(String(inv.paidAmount || 0));
+            if (Array.isArray(inv.items) && inv.items.length > 0) {
+              setItems(
+                inv.items.map((it: any) => ({
+                  productId: it.productId || undefined,
+                  hsnCode: it.hsnCode || '',
+                  description: it.description,
+                  quantity: it.quantity,
+                  unit: it.unit || 'Pcs',
+                  rate: it.rate,
+                  discount: it.discount || 0,
+                  discountType: it.discountType || 'AMOUNT',
+                  taxRate: it.taxRate ?? 18,
+                }))
+              );
+            }
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
     const today = new Date();
     setInvoiceDate(today.toISOString().split('T')[0]);
     setDueDate(new Date(today.getTime() + 15 * 86400000).toISOString().split('T')[0]);
@@ -157,7 +199,7 @@ function InvoiceCreationForm() {
         }
       })
       .catch(() => {});
-  }, [canAccessCommercial]);
+  }, [canAccessCommercial, editInvoiceId]);
 
   // Load Customers & Inventory Catalog
   useEffect(() => {
@@ -167,7 +209,7 @@ function InvoiceCreationForm() {
       .then((data) => {
         if (data?.success && Array.isArray(data.customers)) {
           setCustomers(data.customers);
-          if (!selectedCustomerId && data.customers.length > 0 && !preselectedCustomerId) {
+          if (!selectedCustomerId && data.customers.length > 0 && !preselectedCustomerId && !editInvoiceId) {
             setSelectedCustomerId(data.customers[0].id);
           }
         }
@@ -580,8 +622,10 @@ function InvoiceCreationForm() {
     setActiveAction(isDraft ? 'draft' : action);
 
     try {
-      const res = await fetch('/api/invoices', {
-        method: 'POST',
+      const endpoint = isEditMode ? `/api/invoices/${editInvoiceId}` : '/api/invoices';
+      const method = isEditMode ? 'PUT' : 'POST';
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: selectedCustomerId,
@@ -591,9 +635,13 @@ function InvoiceCreationForm() {
           isTaxInclusive,
           isGstInvoice,
           items: validItems,
-          paidAmount: parseFloat(paidAmount) || 0,
-          paymentMethod,
-          paymentReference: paymentMethod === 'CASH' ? '' : paymentReference,
+          ...(!isEditMode
+            ? {
+                paidAmount: parseFloat(paidAmount) || 0,
+                paymentMethod,
+                paymentReference: paymentMethod === 'CASH' ? '' : paymentReference,
+              }
+            : {}),
           notes,
           termsAndConditions: terms,
           isDraft,
@@ -602,11 +650,13 @@ function InvoiceCreationForm() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to generate invoice.');
+        throw new Error(data.error || 'Failed to save invoice.');
       }
 
       toast.success(
-        isDraft
+        isEditMode
+          ? `Invoice ${data.invoice.invoiceNumber} updated successfully!`
+          : isDraft
           ? `Invoice ${data.invoice.invoiceNumber} saved as draft!`
           : `Invoice ${data.invoice.invoiceNumber} generated successfully!`
       );
@@ -661,7 +711,7 @@ function InvoiceCreationForm() {
           </button>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Create New Invoice
+              {isEditMode ? `Edit Invoice ${estimatedInvoiceNumber}` : 'Create New Invoice'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Workspace: <strong>{activeBusiness?.name || 'My Store'}</strong> • GSTIN:{' '}
@@ -1410,6 +1460,18 @@ function InvoiceCreationForm() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Payment Section (2 cols on lg) */}
           <div className="lg:col-span-2 space-y-4">
+            {isEditMode ? (
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                  Recorded Payments Preserved
+                </span>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Existing recorded payments totaling{' '}
+                  <strong className="font-mono text-emerald-700">₹{existingPaidAmount.toFixed(2)}</strong> will be preserved and balance due will recalculate automatically. To edit or delete individual payments, open the invoice details view.
+                </p>
+              </div>
+            ) : (
             <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-slate-500" />
@@ -1509,6 +1571,7 @@ function InvoiceCreationForm() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Right Column: Invoice Summary & Action Buttons */}
@@ -1604,7 +1667,7 @@ function InvoiceCreationForm() {
                 ) : (
                   <>
                     <Save className="w-4 h-4 text-emerald-400" />
-                    <span>Save Invoice</span>
+                    <span>{isEditMode ? 'Update Invoice' : 'Save Invoice'}</span>
                   </>
                 )}
               </button>
@@ -2001,7 +2064,7 @@ function InvoiceCreationForm() {
             className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Save Invoice</span>
+            <span>{isEditMode ? 'Update Invoice' : 'Save Invoice'}</span>
           </button>
         </div>
       </div>

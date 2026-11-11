@@ -5,7 +5,7 @@ import { ModulePageShell } from '@/components/shared/ModulePageShell';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
-import { Plus, Search, Trash2, Receipt, Calendar, CreditCard, Tag, X } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Receipt, Calendar, CreditCard, Tag, X } from 'lucide-react';
 
 interface Expense {
   id: string;
@@ -39,6 +39,7 @@ export default function ExpensesPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // New expense form state
@@ -79,6 +80,30 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setEditingExpenseId(null);
+    setFormCategory(CATEGORIES[0]);
+    setFormPayee('');
+    setFormDescription('');
+    setFormAmount('');
+    setFormPaymentMethod('CASH');
+    setFormExpenseDate(new Date().toISOString().split('T')[0]);
+    setFormReferenceNumber('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (exp: Expense) => {
+    setEditingExpenseId(exp.id);
+    setFormCategory(CATEGORIES.includes(exp.category) ? exp.category : CATEGORIES[0]);
+    setFormPayee(exp.payee || '');
+    setFormDescription(exp.description || '');
+    setFormAmount(String(exp.amount));
+    setFormPaymentMethod(exp.paymentMethod || 'CASH');
+    setFormExpenseDate(new Date(exp.expenseDate).toISOString().split('T')[0]);
+    setFormReferenceNumber(exp.referenceNumber || '');
+    setIsModalOpen(true);
+  };
+
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseFloat(formAmount);
@@ -90,9 +115,10 @@ export default function ExpensesPage() {
     try {
       setSubmitting(true);
       const res = await fetch('/api/expenses', {
-        method: 'POST',
+        method: editingExpenseId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(editingExpenseId ? { id: editingExpenseId } : {}),
           category: formCategory,
           payee: formPayee,
           description: formDescription,
@@ -104,10 +130,11 @@ export default function ExpensesPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to record expense');
+      if (!res.ok) throw new Error(data.error || 'Failed to save expense');
 
-      toast.success('Expense recorded successfully!');
+      toast.success(editingExpenseId ? 'Expense updated successfully!' : 'Expense recorded successfully!');
       setIsModalOpen(false);
+      setEditingExpenseId(null);
       // Reset form
       setFormPayee('');
       setFormDescription('');
@@ -182,7 +209,7 @@ export default function ExpensesPage() {
               <p className="text-xs text-slate-600 mt-1">Record a new outlay or voucher</p>
             </div>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenCreateModal}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -289,13 +316,24 @@ export default function ExpensesPage() {
                         ₹{e.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleDeleteExpense(e.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="Delete expense"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(e)}
+                            className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+                            title="Edit expense"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExpense(e.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                            title="Delete expense"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -306,17 +344,22 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      {/* Record Expense Modal */}
+      {/* Record / Edit Expense Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Receipt className="w-4 h-4 text-emerald-600" />
-                <h3 className="font-bold text-sm text-slate-900">Record Operational Expense</h3>
+                <h3 className="font-bold text-sm text-slate-900">
+                  {editingExpenseId ? 'Edit Expense Voucher' : 'Record Operational Expense'}
+                </h3>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingExpenseId(null);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
@@ -434,7 +477,7 @@ export default function ExpensesPage() {
                   disabled={submitting}
                   className="px-5 py-2 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {submitting ? 'Recording...' : 'Save Expense'}
+                  {submitting ? 'Saving...' : editingExpenseId ? 'Update Expense' : 'Save Expense'}
                 </button>
               </div>
             </form>

@@ -95,6 +95,68 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const authContext = await requireCommercialAccess(undefined, ['BUSINESS_OWNER', 'ACCOUNTANT']);
+    const body = await request.json();
+
+    const { id, category, payee, description, amount, paymentMethod, expenseDate, referenceNumber } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Expense ID is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.expense.findFirst({
+      where: { id, businessId: authContext.business.id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Expense not found or unauthorized' }, { status: 404 });
+    }
+
+    if (category !== undefined && !category.trim()) {
+      return NextResponse.json({ error: 'Expense category cannot be empty' }, { status: 400 });
+    }
+
+    const parsedAmount = amount !== undefined ? parseFloat(amount) : existing.amount;
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({ error: 'Valid expense amount is required' }, { status: 400 });
+    }
+
+    const validPaymentMethod = paymentMethod
+      ? Object.values(PaymentMethod).includes(paymentMethod)
+        ? paymentMethod
+        : existing.paymentMethod
+      : existing.paymentMethod;
+
+    const updated = await prisma.expense.update({
+      where: { id },
+      data: {
+        category: category !== undefined ? category.trim() : existing.category,
+        payee: payee !== undefined ? (payee?.trim() || 'General Outlay') : existing.payee,
+        notes: description !== undefined ? (description?.trim() || null) : existing.notes,
+        amount: parsedAmount,
+        paymentMethod: validPaymentMethod,
+        expenseDate: expenseDate ? new Date(expenseDate) : existing.expenseDate,
+        referenceNumber:
+          referenceNumber !== undefined ? (referenceNumber?.trim() || null) : existing.referenceNumber,
+      },
+    });
+
+    return NextResponse.json({ expense: { ...updated, description: updated.notes } });
+  } catch (error: any) {
+    const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);
+    return NextResponse.json(
+      { error: error.message || 'Failed to update expense' },
+      { status }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  return PUT(request);
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const authContext = await requireCommercialAccess(undefined, ['BUSINESS_OWNER', 'ACCOUNTANT']);

@@ -16,6 +16,8 @@ import {
   FileText,
   Smartphone,
   MessageSquare,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -32,6 +34,7 @@ interface CustomerSummary {
   billingAddress: string | null;
   gstin: string | null;
   openingBalance: number;
+  notes?: string | null;
   invoiceCount: number;
   invoiceTotal: number;
   totalOutstanding: number;
@@ -47,8 +50,10 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Add customer modal state
+  // Add / Edit customer modal state
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [waTarget, setWaTarget] = useState<WhatsAppReminderTarget | null>(null);
   const [creating, setCreating] = useState(false);
@@ -125,14 +130,68 @@ export default function CustomersPage() {
     }
   };
 
+  const resetCustomerForm = () => {
+    setEditingCustomerId(null);
+    setFormData({
+      name: '',
+      mobile: '',
+      email: '',
+      gstin: '',
+      billingAddress: '',
+      openingBalance: '0',
+      notes: '',
+    });
+  };
+
+  const handleOpenAddModal = () => {
+    resetCustomerForm();
+    setModalOpen(true);
+  };
+
+  const handleOpenEditCustomer = (c: CustomerSummary) => {
+    setEditingCustomerId(c.id);
+    setFormData({
+      name: c.name || '',
+      mobile: c.mobile || '',
+      email: c.email || '',
+      gstin: c.gstin || '',
+      billingAddress: c.billingAddress || '',
+      openingBalance: String(c.openingBalance ?? 0),
+      notes: c.notes || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleDeleteCustomer = async (c: CustomerSummary) => {
+    if (!confirm(`Delete customer "${c.name}"? Customers with existing bills, payments, or quotations cannot be deleted until those records are removed.`)) {
+      return;
+    }
+
+    setDeletingCustomerId(c.id);
+    try {
+      const res = await fetch(`/api/customers/${c.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete customer');
+      }
+      toast.success(data.message || `Customer ${c.name} deleted.`);
+      fetchCustomers(search);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete customer');
+    } finally {
+      setDeletingCustomerId(null);
+    }
+  };
+
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/customers', {
-        method: 'POST',
+      const isEditing = Boolean(editingCustomerId);
+      const res = await fetch(isEditing ? `/api/customers/${editingCustomerId}` : '/api/customers', {
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
@@ -142,23 +201,19 @@ export default function CustomersPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create customer');
+        throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} customer`);
       }
 
-      toast.success(`Customer ${data.customer.name} registered successfully!`);
+      toast.success(
+        isEditing
+          ? `Customer ${data.customer.name} updated successfully!`
+          : `Customer ${data.customer.name} registered successfully!`
+      );
       setModalOpen(false);
-      setFormData({
-        name: '',
-        mobile: '',
-        email: '',
-        gstin: '',
-        billingAddress: '',
-        openingBalance: '0',
-        notes: '',
-      });
-      fetchCustomers();
+      resetCustomerForm();
+      fetchCustomers(search);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to register customer';
+      const msg = err instanceof Error ? err.message : 'Failed to save customer';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -199,7 +254,7 @@ export default function CustomersPage() {
 
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={handleOpenAddModal}
           className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all self-start sm:self-auto cursor-pointer"
         >
           <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
@@ -284,7 +339,7 @@ export default function CustomersPage() {
             {!search && (
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={handleOpenAddModal}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
@@ -387,6 +442,23 @@ export default function CustomersPage() {
                         >
                           Khata Ledger
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCustomer(c)}
+                          className="p-1 rounded border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Edit Customer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomer(c)}
+                          disabled={deletingCustomerId === c.id}
+                          className="p-1 rounded border border-slate-200 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-40 cursor-pointer"
+                          title="Delete Customer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -397,14 +469,16 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {/* Add Customer Modal */}
+      {/* Add / Edit Customer Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in">
           <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Add Customer / Party</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  {editingCustomerId ? 'Edit Customer / Party' : 'Add Customer / Party'}
+                </h3>
               </div>
               <button
                 type="button"
@@ -523,7 +597,7 @@ export default function CustomersPage() {
                   disabled={creating}
                   className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {creating ? 'Saving...' : 'Register Customer'}
+                  {creating ? 'Saving...' : editingCustomerId ? 'Save Changes' : 'Register Customer'}
                 </button>
               </div>
             </form>

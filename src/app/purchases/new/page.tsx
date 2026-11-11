@@ -62,6 +62,8 @@ function PurchaseCreationForm() {
   const canManagePurchases = isAllowed('canManagePurchases');
 
   const preselectedSupplierId = searchParams.get('supplierId') || '';
+  const editPurchaseId = searchParams.get('edit') || '';
+  const isEditMode = Boolean(editPurchaseId);
 
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -69,11 +71,15 @@ function PurchaseCreationForm() {
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [loadingPurchase, setLoadingPurchase] = useState(false);
+  const [editPurchaseNumber, setEditPurchaseNumber] = useState('');
+  const [existingPaidAmount, setExistingPaidAmount] = useState(0);
 
   useEffect(() => {
+    if (editPurchaseId) return;
     setPurchaseDate(new Date().toISOString().split('T')[0]);
     setDueDate(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
-  }, []);
+  }, [editPurchaseId]);
   const [notes, setNotes] = useState('');
 
   const [items, setItems] = useState<PurchaseLineRow[]>([
@@ -115,6 +121,59 @@ function PurchaseCreationForm() {
     ]).catch((err) => console.error('Error loading options:', err));
   }, [canManagePurchases]);
 
+  useEffect(() => {
+    if (!canManagePurchases || !editPurchaseId) return;
+    let active = true;
+    setLoadingPurchase(true);
+    fetch(`/api/purchases/${editPurchaseId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!active) return;
+        if (!d.success || !d.purchase) {
+          throw new Error(d.error || 'Purchase bill not found.');
+        }
+        const p = d.purchase;
+        setEditPurchaseNumber(p.purchaseNumber || '');
+        setSelectedSupplierId(p.supplierId || '');
+        setSupplierInvoiceNumber(p.supplierInvoiceNumber || '');
+        setPurchaseDate(p.purchaseDate ? String(p.purchaseDate).slice(0, 10) : '');
+        setDueDate(p.dueDate ? String(p.dueDate).slice(0, 10) : '');
+        setNotes(p.notes || '');
+        setExistingPaidAmount(Number(p.paidAmount || 0));
+        if (Array.isArray(p.items) && p.items.length > 0) {
+          setItems(
+            p.items.map((it: {
+              productId?: string | null;
+              description: string;
+              quantity: number;
+              unit?: string;
+              purchaseRate: number;
+              discount?: number;
+              taxRate?: number;
+            }) => ({
+              productId: it.productId || undefined,
+              description: it.description || '',
+              quantity: Number(it.quantity) || 1,
+              unit: it.unit || 'Pcs',
+              purchaseRate: Number(it.purchaseRate) || 0,
+              discount: Number(it.discount) || 0,
+              taxRate: Number(it.taxRate) || 0,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : 'Failed to load purchase bill.');
+      })
+      .finally(() => {
+        if (active) setLoadingPurchase(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [canManagePurchases, editPurchaseId]);
+
   // Recalculate totals
   let subtotal = 0;
   let discountTotal = 0;
@@ -148,7 +207,7 @@ function PurchaseCreationForm() {
   taxTotal = round2(taxTotal);
   const total = round2(subtotal + taxTotal);
 
-  const parsedPaid = Math.max(0, parseFloat(paidAmount) || 0);
+  const parsedPaid = isEditMode ? existingPaidAmount : Math.max(0, parseFloat(paidAmount) || 0);
   const balanceDue = round2(Math.max(0, total - parsedPaid));
 
   const handleProductSelect = (index: number, productId: string) => {
@@ -245,29 +304,34 @@ function PurchaseCreationForm() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/purchases', {
-        method: 'POST',
+      const payload: Record<string, unknown> = {
+        supplierId: selectedSupplierId,
+        supplierInvoiceNumber: supplierInvoiceNumber.trim() || null,
+        purchaseDate,
+        dueDate,
+        status: targetStatus,
+        items: validItems.map((it) => ({
+          productId: it.productId || null,
+          description: it.description.trim(),
+          quantity: Number(it.quantity) || 1,
+          unit: it.unit || 'Pcs',
+          purchaseRate: Number(it.purchaseRate) || 0,
+          discount: Number(it.discount) || 0,
+          taxRate: Number(it.taxRate) || 0,
+        })),
+        notes: notes.trim() || null,
+      };
+
+      if (!isEditMode) {
+        payload.paidAmount = parsedPaid;
+        payload.paymentMethod = parsedPaid > 0 ? paymentMethod : undefined;
+        payload.paymentReference = parsedPaid > 0 ? paymentReference.trim() || null : undefined;
+      }
+
+      const res = await fetch(isEditMode ? `/api/purchases/${editPurchaseId}` : '/api/purchases', {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          supplierId: selectedSupplierId,
-          supplierInvoiceNumber: supplierInvoiceNumber.trim() || null,
-          purchaseDate,
-          dueDate,
-          status: targetStatus,
-          items: validItems.map((it) => ({
-            productId: it.productId || null,
-            description: it.description.trim(),
-            quantity: Number(it.quantity) || 1,
-            unit: it.unit || 'Pcs',
-            purchaseRate: Number(it.purchaseRate) || 0,
-            discount: Number(it.discount) || 0,
-            taxRate: Number(it.taxRate) || 0,
-          })),
-          paidAmount: parsedPaid,
-          paymentMethod: parsedPaid > 0 ? paymentMethod : undefined,
-          paymentReference: parsedPaid > 0 ? paymentReference.trim() || null : undefined,
-          notes: notes.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -276,9 +340,11 @@ function PurchaseCreationForm() {
       }
 
       toast.success(
-        targetStatus === 'RECEIVED'
-          ? 'Purchase recorded and inventory updated!'
-          : 'Purchase bill saved as draft.'
+        isEditMode
+          ? 'Purchase bill updated successfully!'
+          : targetStatus === 'RECEIVED'
+            ? 'Purchase recorded and inventory updated!'
+            : 'Purchase bill saved as draft.'
       );
       router.push(`/purchases/${data.purchase.id}`);
     } catch (err: unknown) {
@@ -316,10 +382,20 @@ function PurchaseCreationForm() {
                 Inward Purchase Bill
               </span>
             </div>
-            <h1 className="text-xl font-extrabold text-slate-900">Record Inward Purchase</h1>
+            <h1 className="text-xl font-extrabold text-slate-900">
+              {isEditMode
+                ? `Edit Purchase Bill${editPurchaseNumber ? ` (${editPurchaseNumber})` : ''}`
+                : 'Record Inward Purchase'}
+            </h1>
           </div>
         </div>
       </div>
+
+      {loadingPurchase && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 font-medium">
+          Loading purchase bill details...
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2 animate-in fade-in">
@@ -599,10 +675,12 @@ function PurchaseCreationForm() {
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <span className="font-bold text-xs text-slate-900 block">Payment Made to Vendor</span>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Amount Paid (₹)
-                </label>
+              {!isEditMode ? (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Amount Paid (₹)
+                    </label>
                 <input
                   type="number"
                   step="0.01"
@@ -645,6 +723,18 @@ function PurchaseCreationForm() {
                   </div>
                 </>
               )}
+                </>
+              ) : (
+                <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 text-[11px] text-blue-800 space-y-1">
+                  <div className="flex justify-between font-semibold">
+                    <span>Already Paid:</span>
+                    <span>₹{existingPaidAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <p className="text-blue-600 text-[10px]">
+                    Individual vendor payments can be edited or deleted directly from the purchase bill detail page.
+                  </p>
+                </div>
+              )}
 
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
                 <span className="text-slate-500">Remaining Balance:</span>
@@ -680,7 +770,11 @@ function PurchaseCreationForm() {
                 className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-xs transition-colors text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                {saving ? 'Processing...' : 'Mark as Received & Update Stock'}
+                {saving
+                  ? 'Processing...'
+                  : isEditMode
+                    ? 'Save & Mark as Received'
+                    : 'Mark as Received & Update Stock'}
               </button>
 
               <button
@@ -689,7 +783,7 @@ function PurchaseCreationForm() {
                 onClick={() => handleSubmit('DRAFT')}
                 className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-xs disabled:opacity-50"
               >
-                Save as Draft PO (No Stock Change)
+                {isEditMode ? 'Save Changes as Draft PO' : 'Save as Draft PO (No Stock Change)'}
               </button>
             </div>
           </div>
@@ -698,7 +792,7 @@ function PurchaseCreationForm() {
 
       {/* Add Supplier Modal */}
       {addSupplierModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 animate-in zoom-in-95 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
               <h3 className="font-extrabold text-sm text-slate-900">Add Supplier Shortcut</h3>

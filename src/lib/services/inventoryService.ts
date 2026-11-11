@@ -313,6 +313,25 @@ export async function archiveProduct(businessId: string, productId: string, isAc
 }
 
 /**
+ * Permanently deletes a product (cascades StockMovement entries; line items keep historical snapshots with productId=null).
+ */
+export async function deleteProduct(businessId: string, productId: string) {
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, businessId },
+  });
+
+  if (!existing) {
+    throw new Error('Product not found or unauthorized.');
+  }
+
+  await prisma.product.delete({
+    where: { id: productId },
+  });
+
+  return { deletedId: productId, name: existing.name };
+}
+
+/**
  * Adjust product stock manually with an audit ledger entry
  */
 export async function adjustStock(

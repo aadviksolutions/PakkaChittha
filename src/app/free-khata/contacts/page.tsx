@@ -14,8 +14,10 @@ import {
   Sparkles,
   UserPlus,
   Trash2,
+  Edit2,
 } from 'lucide-react';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
+import { ContactEditModal, EditableKhataContact } from '@/components/free-khata/ContactEditModal';
 import { formatDate } from '@/lib/services/khataService';
 import { useTranslation } from '@/i18n/context';
 
@@ -56,6 +58,8 @@ function ContactsContent() {
   // WhatsApp Modal
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [waTarget, setWaTarget] = useState<WhatsAppReminderTarget | null>(null);
+  const [editingContact, setEditingContact] = useState<EditableKhataContact | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -127,6 +131,28 @@ function ContactsContent() {
       type: c.amountToReceive >= c.amountToPay ? 'GAVE' : 'RECEIVED',
     });
     setWaModalOpen(true);
+  };
+
+  const handleDeleteContact = async (c: ContactItem) => {
+    const msg = isHi
+      ? `क्या आप संपर्क "${c.name}" और उनके सभी ${c.transactionCount} लेन-देन स्थायी रूप से हटाना चाहते हैं?`
+      : `Permanently delete contact "${c.name}" and all ${c.transactionCount} linked transactions?`;
+    if (!confirm(msg)) return;
+    setDeletingContactId(c.id);
+    try {
+      const res = await fetch(`/api/free-khata/contacts/${c.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete contact');
+      }
+      fetchContacts();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete contact');
+    } finally {
+      setDeletingContactId(null);
+    }
   };
 
   const filtered = contacts.filter((c) => {
@@ -277,12 +303,31 @@ function ContactsContent() {
                       <button
                         type="button"
                         onClick={() => handleOpenWhatsApp(c)}
-                        title="Send WhatsApp Reminder"
+                        title={isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}
                         className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                       >
                         <MessageSquare className="w-4 h-4" />
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingContact(c)}
+                      title={isHi ? 'संपर्क संपादित करें' : 'Edit Contact'}
+                      className="p-2 text-slate-500 hover:text-[#071F38] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={deletingContactId === c.id}
+                      onClick={() => handleDeleteContact(c)}
+                      title={isHi ? 'संपर्क हटाएं' : 'Delete Contact'}
+                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
 
                     <Link
                       href={`/free-khata/person/${c.id}`}
@@ -387,6 +432,18 @@ function ContactsContent() {
             setWaTarget(null);
           }}
           target={waTarget}
+        />
+      )}
+
+      {editingContact && (
+        <ContactEditModal
+          isOpen={Boolean(editingContact)}
+          onClose={() => setEditingContact(null)}
+          onSuccess={() => {
+            setEditingContact(null);
+            fetchContacts();
+          }}
+          contact={editingContact}
         />
       )}
     </div>

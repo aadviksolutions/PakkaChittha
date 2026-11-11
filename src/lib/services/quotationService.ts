@@ -376,10 +376,6 @@ export async function deleteQuotation(businessId: string, id: string) {
     throw new Error('Quotation not found.');
   }
 
-  if (existing.status === QuotationStatus.CONVERTED) {
-    throw new Error('Cannot delete a converted quotation.');
-  }
-
   return prisma.quotation.delete({
     where: { id },
   });

@@ -1392,6 +1392,86 @@ export async function createHouseholdSettlement(
 }
 
 /**
+ * Updates an existing household settlement while preventing over-settlement.
+ */
+export async function updateHouseholdSettlement(
+  householdId: string,
+  settlementId: string,
+  data: {
+    payerMemberId?: string;
+    receiverMemberId?: string;
+    amount?: number;
+    date?: string | Date;
+    paymentMethod?: PaymentMethod;
+    notes?: string | null;
+  }
+) {
+  const existing = await prisma.householdSettlement.findUnique({
+    where: { id: settlementId },
+  });
+
+  if (!existing || existing.householdId !== householdId) {
+    throw new Error('Settlement record not found in this household.');
+  }
+
+  const payerMemberId = data.payerMemberId || existing.payerMemberId;
+  const receiverMemberId = data.receiverMemberId || existing.receiverMemberId;
+
+  if (payerMemberId === receiverMemberId) {
+    throw new Error('Payer and receiver must be different family members.');
+  }
+
+  const rawAmount = data.amount !== undefined ? Number(data.amount) : existing.amount;
+  if (isNaN(rawAmount) || rawAmount <= 0 || !isFinite(rawAmount)) {
+    throw new Error('Please enter a valid positive settlement amount.');
+  }
+  const cleanAmount = Math.round(rawAmount * 100) / 100;
+
+  const balances = await getHouseholdBalances(householdId);
+  const payerBalance = balances.members.find((m) => m.memberId === payerMemberId);
+  if (!payerBalance) {
+    throw new Error('Paying member does not belong to this household.');
+  }
+  const receiverExists = balances.members.some((m) => m.memberId === receiverMemberId);
+  if (!receiverExists) {
+    throw new Error('Receiving member does not belong to this household.');
+  }
+
+  const netBeforeSettlement =
+    payerBalance.netBalance -
+    (payerMemberId === existing.payerMemberId ? existing.amount : 0) +
+    (payerMemberId === existing.receiverMemberId ? existing.amount : 0);
+
+  if (netBeforeSettlement >= 0) {
+    throw new Error(
+      `${payerBalance.name} currently has no outstanding debt to settle.`
+    );
+  }
+  const maxDebt = Math.abs(netBeforeSettlement);
+  if (cleanAmount > maxDebt + 0.01) {
+    throw new Error(
+      `Settlement amount ₹${cleanAmount.toFixed(2)} exceeds ${payerBalance.name}'s total outstanding debt of ₹${maxDebt.toFixed(2)}.`
+    );
+  }
+
+  return await prisma.householdSettlement.update({
+    where: { id: settlementId },
+    data: {
+      payerMemberId,
+      receiverMemberId,
+      amount: cleanAmount,
+      date: data.date ? new Date(data.date) : existing.date,
+      paymentMethod: data.paymentMethod || existing.paymentMethod,
+      notes: data.notes !== undefined ? data.notes?.trim() || null : existing.notes,
+    },
+    include: {
+      payerMember: { include: { user: { select: { name: true } } } },
+      receiverMember: { include: { user: { select: { name: true } } } },
+    },
+  });
+}
+
+/**
  * Deletes a recorded settlement.
  */
 export async function deleteHouseholdSettlement(householdId: string, settlementId: string) {

@@ -17,6 +17,8 @@ import {
   CheckCheck,
   RefreshCw,
   Share2,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -47,6 +49,7 @@ export default function QuotationsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchQuotations = useCallback(async () => {
     setLoading(true);
@@ -90,6 +93,24 @@ export default function QuotationsPage() {
       toast.error(err instanceof Error ? err.message : 'Conversion failed');
     } finally {
       setConvertingId(null);
+    }
+  };
+
+  const handleDeleteQuotation = async (id: string, quotationNumber: string) => {
+    if (!confirm(`Delete quotation ${quotationNumber}? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(id);
+      const res = await fetch(`/api/quotations/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete quotation');
+      }
+      toast.success(`Quotation ${quotationNumber} deleted successfully.`);
+      fetchQuotations();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete quotation');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -341,6 +362,24 @@ export default function QuotationsPage() {
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
+                        {q.status !== 'CONVERTED' && (
+                          <Link
+                            href={`/quotations/new?edit=${q.id}`}
+                            className="p-1.5 text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Quotation"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuotation(q.id, q.quotationNumber)}
+                          disabled={deletingId === q.id}
+                          className="p-1.5 text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                          title="Delete Quotation"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

@@ -16,6 +16,8 @@ import {
   X,
   FileText,
   MessageSquare,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { WhatsAppShareModal } from '@/components/whatsapp/WhatsAppShareModal';
 import { useToast } from '@/context/ToastContext';
@@ -107,10 +109,13 @@ function InvoiceDetailContent({
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [paymentRef, setPaymentRef] = useState('');
   const [paying, setPaying] = useState(false);
+  const [deletingInvoice, setDeletingInvoice] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   // Void modal state
   const [voidModalOpen, setVoidModalOpen] = useState(false);
@@ -158,6 +163,69 @@ function InvoiceDetailContent({
     }
   }, [invoice, searchParams]);
 
+  const handleOpenAddPayment = () => {
+    if (!invoice) return;
+    setEditingPaymentId(null);
+    setPaymentAmount(invoice.balanceDue > 0 ? invoice.balanceDue.toString() : '');
+    setPaymentMethod('UPI');
+    setPaymentRef('');
+    setPaymentModalOpen(true);
+  };
+
+  const handleOpenEditPayment = (p: InvoiceDetail['payments'][number]) => {
+    setEditingPaymentId(p.id);
+    setPaymentAmount(String(p.amount));
+    setPaymentMethod(p.paymentMethod || 'UPI');
+    setPaymentRef(p.referenceNumber || '');
+    setPaymentModalOpen(true);
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!invoice) return;
+    if (!confirm('Delete this payment record? Invoice balance due will be recalculated.')) return;
+    setDeletingPaymentId(paymentId);
+    try {
+      const res = await fetch(
+        `/api/invoices/${invoice.id}/payments?paymentId=${encodeURIComponent(paymentId)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete payment');
+      }
+      toast.success('Payment deleted and invoice balance updated.');
+      fetchInvoice();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete payment');
+    } finally {
+      setDeletingPaymentId(null);
+    }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!invoice) return;
+    if (
+      !confirm(
+        `Permanently delete invoice ${invoice.invoiceNumber}? Stock deductions will be restored and linked payments removed.`
+      )
+    ) {
+      return;
+    }
+    setDeletingInvoice(true);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete invoice');
+      }
+      toast.success(`Invoice ${invoice.invoiceNumber} deleted.`);
+      router.push('/invoices');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete invoice');
+      setDeletingInvoice(false);
+    }
+  };
+
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invoice) return;
@@ -165,9 +233,10 @@ function InvoiceDetailContent({
 
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/payments`, {
-        method: 'POST',
+        method: editingPaymentId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(editingPaymentId ? { paymentId: editingPaymentId } : {}),
           amount: parseFloat(paymentAmount),
           paymentMethod,
           referenceNumber: paymentRef,
@@ -175,14 +244,19 @@ function InvoiceDetailContent({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to record payment');
+        throw new Error(data.error || 'Failed to save payment');
       }
-      toast.success(`Payment of ₹${paymentAmount} recorded successfully!`);
+      toast.success(
+        editingPaymentId
+          ? 'Payment updated successfully!'
+          : `Payment of ₹${paymentAmount} recorded successfully!`
+      );
       setPaymentModalOpen(false);
+      setEditingPaymentId(null);
       setPaymentRef('');
       fetchInvoice();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to record payment');
+      toast.error(err instanceof Error ? err.message : 'Failed to save payment');
     } finally {
       setPaying(false);
     }
@@ -311,7 +385,7 @@ function InvoiceDetailContent({
           {!isCancelled && invoice.balanceDue > 0 && (
             <button
               type="button"
-              onClick={() => setPaymentModalOpen(true)}
+              onClick={handleOpenAddPayment}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors cursor-pointer"
             >
               <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
@@ -320,15 +394,35 @@ function InvoiceDetailContent({
           )}
 
           {!isCancelled && (
+            <Link
+              href={`/invoices/new?edit=${invoice.id}`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 shadow-2xs transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </Link>
+          )}
+
+          {!isCancelled && (
             <button
               type="button"
               onClick={() => setVoidModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg border border-amber-200 transition-colors cursor-pointer"
             >
               <Ban className="w-3.5 h-3.5" />
               <span>{t('invoices.cancelInvoice')}</span>
             </button>
           )}
+
+          <button
+            type="button"
+            disabled={deletingInvoice}
+            onClick={handleDeleteInvoice}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{deletingInvoice ? 'Deleting...' : 'Delete'}</span>
+          </button>
         </div>
       </div>
 
@@ -563,7 +657,7 @@ function InvoiceDetailContent({
           {!isCancelled && invoice.balanceDue > 0 && (
             <button
               type="button"
-              onClick={() => setPaymentModalOpen(true)}
+              onClick={handleOpenAddPayment}
               className="text-[11px] font-semibold text-emerald-700 hover:underline cursor-pointer"
             >
               + Record Payment
@@ -589,7 +683,7 @@ function InvoiceDetailContent({
                     {p.notes && ` • ${p.notes}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setSelectedPaymentForShare({ id: p.id, amount: p.amount })}
@@ -598,7 +692,26 @@ function InvoiceDetailContent({
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                   </button>
-                  <span className="font-bold text-emerald-700 text-xs tabular-nums">
+                  {!isCancelled && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditPayment(p)}
+                      className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                      title="Edit Payment"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={deletingPaymentId === p.id}
+                    onClick={() => handleDeletePayment(p.id)}
+                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer disabled:opacity-50"
+                    title="Delete Payment"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="font-bold text-emerald-700 text-xs tabular-nums ml-1">
                     +₹{p.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -610,16 +723,21 @@ function InvoiceDetailContent({
 
       {/* Record Payment Modal */}
       {paymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 animate-in fade-in">
           <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">Record Payment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  {editingPaymentId ? 'Edit Payment Record' : 'Record Payment'}
+                </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setPaymentModalOpen(false)}
+                onClick={() => {
+                  setPaymentModalOpen(false);
+                  setEditingPaymentId(null);
+                }}
                 className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -629,17 +747,19 @@ function InvoiceDetailContent({
             <form onSubmit={handleRecordPayment} className="p-5 space-y-3.5 text-xs">
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex justify-between text-slate-600 mb-1">
-                  <span>Balance Due:</span>
-                  <span className="font-mono font-bold text-amber-800">₹{invoice.balanceDue.toFixed(2)}</span>
+                  <span>{editingPaymentId ? 'Invoice Total:' : 'Balance Due:'}</span>
+                  <span className="font-mono font-bold text-amber-800">
+                    ₹{(editingPaymentId ? invoice.total : invoice.balanceDue).toFixed(2)}
+                  </span>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Amount to Collect (₹) *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Amount (₹) *</label>
                 <input
                   type="number"
                   step="0.01"
-                  max={invoice.balanceDue}
+                  max={editingPaymentId ? undefined : invoice.balanceDue}
                   min="0.01"
                   required
                   value={paymentAmount}
@@ -687,7 +807,7 @@ function InvoiceDetailContent({
                   disabled={paying}
                   className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg disabled:opacity-50 cursor-pointer"
                 >
-                  {paying ? 'Recording...' : 'Record Payment'}
+                  {paying ? 'Saving...' : editingPaymentId ? 'Update Payment' : 'Record Payment'}
                 </button>
               </div>
             </form>
@@ -697,7 +817,7 @@ function InvoiceDetailContent({
 
       {/* Cancel / Void Modal */}
       {voidModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 animate-in fade-in">
           <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-rose-50/50">
               <div className="flex items-center gap-2">

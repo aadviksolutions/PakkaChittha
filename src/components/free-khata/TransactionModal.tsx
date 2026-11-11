@@ -37,6 +37,22 @@ export type KhataTransactionSubtype =
   | 'LENT_REPAY'      // पहले दी गई रकम वापस मिली (Receiving back lent money)
   | 'RECEIVED_NEW';   // मैंने नई रकम ली (Borrowed new money)
 
+export interface EditingKhataTransaction {
+  id: string;
+  contactId: string;
+  contactName: string;
+  contactPhone?: string | null;
+  type: 'GAVE' | 'RECEIVED';
+  amount: number;
+  settledAmount: number;
+  date: string | Date;
+  dueDate?: string | Date | null;
+  description?: string | null;
+  paymentMode: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
+}
+
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -45,6 +61,7 @@ interface TransactionModalProps {
   initialSubtype?: KhataTransactionSubtype | null;
   preselectedContact?: ContactOption | null;
   existingContacts?: ContactOption[];
+  editingTransaction?: EditingKhataTransaction | null;
 }
 
 export function TransactionModal({
@@ -55,6 +72,7 @@ export function TransactionModal({
   initialSubtype = null,
   preselectedContact = null,
   existingContacts = [],
+  editingTransaction = null,
 }: TransactionModalProps) {
   const { t, locale } = useTranslation();
   const isHi = locale === 'hi';
@@ -86,6 +104,43 @@ export function TransactionModal({
   useEffect(() => {
     if (isOpen) {
       setError(null);
+      if (editingTransaction) {
+        setSubtype(editingTransaction.type === 'GAVE' ? 'GAVE_NEW' : 'RECEIVED_NEW');
+        setSelectedContactId(editingTransaction.contactId);
+        setPersonName(editingTransaction.contactName);
+        setPhone(editingTransaction.contactPhone || '');
+        setAmount(String(editingTransaction.amount));
+        setDate(new Date(editingTransaction.date).toISOString().split('T')[0]);
+        setDueDate(
+          editingTransaction.dueDate
+            ? new Date(editingTransaction.dueDate).toISOString().split('T')[0]
+            : ''
+        );
+        setDescription(editingTransaction.description || '');
+        setPaymentMode(editingTransaction.paymentMode || 'CASH');
+        setPaymentRef(editingTransaction.paymentRef || '');
+        let parsedUpi = '';
+        let parsedBank = '';
+        let parsedCheque = '';
+        let parsedOther = '';
+        if (editingTransaction.paymentDetails) {
+          try {
+            const det = JSON.parse(editingTransaction.paymentDetails);
+            if (det?.app) parsedUpi = det.app;
+            if (det?.bank) parsedBank = det.bank;
+            if (det?.chequeDate) parsedCheque = det.chequeDate;
+            if (det?.note) parsedOther = det.note;
+          } catch {
+            parsedOther = editingTransaction.paymentDetails;
+          }
+        }
+        setUpiApp(parsedUpi);
+        setBankName(parsedBank);
+        setChequeDate(parsedCheque);
+        setOtherModeDetails(parsedOther);
+        return;
+      }
+
       setAmount('');
       setDescription('');
       setDueDate('');
@@ -117,7 +172,7 @@ export function TransactionModal({
         setPhone('');
       }
     }
-  }, [isOpen, primaryIntent, initialSubtype, preselectedContact]);
+  }, [isOpen, primaryIntent, initialSubtype, preselectedContact, editingTransaction]);
 
   if (!isOpen) return null;
 
@@ -210,7 +265,34 @@ export function TransactionModal({
         paymentDetailsPayload = JSON.stringify({ note: otherModeDetails.trim() });
       }
 
-      if (isRepayment) {
+      if (editingTransaction) {
+        if (parsedAmount < editingTransaction.settledAmount) {
+          throw new Error(
+            isHi
+              ? `रकम पहले से चुकता ₹${editingTransaction.settledAmount} से कम नहीं हो सकती।`
+              : `Amount cannot be less than already settled ₹${editingTransaction.settledAmount}.`
+          );
+        }
+
+        const res = await fetch(`/api/free-khata/transactions/${editingTransaction.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: parsedAmount,
+            date: new Date(date).toISOString(),
+            dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+            description: description.trim() || null,
+            paymentMode,
+            paymentRef: paymentRef.trim() || null,
+            paymentDetails: paymentDetailsPayload,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Failed to update transaction.');
+        }
+      } else if (isRepayment) {
         // Record repayment
         const targetType = subtype === 'BORROWED_REPAY' ? 'RECEIVED' : 'GAVE';
         const payload = {
@@ -453,18 +535,32 @@ export function TransactionModal({
                 }`}
             >
               <div>
-                <button
-                  type="button"
-                  onClick={() => setSubtype(null)}
-                  className="text-[10.5px] font-bold text-slate-500 hover:underline mb-0.5 block cursor-pointer"
-                >
-                  ← {isHi ? 'प्रकार बदलें' : 'Change Type'}
-                </button>
+                {!editingTransaction && (
+                  <button
+                    type="button"
+                    onClick={() => setSubtype(null)}
+                    className="text-[10.5px] font-bold text-slate-500 hover:underline mb-0.5 block cursor-pointer"
+                  >
+                    ← {isHi ? 'प्रकार बदलें' : 'Change Type'}
+                  </button>
+                )}
                 <h3 className="text-base sm:text-lg font-black text-[#071F38]">
-                  {subtype === 'GAVE_NEW' && (isHi ? 'मैंने नई रकम दी' : 'Gave New Amount')}
-                  {subtype === 'BORROWED_REPAY' && (isHi ? 'पहले ली गई रकम वापस की' : 'Repaid Borrowed Amount')}
-                  {subtype === 'LENT_REPAY' && (isHi ? 'पहले दी गई रकम वापस मिली' : 'Received Lent Money Back')}
-                  {subtype === 'RECEIVED_NEW' && (isHi ? 'मैंने नई रकम ली' : 'Took New Amount')}
+                  {editingTransaction
+                    ? editingTransaction.type === 'GAVE'
+                      ? isHi
+                        ? 'दी गई रकम संपादित करें (Edit)'
+                        : 'Edit Given Entry'
+                      : isHi
+                      ? 'ली गई रकम संपादित करें (Edit)'
+                      : 'Edit Taken Entry'
+                    : (
+                      <>
+                        {subtype === 'GAVE_NEW' && (isHi ? 'मैंने नई रकम दी' : 'Gave New Amount')}
+                        {subtype === 'BORROWED_REPAY' && (isHi ? 'पहले ली गई रकम वापस की' : 'Repaid Borrowed Amount')}
+                        {subtype === 'LENT_REPAY' && (isHi ? 'पहले दी गई रकम वापस मिली' : 'Received Lent Money Back')}
+                        {subtype === 'RECEIVED_NEW' && (isHi ? 'मैंने नई रकम ली' : 'Took New Amount')}
+                      </>
+                    )}
                 </h3>
               </div>
               <button
@@ -503,13 +599,15 @@ export function TransactionModal({
                   )}
                 </div>
 
-                {preselectedContact ? (
+                {editingTransaction || preselectedContact ? (
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div>
-                      <strong className="text-xs text-slate-800">{preselectedContact.name}</strong>
-                      {preselectedContact.phone && (
+                      <strong className="text-xs text-slate-800">
+                        {editingTransaction ? editingTransaction.contactName : preselectedContact?.name}
+                      </strong>
+                      {(editingTransaction?.contactPhone || preselectedContact?.phone) && (
                         <span className="text-[11px] text-slate-500 block">
-                          {preselectedContact.phone}
+                          {editingTransaction ? editingTransaction.contactPhone : preselectedContact?.phone}
                         </span>
                       )}
                     </div>
@@ -840,6 +938,8 @@ export function TransactionModal({
               >
                 {loading ? (
                   <span>{isHi ? 'सहेजा जा रहा है...' : 'Saving...'}</span>
+                ) : editingTransaction ? (
+                  <span>{isHi ? 'अपडेट सहेजें' : 'Update Transaction'}</span>
                 ) : (
                   <span>{isHi ? 'नया हिसाब जोड़ें' : 'Save Transaction'}</span>
                 )}

@@ -18,6 +18,8 @@ import {
   FileText,
   X,
   RefreshCw,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 
@@ -90,10 +92,13 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
 
   // Payment Modal
   const [payModalOpen, setPayModalOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
   const [paymentRef, setPaymentRef] = useState('');
   const [paying, setPaying] = useState(false);
+  const [deletingPurchase, setDeletingPurchase] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   // Void Modal
   const [voidModalOpen, setVoidModalOpen] = useState(false);
@@ -147,34 +152,102 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
     }
   };
 
+  const handleOpenEditPayment = (p: SupplierPaymentItem) => {
+    setEditingPaymentId(p.id);
+    setPayAmount(String(p.amount));
+    setPaymentMethod(p.paymentMethod || 'BANK_TRANSFER');
+    setPaymentRef(p.referenceNumber || '');
+    setPayModalOpen(true);
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Delete this vendor payment? The bill balance and status will be recalculated automatically.')) {
+      return;
+    }
+
+    setDeletingPaymentId(paymentId);
+    try {
+      const res = await fetch(`/api/purchases/${id}/payments?paymentId=${encodeURIComponent(paymentId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete payment.');
+      }
+      toast.success('Payment deleted successfully.');
+      fetchPurchase();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting payment');
+    } finally {
+      setDeletingPaymentId(null);
+    }
+  };
+
+  const handleDeletePurchase = async () => {
+    if (!purchase) return;
+    if (
+      !confirm(
+        `Delete purchase bill ${purchase.purchaseNumber}? This will permanently delete the purchase, its line items and payments, and reverse stock if received.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingPurchase(true);
+    try {
+      const res = await fetch(`/api/purchases/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete purchase bill.');
+      }
+      toast.success(data.message || 'Purchase bill deleted.');
+      router.push('/purchases');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting purchase bill');
+    } finally {
+      setDeletingPurchase(false);
+    }
+  };
+
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!payAmount) return;
 
     setPaying(true);
     try {
+      const isEditing = Boolean(editingPaymentId);
       const res = await fetch(`/api/purchases/${id}/payments`, {
-        method: 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: parseFloat(payAmount),
-          paymentMethod,
-          referenceNumber: paymentRef.trim() || null,
-          idempotencyKey: `pay-bill-${id}-${Date.now()}`,
-        }),
+        body: JSON.stringify(
+          isEditing
+            ? {
+                paymentId: editingPaymentId,
+                amount: parseFloat(payAmount),
+                paymentMethod,
+                referenceNumber: paymentRef.trim() || null,
+              }
+            : {
+                amount: parseFloat(payAmount),
+                paymentMethod,
+                referenceNumber: paymentRef.trim() || null,
+                idempotencyKey: `pay-bill-${id}-${Date.now()}`,
+              }
+        ),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to record payment.');
+        throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'record'} payment.`);
       }
 
       setPayModalOpen(false);
+      setEditingPaymentId(null);
       setPaymentRef('');
-      toast.success('Payment recorded successfully.');
+      toast.success(isEditing ? 'Payment updated successfully.' : 'Payment recorded successfully.');
       fetchPurchase();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error recording payment');
+      toast.error(err instanceof Error ? err.message : 'Error saving payment');
     } finally {
       setPaying(false);
     }
@@ -277,7 +350,7 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {purchase.status === 'DRAFT' && (
             <button
               onClick={handleReceiveGoods}
@@ -291,7 +364,10 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
           {purchase.status !== 'CANCELLED' && purchase.balanceDue > 0 && (
             <button
               onClick={() => {
+                setEditingPaymentId(null);
                 setPayAmount(String(purchase.balanceDue));
+                setPaymentMethod('BANK_TRANSFER');
+                setPaymentRef('');
                 setPayModalOpen(true);
               }}
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white hover:bg-blue-500 text-xs font-semibold rounded-xl shadow-xs transition-colors"
@@ -302,17 +378,36 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
           )}
 
           {purchase.status !== 'CANCELLED' && (
+            <Link
+              href={`/purchases/new?edit=${purchase.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-600 text-xs font-semibold rounded-xl transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              Edit Bill
+            </Link>
+          )}
+
+          {purchase.status !== 'CANCELLED' && (
             <button
               onClick={() => {
                 setVoidReason('');
                 setVoidModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-rose-600 text-xs font-semibold rounded-xl transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-amber-50 hover:text-amber-600 text-xs font-semibold rounded-xl transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               Void Bill
             </button>
           )}
+
+          <button
+            onClick={handleDeletePurchase}
+            disabled={deletingPurchase}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {deletingPurchase ? 'Deleting...' : 'Delete Bill'}
+          </button>
         </div>
       </div>
 
@@ -529,6 +624,7 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
                   <th className="py-3 px-4">Payment Method</th>
                   <th className="py-3 px-4">UTR / Cheque Ref</th>
                   <th className="py-3 px-4">Notes</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -551,6 +647,25 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
                     </td>
                     <td className="py-3 px-4 font-mono text-slate-500">{p.referenceNumber || '-'}</td>
                     <td className="py-3 px-4 text-slate-500">{p.notes || '-'}</td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditPayment(p)}
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
+                          title="Edit Payment"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePayment(p.id)}
+                          disabled={deletingPaymentId === p.id}
+                          className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors disabled:opacity-40"
+                          title="Delete Payment"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -561,11 +676,13 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
 
       {/* Payment Modal */}
       {payModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="font-extrabold text-base text-slate-900">Record Vendor Payment</h3>
+                <h3 className="font-extrabold text-base text-slate-900">
+                  {editingPaymentId ? 'Edit Vendor Payment' : 'Record Vendor Payment'}
+                </h3>
                 <p className="text-xs text-slate-500">Bill: {purchase.purchaseNumber}</p>
               </div>
               <button
@@ -638,7 +755,7 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
                   disabled={paying}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-500 disabled:opacity-50"
                 >
-                  {paying ? 'Recording...' : 'Confirm Payment'}
+                  {paying ? 'Saving...' : editingPaymentId ? 'Update Payment' : 'Confirm Payment'}
                 </button>
               </div>
             </form>
@@ -648,7 +765,7 @@ function PurchaseDetailContent({ params }: { params: Promise<{ id: string }> }) 
 
       {/* Void Modal */}
       {voidModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 text-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>

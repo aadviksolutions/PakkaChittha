@@ -29,10 +29,17 @@ import {
   Building,
   QrCode,
   FileSpreadsheet,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
-import { TransactionModal, ContactOption } from '@/components/free-khata/TransactionModal';
+import {
+  TransactionModal,
+  ContactOption,
+  EditingKhataTransaction,
+} from '@/components/free-khata/TransactionModal';
 import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
+import { ContactEditModal, EditableKhataContact } from '@/components/free-khata/ContactEditModal';
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
 import { useTranslation } from '@/i18n/context';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
@@ -155,6 +162,9 @@ function PersonalKhataDashboardContent() {
   // Modals state
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txPrimaryIntent, setTxPrimaryIntent] = useState<'GAVE' | 'RECEIVED'>('GAVE');
+  const [editingTx, setEditingTx] = useState<EditingKhataTransaction | null>(null);
+  const [editingContact, setEditingContact] = useState<EditableKhataContact | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [repayModalOpen, setRepayModalOpen] = useState(false);
   const [repayTarget, setRepayTarget] = useState<RepaymentTransactionTarget | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -183,13 +193,79 @@ function PersonalKhataDashboardContent() {
 
   // Primary Action Button Handlers
   const handleOpenGave = () => {
+    setEditingTx(null);
     setTxPrimaryIntent('GAVE');
     setTxModalOpen(true);
   };
 
   const handleOpenReceived = () => {
+    setEditingTx(null);
     setTxPrimaryIntent('RECEIVED');
     setTxModalOpen(true);
+  };
+
+  const handleOpenEditTx = (tx: KhataTransactionItem) => {
+    setEditingTx({
+      id: tx.id,
+      contactId: tx.contactId,
+      contactName: tx.contactName,
+      contactPhone: tx.contactPhone,
+      type: tx.type,
+      amount: tx.amount,
+      settledAmount: tx.settledAmount,
+      date: tx.date,
+      dueDate: tx.dueDate,
+      description: tx.description,
+      paymentMode: tx.paymentMode,
+      paymentRef: tx.paymentRef,
+      paymentDetails: tx.paymentDetails,
+    });
+    setTxPrimaryIntent(tx.type);
+    setTxModalOpen(true);
+  };
+
+  const handleDeleteTx = async (tx: KhataTransactionItem) => {
+    const msg = isHi
+      ? `क्या आप ₹${tx.amount.toLocaleString('en-IN')} का यह हिसाब (${tx.contactName}) हटाना चाहते हैं? इससे जुड़ी वापसी एंट्री भी हट जाएंगी।`
+      : `Delete ₹${tx.amount.toLocaleString('en-IN')} transaction for ${tx.contactName}? Linked repayments will also be deleted.`;
+    if (!confirm(msg)) return;
+    setDeletingId(tx.id);
+    try {
+      const res = await fetch(`/api/free-khata/transactions/${tx.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete transaction');
+      }
+      fetchDashboardData();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete transaction');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteContact = async (c: KhataContactSummary) => {
+    const msg = isHi
+      ? `क्या आप संपर्क "${c.name}" और उनके सभी ${c.transactionCount} लेन-देन स्थायी रूप से हटाना चाहते हैं?`
+      : `Permanently delete contact "${c.name}" and all ${c.transactionCount} linked transactions?`;
+    if (!confirm(msg)) return;
+    setDeletingId(c.id);
+    try {
+      const res = await fetch(`/api/free-khata/contacts/${c.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete contact');
+      }
+      fetchDashboardData();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete contact');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleOpenRepay = (tx: KhataTransactionItem) => {
@@ -766,6 +842,23 @@ function PersonalKhataDashboardContent() {
                             <span className="hidden sm:inline text-[10.5px]">Reminder</span>
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setEditingContact(c)}
+                          title={isHi ? 'संपर्क संपादित करें' : 'Edit Contact'}
+                          className="p-1.5 bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingId === c.id}
+                          onClick={() => handleDeleteContact(c)}
+                          title={isHi ? 'संपर्क हटाएं' : 'Delete Contact'}
+                          className="p-1.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                         <span className="text-[10px] text-slate-400">
                           {c.transactionCount} {isHi ? 'लेन-देन' : 'entries'}
                         </span>
@@ -911,6 +1004,23 @@ function PersonalKhataDashboardContent() {
                             {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditTx(tx)}
+                          title={isHi ? 'संपादित करें' : 'Edit Entry'}
+                          className="p-1 text-slate-500 hover:text-[#071F38] hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingId === tx.id}
+                          onClick={() => handleDeleteTx(tx)}
+                          title={isHi ? 'हटाएं' : 'Delete Entry'}
+                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md cursor-pointer transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -971,10 +1081,29 @@ function PersonalKhataDashboardContent() {
       {txModalOpen && (
         <TransactionModal
           isOpen={txModalOpen}
-          onClose={() => setTxModalOpen(false)}
-          onSuccess={fetchDashboardData}
+          onClose={() => {
+            setTxModalOpen(false);
+            setEditingTx(null);
+          }}
+          onSuccess={() => {
+            setEditingTx(null);
+            fetchDashboardData();
+          }}
           primaryIntent={txPrimaryIntent}
+          editingTransaction={editingTx}
           existingContacts={existingContacts}
+        />
+      )}
+
+      {editingContact && (
+        <ContactEditModal
+          isOpen={Boolean(editingContact)}
+          onClose={() => setEditingContact(null)}
+          onSuccess={() => {
+            setEditingContact(null);
+            fetchDashboardData();
+          }}
+          contact={editingContact}
         />
       )}
 

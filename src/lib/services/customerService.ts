@@ -232,3 +232,38 @@ export async function updateCustomer(
     },
   });
 }
+
+/**
+ * Permanently deletes a customer if no linked invoices, payments, or quotations exist.
+ */
+export async function deleteCustomer(businessId: string, customerId: string) {
+  const existing = await prisma.customer.findFirst({
+    where: { id: customerId, businessId },
+  });
+
+  if (!existing) {
+    throw new Error('Customer not found or unauthorized.');
+  }
+
+  const [invoiceCount, paymentCount, quotationCount] = await Promise.all([
+    prisma.invoice.count({ where: { businessId, customerId } }),
+    prisma.payment.count({ where: { businessId, customerId } }),
+    prisma.quotation.count({ where: { businessId, customerId } }),
+  ]);
+
+  if (invoiceCount > 0 || paymentCount > 0 || quotationCount > 0) {
+    const linked: string[] = [];
+    if (invoiceCount > 0) linked.push(`${invoiceCount} invoice(s)`);
+    if (paymentCount > 0) linked.push(`${paymentCount} payment(s)`);
+    if (quotationCount > 0) linked.push(`${quotationCount} quotation(s)`);
+    throw new Error(
+      `Cannot delete "${existing.name}" because it has linked ${linked.join(', ')}. Delete those records first.`
+    );
+  }
+
+  await prisma.customer.delete({
+    where: { id: customerId },
+  });
+
+  return { deletedId: customerId, name: existing.name };
+}

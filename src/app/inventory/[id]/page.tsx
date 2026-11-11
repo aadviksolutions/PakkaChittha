@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Archive,
   Edit,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
@@ -84,6 +85,7 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
     description: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState(false);
 
   const fetchProduct = useCallback(async () => {
     setLoading(true);
@@ -214,6 +216,32 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!product) return;
+    if (
+      !confirm(
+        `Delete product "${product.name}"? This removes the product and its stock movement ledger while keeping past invoice/purchase snapshots.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingProduct(true);
+    try {
+      const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete product.');
+      }
+      toast.success(data.message || 'Product deleted successfully');
+      router.push('/inventory');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting product');
+    } finally {
+      setDeletingProduct(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-12 text-center text-slate-400 text-xs">
@@ -308,6 +336,15 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
           >
             <Archive className="w-3.5 h-3.5" />
             {product.isActive ? 'Archive' : 'Restore'}
+          </button>
+
+          <button
+            onClick={handleDeleteProduct}
+            disabled={deletingProduct}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-xl transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {deletingProduct ? 'Deleting...' : 'Delete'}
           </button>
 
           <button
@@ -466,7 +503,7 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
       {/* Stock Adjustment Modal */}
       {adjustModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
@@ -549,7 +586,7 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
 
       {/* Edit Product Modal */}
       {editModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>

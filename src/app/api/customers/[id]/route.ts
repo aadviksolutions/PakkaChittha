@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCommercialAccess, AuthError } from '@/lib/auth/guards';
-import { getCustomerById, updateCustomer } from '@/lib/services/customerService';
+import { getCustomerById, updateCustomer, deleteCustomer } from '@/lib/services/customerService';
 
 export async function GET(
   _req: NextRequest,
@@ -52,6 +52,37 @@ export async function PUT(
       return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
     }
     const message = error instanceof Error ? error.message : 'Failed to update customer.';
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PUT(req, context);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { business } = await requireCommercialAccess();
+    const { id } = await params;
+
+    const result = await deleteCustomer(business.id, id);
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      message: `Customer "${result.name}" deleted successfully.`,
+    });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
+    }
+    const message = error instanceof Error ? error.message : 'Failed to delete customer.';
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

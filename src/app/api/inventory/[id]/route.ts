@@ -4,6 +4,7 @@ import {
   getProductById,
   updateProduct,
   archiveProduct,
+  deleteProduct,
 } from '@/lib/services/inventoryService';
 
 export async function GET(
@@ -70,6 +71,37 @@ export async function PUT(
       return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
     }
     const message = error instanceof Error ? error.message : 'Failed to update product.';
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PUT(req, context);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { business } = await requireCommercialAccess();
+    const { id } = await params;
+
+    const result = await deleteProduct(business.id, id);
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      message: `Product "${result.name}" deleted successfully.`,
+    });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
+    }
+    const message = error instanceof Error ? error.message : 'Failed to delete product.';
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

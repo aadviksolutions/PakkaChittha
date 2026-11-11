@@ -181,3 +181,36 @@ export async function updateSupplier(
     },
   });
 }
+
+/**
+ * Permanently deletes a supplier if no linked purchases or vendor payments exist.
+ */
+export async function deleteSupplier(businessId: string, supplierId: string) {
+  const existing = await prisma.supplier.findFirst({
+    where: { id: supplierId, businessId },
+  });
+
+  if (!existing) {
+    throw new Error('Supplier not found or unauthorized.');
+  }
+
+  const [purchaseCount, paymentCount] = await Promise.all([
+    prisma.purchase.count({ where: { businessId, supplierId } }),
+    prisma.supplierPayment.count({ where: { businessId, supplierId } }),
+  ]);
+
+  if (purchaseCount > 0 || paymentCount > 0) {
+    const linked: string[] = [];
+    if (purchaseCount > 0) linked.push(`${purchaseCount} purchase bill(s)`);
+    if (paymentCount > 0) linked.push(`${paymentCount} vendor payment(s)`);
+    throw new Error(
+      `Cannot delete "${existing.name}" because it has linked ${linked.join(', ')}. Delete those records first.`
+    );
+  }
+
+  await prisma.supplier.delete({
+    where: { id: supplierId },
+  });
+
+  return { deletedId: supplierId, name: existing.name };
+}

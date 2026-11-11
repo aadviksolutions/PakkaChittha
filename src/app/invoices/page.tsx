@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   Clock,
   MessageSquare,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -65,6 +67,7 @@ export default function InvoicesPage() {
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [paymentRef, setPaymentRef] = useState('');
   const [paying, setPaying] = useState(false);
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
   const [selectedInvoiceForShare, setSelectedInvoiceForShare] = useState<InvoiceListItem | null>(null);
 
   const fetchInvoices = useCallback(async () => {
@@ -119,6 +122,30 @@ export default function InvoicesPage() {
       toast.error(err instanceof Error ? err.message : 'Error cancelling invoice');
     } finally {
       setVoiding(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (inv: InvoiceListItem) => {
+    if (
+      !confirm(
+        `Delete invoice ${inv.invoiceNumber}? Stock deductions will be restored and linked payment records will be removed.`
+      )
+    ) {
+      return;
+    }
+    setDeletingInvoiceId(inv.id);
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete invoice');
+      }
+      toast.success(`Invoice ${inv.invoiceNumber} deleted`);
+      fetchInvoices();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting invoice');
+    } finally {
+      setDeletingInvoiceId(null);
     }
   };
 
@@ -456,6 +483,16 @@ export default function InvoicesPage() {
                           </button>
                         )}
 
+                        {inv.status !== 'CANCELLED' && (
+                          <Link
+                            href={`/invoices/new?edit=${inv.id}`}
+                            className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                            title="Edit Invoice"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
+
                         {inv.status !== 'CANCELLED' && inv.paidAmount === 0 && (
                           <button
                             type="button"
@@ -463,12 +500,22 @@ export default function InvoicesPage() {
                               setSelectedInvoice(inv);
                               setVoidModalOpen(true);
                             }}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors cursor-pointer"
                             title="Cancel / Void Invoice"
                           >
                             <Ban className="w-3.5 h-3.5" />
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          disabled={deletingInvoiceId === inv.id}
+                          onClick={() => handleDeleteInvoice(inv)}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer disabled:opacity-50"
+                          title="Delete Invoice"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
 
                         <Link
                           href={`/invoices/${inv.id}`}
@@ -489,7 +536,7 @@ export default function InvoicesPage() {
 
       {/* Record Payment Modal */}
       {paymentModalOpen && paymentInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 animate-in fade-in">
           <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
@@ -586,7 +633,7 @@ export default function InvoicesPage() {
 
       {/* Cancel / Void Modal */}
       {voidModalOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 animate-in fade-in">
           <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-rose-50/50">
               <div className="flex items-center gap-2">

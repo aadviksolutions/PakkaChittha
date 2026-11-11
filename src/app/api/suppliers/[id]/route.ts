@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireGrowthAccess } from '@/lib/auth/guards';
-import { getSupplierById, updateSupplier } from '@/lib/services/supplierService';
+import { requireGrowthAccess, AuthError } from '@/lib/auth/guards';
+import { getSupplierById, updateSupplier, deleteSupplier } from '@/lib/services/supplierService';
 
 export async function GET(
   _req: NextRequest,
@@ -51,7 +51,41 @@ export async function PUT(
       supplier: updated,
     });
   } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
+    }
     const message = error instanceof Error ? error.message : 'Failed to update supplier.';
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return PUT(req, context);
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { business } = await requireGrowthAccess();
+    const { id } = await params;
+
+    const result = await deleteSupplier(business.id, id);
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+      message: `Supplier "${result.name}" deleted successfully.`,
+    });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.statusCode });
+    }
+    const message = error instanceof Error ? error.message : 'Failed to delete supplier.';
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }

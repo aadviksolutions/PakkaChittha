@@ -11,6 +11,7 @@ import {
   CheckCheck,
   CheckCircle2,
   Send,
+  Edit2,
   Trash2,
   RefreshCw,
   ExternalLink,
@@ -267,15 +268,25 @@ export default function QuotationDetailPage() {
           </button>
 
           {quotation.status !== 'CONVERTED' && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-              title="Delete Quotation"
+            <Link
+              href={`/quotations/new?edit=${quotation.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+              title="Edit Quotation"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </Link>
           )}
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+            title="Delete Quotation"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete</span>
+          </button>
         </div>
       </div>
 

@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Eye,
   Edit2,
+  Trash2,
   Sliders,
   Archive,
   RefreshCw,
@@ -113,8 +114,10 @@ function InventoryContent() {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
 
-  // Add Product Modal
+  // Add / Edit Product Modal
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [addForm, setAddForm] = useState({
     name: '',
@@ -181,18 +184,81 @@ function InventoryContent() {
     fetchInventory();
   }, [fetchInventory]);
 
+  const resetProductForm = () => {
+    setEditingProductId(null);
+    setAddForm({
+      name: '',
+      sku: '',
+      barcode: '',
+      category: 'General',
+      unit: 'Pcs',
+      purchasePrice: '',
+      sellingPrice: '',
+      taxRate: '18',
+      openingStock: '0',
+      lowStockAlert: '10',
+      description: '',
+      imageUrl: '',
+    });
+  };
+
+  const handleOpenAddProduct = () => {
+    resetProductForm();
+    setAddModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (p: Product) => {
+    setEditingProductId(p.id);
+    setAddForm({
+      name: p.name || '',
+      sku: p.sku || '',
+      barcode: p.barcode || '',
+      category: p.category || 'General',
+      unit: p.unit || 'Pcs',
+      purchasePrice: String(p.purchasePrice ?? 0),
+      sellingPrice: String(p.sellingPrice ?? 0),
+      taxRate: String(p.taxRate ?? 18),
+      openingStock: String(p.currentStock ?? 0),
+      lowStockAlert: String(p.lowStockAlert ?? 10),
+      description: p.description || '',
+      imageUrl: p.imageUrl || '',
+    });
+    setAddModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (p: Product) => {
+    if (!confirm(`Delete product "${p.name}"? This removes the product and its stock movement history while keeping past invoice/purchase snapshots.`)) {
+      return;
+    }
+    setDeletingProductId(p.id);
+    try {
+      const res = await fetch(`/api/inventory/${p.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete product.');
+      }
+      toast.success(data.message || `Product "${p.name}" deleted.`);
+      fetchInventory();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting product');
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addForm.name.trim()) return;
 
     setCreating(true);
     try {
+      const isEditing = Boolean(editingProductId);
       const resolvedSku =
         addForm.sku.trim() ||
         `${addForm.name.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'ITEM'}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      const res = await fetch('/api/inventory', {
-        method: 'POST',
+      const res = await fetch(isEditing ? `/api/inventory/${editingProductId}` : '/api/inventory', {
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: addForm.name.trim(),
@@ -203,7 +269,7 @@ function InventoryContent() {
           purchasePrice: parseFloat(addForm.purchasePrice) || 0,
           sellingPrice: parseFloat(addForm.sellingPrice) || 0,
           taxRate: parseFloat(addForm.taxRate) || 0,
-          openingStock: parseFloat(addForm.openingStock) || 0,
+          ...(isEditing ? {} : { openingStock: parseFloat(addForm.openingStock) || 0 }),
           lowStockAlert: parseFloat(addForm.lowStockAlert) || 10,
           description: addForm.description.trim() || null,
           imageUrl: addForm.imageUrl || null,
@@ -212,28 +278,15 @@ function InventoryContent() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create product.');
+        throw new Error(data.error || `Failed to ${isEditing ? 'update' : 'create'} product.`);
       }
 
       setAddModalOpen(false);
-      setAddForm({
-        name: '',
-        sku: '',
-        barcode: '',
-        category: 'General',
-        unit: 'Pcs',
-        purchasePrice: '',
-        sellingPrice: '',
-        taxRate: '18',
-        openingStock: '0',
-        lowStockAlert: '10',
-        description: '',
-        imageUrl: '',
-      });
-      toast.success('Product created successfully!');
+      resetProductForm();
+      toast.success(isEditing ? 'Product updated successfully!' : 'Product created successfully!');
       fetchInventory();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error creating product');
+      toast.error(err instanceof Error ? err.message : 'Error saving product');
     } finally {
       setCreating(false);
     }
@@ -361,7 +414,7 @@ function InventoryContent() {
           </button>
 
           <button
-            onClick={() => setAddModalOpen(true)}
+            onClick={handleOpenAddProduct}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold rounded-xl shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4 text-emerald-400" />
@@ -500,7 +553,7 @@ function InventoryContent() {
               Add your first inventory product or import a CSV catalog.
             </p>
             <button
-              onClick={() => setAddModalOpen(true)}
+              onClick={handleOpenAddProduct}
               className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800"
             >
               + Create Product
@@ -584,6 +637,23 @@ function InventoryContent() {
                         >
                           <Sliders className="w-3 h-3" />
                           <span>Adjust</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditProduct(p)}
+                          className="p-1.5 text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
+                          title="Edit Product"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(p)}
+                          disabled={deletingProductId === p.id}
+                          className="p-1.5 text-slate-500 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                          title="Delete Product"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <Link
                           href={`/inventory/${p.id}`}
@@ -696,6 +766,23 @@ function InventoryContent() {
                             >
                               <Sliders className="w-3.5 h-3.5 text-blue-600" />
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProduct(p)}
+                              title="Edit Product"
+                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p)}
+                              disabled={deletingProductId === p.id}
+                              title="Delete Product"
+                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors disabled:opacity-40 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                             <Link
                               href={`/inventory/${p.id}`}
                               className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
@@ -715,17 +802,24 @@ function InventoryContent() {
         )}
       </div>
 
-      {/* Add Product Modal (Shopkeeper-Simplified: Essential fields first) */}
+      {/* Add / Edit Product Modal (Shopkeeper-Simplified: Essential fields first) */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="font-extrabold text-base text-slate-900">Add New Product</h3>
-                <p className="text-xs text-slate-500">Add a product in seconds</p>
+                <h3 className="font-extrabold text-base text-slate-900">
+                  {editingProductId ? 'Edit Product' : 'Add New Product'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {editingProductId ? 'Update product details and pricing' : 'Add a product in seconds'}
+                </p>
               </div>
               <button
-                onClick={() => setAddModalOpen(false)}
+                onClick={() => {
+                  setAddModalOpen(false);
+                  resetProductForm();
+                }}
                 className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -806,11 +900,14 @@ function InventoryContent() {
                     step="any"
                     min="0"
                     placeholder="0"
+                    disabled={Boolean(editingProductId)}
                     value={addForm.openingStock}
                     onChange={(e) => setAddForm({ ...addForm, openingStock: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden font-mono text-xs"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 focus:outline-hidden font-mono text-xs disabled:bg-slate-100 disabled:text-slate-500"
                   />
-                  <p className="text-[10px] text-slate-400 mt-0.5">Defaults to 0</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {editingProductId ? 'Use Adjust Stock to modify live quantity' : 'Defaults to 0'}
+                  </p>
                 </div>
               </div>
 
@@ -926,7 +1023,7 @@ function InventoryContent() {
                   disabled={creating}
                   className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-xs disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {creating ? 'Saving...' : 'Save Product'}
+                  {creating ? 'Saving...' : editingProductId ? 'Save Changes' : 'Save Product'}
                 </button>
               </div>
             </form>
@@ -936,7 +1033,7 @@ function InventoryContent() {
 
       {/* Stock Adjustment Modal */}
       {adjustModalOpen && adjustProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
@@ -1019,7 +1116,7 @@ function InventoryContent() {
 
       {/* CSV Import Modal */}
       {csvModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>

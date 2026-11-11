@@ -13,6 +13,7 @@ import {
   Calendar,
   CreditCard,
   Trash2,
+  Edit2,
   TrendingUp,
   Receipt,
   UserCheck,
@@ -77,6 +78,7 @@ export default function HouseholdSplitsPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingSettlementId, setEditingSettlementId] = useState<string | null>(null);
 
   // Filter
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string>('ALL');
@@ -114,12 +116,25 @@ export default function HouseholdSplitsPage() {
   }, [members, currentUserId]);
 
   const handleOpenSettlementModal = (prefillFrom?: string, prefillTo?: string, prefillAmount?: number) => {
+    setEditingSettlementId(null);
     setPayerId(prefillFrom || (myBalance && myBalance.netBalance < 0 ? myBalance.memberId : members[0]?.memberId || ''));
     setReceiverId(prefillTo || (myBalance && myBalance.netBalance > 0 ? myBalance.memberId : members[1]?.memberId || ''));
     setAmount(prefillAmount ? String(prefillAmount) : '');
     setDate(new Date().toISOString().slice(0, 10));
     setPaymentMethod('UPI');
     setNotes('');
+    setErrorMsg('');
+    setShowModal(true);
+  };
+
+  const handleOpenEditSettlement = (s: SettlementRecord) => {
+    setEditingSettlementId(s.id);
+    setPayerId(s.payerMemberId);
+    setReceiverId(s.receiverMemberId);
+    setAmount(String(s.amount));
+    setDate(new Date(s.date).toISOString().slice(0, 10));
+    setPaymentMethod(s.paymentMethod || 'UPI');
+    setNotes(s.notes || '');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -141,8 +156,11 @@ export default function HouseholdSplitsPage() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/household/settlements', {
-        method: 'POST',
+      const endpoint = editingSettlementId
+        ? `/api/household/settlements/${editingSettlementId}`
+        : '/api/household/settlements';
+      const res = await fetch(endpoint, {
+        method: editingSettlementId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           payerMemberId: payerId,
@@ -156,15 +174,20 @@ export default function HouseholdSplitsPage() {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'Failed to record settlement.');
+        throw new Error(json.error || 'Failed to save settlement.');
       }
 
       setShowModal(false);
-      setSuccessNotice('Settlement recorded successfully. Member balances updated.');
+      setEditingSettlementId(null);
+      setSuccessNotice(
+        editingSettlementId
+          ? 'Settlement updated successfully. Member balances recalculated.'
+          : 'Settlement recorded successfully. Member balances updated.'
+      );
       fetchData();
       setTimeout(() => setSuccessNotice(null), 4000);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Error recording settlement');
+      setErrorMsg(err instanceof Error ? err.message : 'Error saving settlement');
     } finally {
       setSubmitting(false);
     }
@@ -516,11 +539,20 @@ export default function HouseholdSplitsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 self-end sm:self-center">
-                  <span className="text-sm font-black text-slate-900">
+                <div className="flex items-center justify-between sm:justify-end gap-2 self-end sm:self-center">
+                  <span className="text-sm font-black text-slate-900 mr-1">
                     ₹{s.amount.toFixed(2)}
                   </span>
                   <button
+                    type="button"
+                    onClick={() => handleOpenEditSettlement(s)}
+                    className="p-1.5 text-slate-400 hover:text-[#071F38] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    title="Edit Settlement Record"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDeleteSettlement(s.id)}
                     disabled={deletingId === s.id}
                     className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
@@ -541,15 +573,18 @@ export default function HouseholdSplitsPage() {
 
       {/* RECORD SETTLEMENT MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
                 <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
-                <span>Record Settlement Repayment</span>
+                <span>{editingSettlementId ? 'Edit Settlement Repayment' : 'Record Settlement Repayment'}</span>
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setEditingSettlementId(null);
+                }}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -674,7 +709,13 @@ export default function HouseholdSplitsPage() {
                   disabled={submitting}
                   className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-60"
                 >
-                  {submitting ? 'Recording Settlement...' : 'Confirm & Save Repayment'}
+                  {submitting
+                    ? editingSettlementId
+                      ? 'Saving Changes...'
+                      : 'Recording Settlement...'
+                    : editingSettlementId
+                    ? 'Save Settlement Changes'
+                    : 'Confirm & Save Repayment'}
                 </button>
               </div>
             </form>

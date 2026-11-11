@@ -12,6 +12,8 @@ import {
   XCircle,
   AlertCircle,
   Eye,
+  Edit2,
+  Trash2,
   CreditCard,
   RefreshCw,
   ShoppingBag,
@@ -72,6 +74,32 @@ function PurchasesContent() {
   const [voidPurchaseId, setVoidPurchaseId] = useState<string>('');
   const [voidReason, setVoidReason] = useState('');
   const [voiding, setVoiding] = useState(false);
+  const [deletingPurchaseId, setDeletingPurchaseId] = useState<string | null>(null);
+
+  const handleDeletePurchase = async (p: { id: string; purchaseNumber: string }) => {
+    if (
+      !confirm(
+        `Delete purchase bill ${p.purchaseNumber}? This will permanently delete the purchase, cascade its items and vendor payments, and reverse stock if goods were received.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingPurchaseId(p.id);
+    try {
+      const res = await fetch(`/api/purchases/${p.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete purchase.');
+      }
+      toast.success(data.message || `Purchase ${p.purchaseNumber} deleted.`);
+      fetchPurchases();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error deleting purchase');
+    } finally {
+      setDeletingPurchaseId(null);
+    }
+  };
 
   const fetchPurchases = useCallback(async () => {
     if (!canManagePurchases) return;
@@ -405,18 +433,35 @@ function PurchasesContent() {
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
                           {p.status !== 'CANCELLED' && (
+                            <Link
+                              href={`/purchases/new?edit=${p.id}`}
+                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-colors"
+                              title="Edit Purchase Bill"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Link>
+                          )}
+                          {p.status !== 'CANCELLED' && (
                             <button
                               onClick={() => {
                                 setVoidPurchaseId(p.id);
                                 setVoidReason('');
                                 setVoidModalOpen(true);
                               }}
-                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors"
+                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-amber-50 text-slate-500 hover:text-amber-600 transition-colors"
                               title="Void Purchase"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDeletePurchase(p)}
+                            disabled={deletingPurchaseId === p.id}
+                            className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors disabled:opacity-40"
+                            title="Delete Purchase Bill"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -430,7 +475,7 @@ function PurchasesContent() {
 
       {/* Void Modal */}
       {voidModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>

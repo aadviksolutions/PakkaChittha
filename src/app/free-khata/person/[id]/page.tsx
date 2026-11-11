@@ -14,6 +14,7 @@ import {
   FileText,
   Clock,
   Trash2,
+  Edit2,
   CheckCircle2,
   CreditCard,
   Sparkles,
@@ -25,9 +26,18 @@ import {
   FileSpreadsheet,
   Check,
 } from 'lucide-react';
-import { TransactionModal, ContactOption } from '@/components/free-khata/TransactionModal';
-import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
+import {
+  TransactionModal,
+  ContactOption,
+  EditingKhataTransaction,
+} from '@/components/free-khata/TransactionModal';
+import {
+  RepaymentModal,
+  RepaymentTransactionTarget,
+  EditingKhataRepayment,
+} from '@/components/free-khata/RepaymentModal';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
+import { ContactEditModal } from '@/components/free-khata/ContactEditModal';
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
 import { PaymentMethod } from '@prisma/client';
 
@@ -116,6 +126,11 @@ export default function PersonLedgerPage({
   // Modals state
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txPrimaryIntent, setTxPrimaryIntent] = useState<'GAVE' | 'RECEIVED'>('GAVE');
+  const [editingTx, setEditingTx] = useState<EditingKhataTransaction | null>(null);
+  const [editingRepayment, setEditingRepayment] = useState<EditingKhataRepayment | null>(null);
+  const [contactEditOpen, setContactEditOpen] = useState(false);
+  const [deletingContact, setDeletingContact] = useState(false);
+  const [deletingActivityId, setDeletingActivityId] = useState<string | null>(null);
   const [repayModalOpen, setRepayModalOpen] = useState(false);
   const [repayTarget, setRepayTarget] = useState<RepaymentTransactionTarget | null>(null);
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -143,8 +158,107 @@ export default function PersonLedgerPage({
   }, [fetchContactDetail]);
 
   const handleOpenGave = () => {
+    setEditingTx(null);
     setTxPrimaryIntent('GAVE');
     setTxModalOpen(true);
+  };
+
+  const handleEditActivity = (act: ActivityLedgerItem) => {
+    if (!data) return;
+    if (act.activityType === 'GAVE_NEW' || act.activityType === 'RECEIVED_NEW') {
+      const tx = data.transactions.find((t) => t.id === act.id);
+      if (!tx) return;
+      setEditingTx({
+        id: tx.id,
+        contactId: data.contact.id,
+        contactName: data.contact.name,
+        contactPhone: data.contact.phone,
+        type: tx.type,
+        amount: tx.amount,
+        settledAmount: tx.settledAmount,
+        date: tx.date,
+        dueDate: tx.dueDate,
+        description: tx.description,
+        paymentMode: tx.paymentMode,
+        paymentRef: tx.paymentRef,
+        paymentDetails: tx.paymentDetails,
+      });
+      setTxPrimaryIntent(tx.type);
+      setTxModalOpen(true);
+    } else {
+      const parentTx = data.transactions.find((t) => t.id === act.transactionId);
+      const rep = parentTx?.repayments.find((r) => r.id === act.id);
+      if (!parentTx || !rep) return;
+      setEditingRepayment({
+        id: rep.id,
+        transactionId: parentTx.id,
+        contactName: data.contact.name,
+        type: parentTx.type,
+        transactionAmount: parentTx.amount,
+        transactionSettledAmount: parentTx.settledAmount,
+        amount: rep.amount,
+        date: rep.date,
+        paymentMode: rep.paymentMode,
+        paymentRef: rep.paymentRef,
+        paymentDetails: rep.paymentDetails,
+        notes: rep.notes,
+      });
+      setRepayTarget(null);
+      setRepayModalOpen(true);
+    }
+  };
+
+  const handleDeleteContact = async () => {
+    if (!data?.contact) return;
+    if (
+      !confirm(
+        `क्या आप "${data.contact.name}" और उनके सभी लेन-देन हटाना चाहते हैं? (Delete this contact and all their Khata transactions?)`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingContact(true);
+    try {
+      const res = await fetch(`/api/free-khata/contacts/${data.contact.id}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete contact');
+      }
+      router.push('/free-khata');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete contact');
+    } finally {
+      setDeletingContact(false);
+    }
+  };
+
+  const handleDeleteActivity = async (act: ActivityLedgerItem) => {
+    const isRepay = act.activityType === 'LENT_REPAY' || act.activityType === 'BORROWED_REPAY';
+    const ok = confirm(
+      isRepay
+        ? `क्या आप ₹${act.amount.toLocaleString('en-IN')} की यह वापसी एंट्री हटाना चाहते हैं? (Delete this repayment & restore balance?)`
+        : `क्या आप ₹${act.amount.toLocaleString('en-IN')} का यह लेन-देन हटाना चाहते हैं? इससे जुड़ी वापसी भी हट जाएगी। (Delete this transaction?)`
+    );
+    if (!ok) return;
+    setDeletingActivityId(act.id);
+    try {
+      const url = isRepay
+        ? `/api/free-khata/repayments?id=${encodeURIComponent(act.id)}`
+        : `/api/free-khata/transactions/${act.id}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to delete entry');
+      }
+      fetchContactDetail();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete entry');
+    } finally {
+      setDeletingActivityId(null);
+    }
   };
 
   const handleOpenReceived = () => {
@@ -329,8 +443,8 @@ export default function PersonLedgerPage({
           </div>
         </div>
 
-        {/* Action Buttons: WhatsApp & Statement */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons: WhatsApp, Statement, Edit & Delete */}
+        <div className="flex flex-wrap items-center gap-2">
           {contact.phone && (summary.amountToReceive > 0 || summary.amountToPay > 0) && (
             <button
               type="button"
@@ -350,6 +464,27 @@ export default function PersonLedgerPage({
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
             <span className="hidden sm:inline">Statement</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setContactEditOpen(true)}
+            className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+            title="संपर्क संपादित करें (Edit Contact)"
+          >
+            <Edit2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Edit</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeleteContact}
+            disabled={deletingContact}
+            className="p-2 bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            title="संपर्क हटाएं (Delete Contact)"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">{deletingContact ? 'Deleting...' : 'Delete'}</span>
           </button>
 
           <button
@@ -606,15 +741,34 @@ export default function PersonLedgerPage({
                       </span>
                     )}
 
-                    {act.transactionId && (
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
+                      {act.transactionId && (act.activityType === 'GAVE_NEW' || act.activityType === 'RECEIVED_NEW') && (act.balanceAfter ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRepayForTx(act.transactionId!)}
+                          className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer"
+                        >
+                          वापसी दर्ज करें
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => handleOpenRepayForTx(act.transactionId!)}
-                        className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer block mt-0.5 ml-auto"
+                        onClick={() => handleEditActivity(act)}
+                        title="संपादित करें (Edit)"
+                        className="p-1 text-slate-500 hover:text-[#071F38] hover:bg-slate-100 rounded cursor-pointer transition-colors"
                       >
-                        वापसी दर्ज करें
+                        <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        disabled={deletingActivityId === act.id}
+                        onClick={() => handleDeleteActivity(act)}
+                        title="हटाएं (Delete)"
+                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded cursor-pointer transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -627,9 +781,16 @@ export default function PersonLedgerPage({
       {txModalOpen && (
         <TransactionModal
           isOpen={txModalOpen}
-          onClose={() => setTxModalOpen(false)}
-          onSuccess={fetchContactDetail}
+          onClose={() => {
+            setTxModalOpen(false);
+            setEditingTx(null);
+          }}
+          onSuccess={() => {
+            setEditingTx(null);
+            fetchContactDetail();
+          }}
           primaryIntent={txPrimaryIntent}
+          editingTransaction={editingTx}
           preselectedContact={contactOption}
           existingContacts={[contactOption]}
         />
@@ -641,9 +802,27 @@ export default function PersonLedgerPage({
           onClose={() => {
             setRepayModalOpen(false);
             setRepayTarget(null);
+            setEditingRepayment(null);
           }}
-          onSuccess={fetchContactDetail}
+          onSuccess={() => {
+            setRepayTarget(null);
+            setEditingRepayment(null);
+            fetchContactDetail();
+          }}
           transaction={repayTarget}
+          editingRepayment={editingRepayment}
+        />
+      )}
+
+      {contactEditOpen && data && (
+        <ContactEditModal
+          isOpen={contactEditOpen}
+          onClose={() => setContactEditOpen(false)}
+          onSuccess={() => {
+            setContactEditOpen(false);
+            fetchContactDetail();
+          }}
+          contact={data.contact}
         />
       )}
 

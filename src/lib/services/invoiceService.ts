@@ -420,3 +420,286 @@ export async function voidInvoice(
     });
   }, { timeout: 25000, maxWait: 10000 });
 }
+
+export interface UpdateInvoiceInput {
+  customerId: string;
+  invoiceDate?: string | Date;
+  dueDate?: string | Date;
+  gstType?: GstType;
+  isTaxInclusive?: boolean;
+  isGstInvoice?: boolean;
+  items: LineItemInput[];
+  notes?: string;
+  termsAndConditions?: string;
+  status?: InvoiceStatus;
+  isDraft?: boolean;
+}
+
+/**
+ * Updates an existing non-cancelled invoice, adjusting inventory stock movements
+ * and preserving existing recorded payments while recomputing totals and balance due.
+ */
+export async function updateInvoice(
+  businessId: string,
+  userId: string,
+  invoiceId: string,
+  input: UpdateInvoiceInput
+) {
+  if (!input.items || input.items.length === 0) {
+    throw new Error('At least one line item is required.');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.invoice.findFirst({
+      where: { id: invoiceId, businessId },
+      include: { items: true, payments: true },
+    });
+
+    if (!existing) {
+      throw new Error('Invoice not found or unauthorized.');
+    }
+
+    if (existing.status === InvoiceStatus.CANCELLED) {
+      throw new Error('Cancelled/voided invoices cannot be edited.');
+    }
+
+    const customer = await tx.customer.findFirst({
+      where: { id: input.customerId, businessId },
+    });
+    if (!customer) {
+      throw new Error('Selected customer does not exist in this business workspace.');
+    }
+
+    const business = await tx.business.findUnique({ where: { id: businessId } });
+    if (!business) {
+      throw new Error('Active business workspace not found.');
+    }
+
+    const existingPaid =
+      existing.payments.length > 0
+        ? round2(existing.payments.reduce((sum, p) => sum + p.amount, 0))
+        : round2(existing.paidAmount);
+
+    // 1. Restore stock for old line items
+    for (const oldItem of existing.items) {
+      if (oldItem.productId) {
+        const product = await tx.product.findFirst({
+          where: { id: oldItem.productId, businessId },
+        });
+        if (product) {
+          const previousStock = product.currentStock;
+          const newStock = round2(previousStock + oldItem.quantity);
+          await tx.product.update({
+            where: { id: product.id },
+            data: { currentStock: newStock },
+          });
+          await tx.stockMovement.create({
+            data: {
+              businessId,
+              productId: product.id,
+              type: StockMovementType.SALE_RETURN,
+              quantity: oldItem.quantity,
+              previousStock,
+              newStock,
+              sourceDocumentType: 'INVOICE_EDIT',
+              sourceDocumentId: existing.id,
+              reason: `Stock restored during edit of invoice ${existing.invoiceNumber}`,
+              actorName: userId || 'Staff',
+            },
+          });
+        }
+      }
+    }
+
+    // 2. Calculate new server-side totals
+    const gstType: GstType = input.gstType || (existing.gstType as GstType) || 'CGST_SGST';
+    const isTaxInclusive =
+      input.isTaxInclusive !== undefined ? Boolean(input.isTaxInclusive) : existing.isTaxInclusive;
+    const isGstInvoice =
+      input.isGstInvoice !== undefined ? Boolean(input.isGstInvoice) : existing.isGstInvoice;
+
+    const calc = calculateInvoiceTotals({
+      items: input.items,
+      gstType,
+      isTaxInclusive,
+      isGstInvoice,
+      paidAmount: existingPaid,
+      enableRounding: true,
+    });
+
+    if (existingPaid > calc.total + 0.01) {
+      throw new Error(
+        `New invoice total (₹${calc.total}) cannot be less than already paid amount (₹${existingPaid}). Please adjust or delete recorded payments first.`
+      );
+    }
+
+    // 3. Verify & deduct stock for updated line items
+    for (const item of calc.items) {
+      if (item.productId) {
+        const product = await tx.product.findFirst({
+          where: { id: item.productId, businessId },
+        });
+        if (product) {
+          if (!business.allowNegativeStock && product.currentStock < item.quantity) {
+            throw new Error(
+              `Insufficient stock for product "${product.name}". Available: ${product.currentStock} ${product.unit}, Requested: ${item.quantity} ${product.unit}.`
+            );
+          }
+          const previousStock = product.currentStock;
+          const newStock = round2(previousStock - item.quantity);
+          await tx.product.update({
+            where: { id: product.id },
+            data: { currentStock: newStock },
+          });
+          await tx.stockMovement.create({
+            data: {
+              businessId,
+              productId: product.id,
+              type: StockMovementType.SALE_DEDUCTION,
+              quantity: -item.quantity,
+              previousStock,
+              newStock,
+              sourceDocumentType: 'INVOICE_EDIT',
+              sourceDocumentId: existing.id,
+              reason: `Updated sale on invoice ${existing.invoiceNumber}`,
+              actorName: userId || 'Staff',
+            },
+          });
+        }
+      }
+    }
+
+    // 4. Determine updated status
+    let newStatus: InvoiceStatus = InvoiceStatus.UNPAID;
+    if ((input.isDraft || input.status === InvoiceStatus.DRAFT) && existingPaid === 0) {
+      newStatus = InvoiceStatus.DRAFT;
+    } else if (calc.balanceDue <= 0) {
+      newStatus = InvoiceStatus.PAID;
+    } else if (existingPaid > 0) {
+      newStatus = InvoiceStatus.PARTIAL;
+    }
+
+    // Update customer link on existing payments if customer changed
+    if (customer.id !== existing.customerId) {
+      await tx.payment.updateMany({
+        where: { invoiceId: existing.id },
+        data: { customerId: customer.id },
+      });
+    }
+
+    await tx.invoiceItem.deleteMany({ where: { invoiceId: existing.id } });
+
+    const invoiceDate = input.invoiceDate ? new Date(input.invoiceDate) : existing.invoiceDate;
+    const dueDate = input.dueDate ? new Date(input.dueDate) : existing.dueDate;
+
+    return tx.invoice.update({
+      where: { id: existing.id },
+      data: {
+        customerId: customer.id,
+        invoiceDate,
+        dueDate,
+        status: newStatus,
+        gstType,
+        isTaxInclusive,
+        isGstInvoice,
+        subtotal: calc.subtotal,
+        discountTotal: calc.discountTotal,
+        taxTotal: calc.taxTotal,
+        cgstTotal: calc.cgstTotal,
+        sgstTotal: calc.sgstTotal,
+        igstTotal: calc.igstTotal,
+        rounding: calc.rounding,
+        total: calc.total,
+        paidAmount: calc.paidAmount,
+        balanceDue: calc.balanceDue,
+        customerName: customer.name,
+        customerMobile: customer.mobile,
+        customerGstin: customer.gstin,
+        customerBillingAddress: customer.billingAddress,
+        notes: input.notes !== undefined ? input.notes?.trim() || null : existing.notes,
+        termsAndConditions:
+          input.termsAndConditions !== undefined
+            ? input.termsAndConditions?.trim() || null
+            : existing.termsAndConditions,
+        items: {
+          create: calc.items.map((item) => ({
+            productId: item.productId || null,
+            hsnCode: item.hsnCode || null,
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            rate: item.rate,
+            discount: item.discount,
+            discountType: item.discountType,
+            taxRate: item.taxRate,
+            taxAmount: item.taxAmount,
+            cgstRate: item.cgstRate,
+            cgstAmount: item.cgstAmount,
+            sgstRate: item.sgstRate,
+            sgstAmount: item.sgstAmount,
+            igstRate: item.igstRate,
+            igstAmount: item.igstAmount,
+            lineTotal: item.lineTotal,
+          })),
+        },
+      },
+      include: { items: true, payments: true },
+    });
+  }, { timeout: 25000, maxWait: 10000 });
+}
+
+/**
+ * Deletes an invoice permanently, restoring inventory stock if it was not already voided,
+ * and cascading linked invoice items and payments.
+ */
+export async function deleteInvoice(
+  businessId: string,
+  userId: string,
+  invoiceId: string
+) {
+  return prisma.$transaction(async (tx) => {
+    const invoice = await tx.invoice.findFirst({
+      where: { id: invoiceId, businessId },
+      include: { items: true },
+    });
+
+    if (!invoice) {
+      throw new Error('Invoice not found or unauthorized.');
+    }
+
+    if (invoice.status !== InvoiceStatus.CANCELLED) {
+      for (const item of invoice.items) {
+        if (item.productId) {
+          const product = await tx.product.findFirst({
+            where: { id: item.productId, businessId },
+          });
+          if (product) {
+            const previousStock = product.currentStock;
+            const newStock = round2(previousStock + item.quantity);
+            await tx.product.update({
+              where: { id: product.id },
+              data: { currentStock: newStock },
+            });
+            await tx.stockMovement.create({
+              data: {
+                businessId,
+                productId: product.id,
+                type: StockMovementType.SALE_RETURN,
+                quantity: item.quantity,
+                previousStock,
+                newStock,
+                sourceDocumentType: 'INVOICE_DELETE',
+                sourceDocumentId: invoice.id,
+                reason: `Stock restored on deletion of invoice ${invoice.invoiceNumber}`,
+                actorName: userId || 'Staff',
+              },
+            });
+          }
+        }
+      }
+    }
+
+    await tx.invoice.delete({ where: { id: invoiceId } });
+    return { deletedId: invoiceId, invoiceNumber: invoice.invoiceNumber };
+  }, { timeout: 25000, maxWait: 10000 });
+}
