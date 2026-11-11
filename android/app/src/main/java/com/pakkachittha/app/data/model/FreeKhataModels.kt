@@ -113,3 +113,176 @@ data class RecordKhataRepaymentRequest(
     @SerializedName("paymentRef") val paymentRef: String? = null,
     @SerializedName("notes") val notes: String? = null
 )
+
+// =========================================================================
+// Consolidated & Person-wise Personal Khata Reports (Shared Backend APIs)
+// =========================================================================
+
+data class KhataConsolidatedReportResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("reportType") val reportType: String? = null,
+    @SerializedName("report") val report: KhataReportDto? = null,
+    @SerializedName("share") val share: KhataReportShareDto? = null,
+    @SerializedName("error") val error: String? = null
+)
+
+data class KhataPersonDetailedReportResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("reportType") val reportType: String? = null,
+    @SerializedName("report") val report: KhataPersonReportDto? = null,
+    @SerializedName("share") val share: KhataReportShareDto? = null,
+    @SerializedName("error") val error: String? = null
+)
+
+data class KhataReportShareDto(
+    @SerializedName("subject") val subject: String = "",
+    @SerializedName("text") val text: String = ""
+)
+
+data class KhataReportMetadataDto(
+    @SerializedName("reportTitle") val reportTitle: String = "",
+    @SerializedName("reportSubtitle") val reportSubtitle: String = "",
+    @SerializedName("referenceNumber") val referenceNumber: String = "",
+    @SerializedName("generatedAt") val generatedAt: String = "",
+    @SerializedName("generatedAtDisplay") val generatedAtDisplay: String = "",
+    @SerializedName("businessName") val businessName: String = "",
+    @SerializedName("businessPhone") val businessPhone: String? = null,
+    @SerializedName("businessEmail") val businessEmail: String? = null,
+    @SerializedName("currency") val currency: String = "INR"
+)
+
+data class KhataReportFiltersDto(
+    @SerializedName("dateRange") val dateRange: String = "ALL",
+    @SerializedName("startDate") val startDate: String? = null,
+    @SerializedName("endDate") val endDate: String? = null,
+    @SerializedName("periodLabel") val periodLabel: String = "All Time",
+    @SerializedName("search") val search: String = "",
+    @SerializedName("mobile") val mobile: String = "",
+    @SerializedName("direction") val direction: String = "ALL",
+    @SerializedName("paymentMode") val paymentMode: String = "ALL",
+    @SerializedName("accountStatus") val accountStatus: String = "OUTSTANDING"
+)
+
+data class KhataReportSummaryDto(
+    @SerializedName("totalAmountToReceive") val totalAmountToReceive: Double = 0.0,
+    @SerializedName("totalAmountToPay") val totalAmountToPay: Double = 0.0,
+    @SerializedName("netPosition") val netPosition: Double = 0.0,
+    @SerializedName("netPositionStatus") val netPositionStatus: String = "SETTLED",
+    @SerializedName("netPositionLabel") val netPositionLabel: String = "",
+    @SerializedName("totalActiveAccounts") val totalActiveAccounts: Int = 0,
+    @SerializedName("receivableAccountCount") val receivableAccountCount: Int = 0,
+    @SerializedName("payableAccountCount") val payableAccountCount: Int = 0,
+    @SerializedName("dualBalanceAccountCount") val dualBalanceAccountCount: Int = 0,
+    @SerializedName("settledAccountCount") val settledAccountCount: Int = 0,
+    @SerializedName("totalMatchedAccounts") val totalMatchedAccounts: Int = 0
+)
+
+data class KhataReportPeriodSummaryDto(
+    @SerializedName("totalGivenInPeriod") val totalGivenInPeriod: Double = 0.0,
+    @SerializedName("totalReceivedBackInPeriod") val totalReceivedBackInPeriod: Double = 0.0,
+    @SerializedName("totalTakenInPeriod") val totalTakenInPeriod: Double = 0.0,
+    @SerializedName("totalReturnedInPeriod") val totalReturnedInPeriod: Double = 0.0,
+    @SerializedName("transactionCount") val transactionCount: Int = 0
+)
+
+data class KhataReportHistoricalSummaryDto(
+    @SerializedName("totalGivenLifetime") val totalGivenLifetime: Double = 0.0,
+    @SerializedName("totalReceivedBackLifetime") val totalReceivedBackLifetime: Double = 0.0,
+    @SerializedName("totalTakenLifetime") val totalTakenLifetime: Double = 0.0,
+    @SerializedName("totalReturnedLifetime") val totalReturnedLifetime: Double = 0.0
+)
+
+data class KhataReceivableRowDto(
+    @SerializedName("sNo") val sNo: Int = 0,
+    @SerializedName("contactId") val contactId: String = "",
+    @SerializedName("personName") val personName: String = "",
+    @SerializedName("mobileNumber") val mobileNumber: String = "—",
+    @SerializedName("totalAmountGiven") val totalAmountGiven: Double = 0.0,
+    @SerializedName("amountReceivedBack") val amountReceivedBack: Double = 0.0,
+    @SerializedName("balanceToReceive") val balanceToReceive: Double = 0.0,
+    @SerializedName("hasPayableAlso") val hasPayableAlso: Boolean = false,
+    @SerializedName("currentPayableBalance") val currentPayableBalance: Double = 0.0
+)
+
+data class KhataPayableRowDto(
+    @SerializedName("sNo") val sNo: Int = 0,
+    @SerializedName("contactId") val contactId: String = "",
+    @SerializedName("personName") val personName: String = "",
+    @SerializedName("mobileNumber") val mobileNumber: String = "—",
+    @SerializedName("totalAmountTaken") val totalAmountTaken: Double = 0.0,
+    @SerializedName("amountReturned") val amountReturned: Double = 0.0,
+    @SerializedName("balanceToPay") val balanceToPay: Double = 0.0,
+    @SerializedName("hasReceivableAlso") val hasReceivableAlso: Boolean = false,
+    @SerializedName("currentReceivableBalance") val currentReceivableBalance: Double = 0.0
+)
+
+data class KhataSettledAccountRowDto(
+    @SerializedName("sNo") val sNo: Int = 0,
+    @SerializedName("contactId") val contactId: String = "",
+    @SerializedName("personName") val personName: String = "",
+    @SerializedName("mobileNumber") val mobileNumber: String = "—",
+    @SerializedName("totalGiven") val totalGiven: Double = 0.0,
+    @SerializedName("totalReceivedBack") val totalReceivedBack: Double = 0.0,
+    @SerializedName("totalTaken") val totalTaken: Double = 0.0,
+    @SerializedName("totalReturned") val totalReturned: Double = 0.0
+)
+
+data class KhataReportTransactionDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("contactId") val contactId: String = "",
+    @SerializedName("personName") val personName: String = "",
+    @SerializedName("mobileNumber") val mobileNumber: String = "—",
+    @SerializedName("date") val date: String = "",
+    @SerializedName("activityType") val activityType: String = "",
+    @SerializedName("activityLabel") val activityLabel: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("moneyDirection") val moneyDirection: String = "OUT",
+    @SerializedName("balanceBucket") val balanceBucket: String = "TO_RECEIVE",
+    @SerializedName("amount") val amount: Double = 0.0,
+    @SerializedName("paymentMode") val paymentMode: String = "CASH",
+    @SerializedName("paymentModeLabel") val paymentModeLabel: String = "Cash",
+    @SerializedName("paymentRef") val paymentRef: String? = null,
+    @SerializedName("notes") val notes: String? = null,
+    @SerializedName("previousBalance") val previousBalance: Double = 0.0,
+    @SerializedName("updatedBalance") val updatedBalance: Double = 0.0
+)
+
+data class KhataReportDto(
+    @SerializedName("metadata") val metadata: KhataReportMetadataDto = KhataReportMetadataDto(),
+    @SerializedName("filters") val filters: KhataReportFiltersDto = KhataReportFiltersDto(),
+    @SerializedName("summary") val summary: KhataReportSummaryDto = KhataReportSummaryDto(),
+    @SerializedName("periodSummary") val periodSummary: KhataReportPeriodSummaryDto = KhataReportPeriodSummaryDto(),
+    @SerializedName("historicalSummary") val historicalSummary: KhataReportHistoricalSummaryDto = KhataReportHistoricalSummaryDto(),
+    @SerializedName("amountToReceiveRows") val amountToReceiveRows: List<KhataReceivableRowDto> = emptyList(),
+    @SerializedName("amountToPayRows") val amountToPayRows: List<KhataPayableRowDto> = emptyList(),
+    @SerializedName("settledAccounts") val settledAccounts: List<KhataSettledAccountRowDto> = emptyList(),
+    @SerializedName("transactions") val transactions: List<KhataReportTransactionDto> = emptyList()
+)
+
+data class KhataPersonReportContactDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("notes") val notes: String? = null
+)
+
+data class KhataPersonReportSummaryDto(
+    @SerializedName("totalGiven") val totalGiven: Double = 0.0,
+    @SerializedName("totalTaken") val totalTaken: Double = 0.0,
+    @SerializedName("totalReceivedBack") val totalReceivedBack: Double = 0.0,
+    @SerializedName("totalReturned") val totalReturned: Double = 0.0,
+    @SerializedName("amountToReceive") val amountToReceive: Double = 0.0,
+    @SerializedName("amountToPay") val amountToPay: Double = 0.0,
+    @SerializedName("netPosition") val netPosition: Double = 0.0,
+    @SerializedName("status") val status: String = "SETTLED",
+    @SerializedName("statusLabel") val statusLabel: String = ""
+)
+
+data class KhataPersonReportDto(
+    @SerializedName("metadata") val metadata: KhataReportMetadataDto = KhataReportMetadataDto(),
+    @SerializedName("filters") val filters: KhataReportFiltersDto = KhataReportFiltersDto(),
+    @SerializedName("contact") val contact: KhataPersonReportContactDto = KhataPersonReportContactDto(),
+    @SerializedName("summary") val summary: KhataPersonReportSummaryDto = KhataPersonReportSummaryDto(),
+    @SerializedName("transactions") val transactions: List<KhataReportTransactionDto> = emptyList()
+)

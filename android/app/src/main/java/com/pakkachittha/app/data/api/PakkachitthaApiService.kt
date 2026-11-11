@@ -1,6 +1,7 @@
 package com.pakkachittha.app.data.api
 
 import com.pakkachittha.app.data.model.*
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -87,6 +88,40 @@ interface PakkachitthaApiService {
 
     @POST("free-khata/repayments")
     suspend fun recordKhataRepayment(@Body request: RecordKhataRepaymentRequest): Response<Unit>
+
+    @GET("free-khata/reports")
+    suspend fun getKhataConsolidatedReport(
+        @Query("dateRange") dateRange: String = "ALL",
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("direction") direction: String = "ALL",
+        @Query("paymentMode") paymentMode: String = "ALL",
+        @Query("accountStatus") accountStatus: String = "OUTSTANDING"
+    ): Response<KhataConsolidatedReportResponse>
+
+    @GET("free-khata/reports")
+    suspend fun getKhataPersonReport(
+        @Query("contactId") contactId: String,
+        @Query("dateRange") dateRange: String = "ALL",
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("paymentMode") paymentMode: String = "ALL"
+    ): Response<KhataPersonDetailedReportResponse>
+
+    @Streaming
+    @GET("free-khata/reports/export")
+    suspend fun exportKhataReport(
+        @Query("format") format: String,
+        @Query("contactId") contactId: String? = null,
+        @Query("dateRange") dateRange: String = "ALL",
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("search") search: String? = null,
+        @Query("direction") direction: String = "ALL",
+        @Query("paymentMode") paymentMode: String = "ALL",
+        @Query("accountStatus") accountStatus: String = "OUTSTANDING"
+    ): Response<ResponseBody>
 
     // --- User Payment Details & UPI ---
     @GET("user/payment-details")

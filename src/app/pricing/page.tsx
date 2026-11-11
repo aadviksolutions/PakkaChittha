@@ -22,6 +22,8 @@ import {
   BillingInterval,
   PlanKey,
 } from '@/lib/subscription/plans';
+import { PublicNavbar } from '@/components/marketing/PublicNavbar';
+import { PublicFooter } from '@/components/marketing/PublicFooter';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -84,30 +86,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-[#F6F9FC] text-slate-800 selection:bg-[#EA580C]/20 selection:text-[#071F38]">
       {/* Top Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="h-9 w-auto flex items-center">
-              <img src="/pakka-chittha-logo.png" alt="Pakka Chittha" className="h-9 w-auto object-contain" />
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-xs sm:text-sm font-semibold text-[#071F38] hover:text-[#EA580C] px-3 py-1.5 transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#EA580C] hover:bg-[#D94E00] shadow-xs transition-all"
-            >
-              Start Free Trial
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
@@ -446,22 +425,7 @@ export default function PricingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 mt-16 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Pakka Chittha. Built for Indian Businesses. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="hover:text-slate-800">
-              Sign In
-            </Link>
-            <Link href="/pricing" className="hover:text-slate-800 font-semibold text-[#EA580C]">
-              Pricing & Plans
-            </Link>
-            <Link href="/register" className="hover:text-slate-800">
-              Free Trial
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

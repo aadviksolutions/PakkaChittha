@@ -21,20 +21,36 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { openAction } = useActionModal();
   const { activeBusiness, user, loading: authLoading } = useAuth();
 
+  const isPublicMarketingPage =
+    pathname === '/pricing' ||
+    pathname === '/gst-billing-software' ||
+    pathname === '/udhaar-khata-management' ||
+    pathname === '/inventory-stock-software' ||
+    pathname === '/ghar-kharcha-app' ||
+    (pathname === '/' && !user);
+
   const isAuthPage =
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/select-mode' ||
     pathname === '/welcome' ||
-    (pathname === '/' && !user && !authLoading) ||
     pathname.endsWith('/print') ||
     pathname.startsWith('/view/invoice/');
+
+  if (isPublicMarketingPage) {
+    return (
+      <>
+        {pathname === '/' && <CinematicIntro />}
+        {children}
+      </>
+    );
+  }
 
   if (isAuthPage) {
     return (
       <>
         <CinematicIntro />
-        <main className="min-h-screen bg-slate-50 text-slate-900">{children}</main>
+        <div className="min-h-screen bg-slate-50 text-slate-900">{children}</div>
       </>
     );
   }

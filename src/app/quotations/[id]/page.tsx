@@ -299,11 +299,10 @@ export default function QuotationDetailPage() {
               key={st}
               disabled={updatingStatus || quotation.status === st}
               onClick={() => handleStatusChange(st)}
-              className={`px-2.5 py-1 font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
-                quotation.status === st
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+              className={`px-2.5 py-1 font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${quotation.status === st
+                ? 'bg-slate-900 text-white'
+                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
             >
               {st}
             </button>

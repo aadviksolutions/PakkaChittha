@@ -166,10 +166,10 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
         isActive: pathname === '/free-khata' && typeof window !== 'undefined' && window.location.search.includes('RECEIVED'),
       },
       {
-        label: t('dashboard.sendReminder'),
-        href: '/free-khata?view=reminders',
-        icon: MessageSquare,
-        isActive: pathname === '/free-khata' && typeof window !== 'undefined' && window.location.search.includes('reminders'),
+        label: t('nav.reports'),
+        href: '/free-khata/reports',
+        icon: FileText,
+        isActive: pathname.startsWith('/free-khata/reports'),
       },
     ];
 

@@ -455,6 +455,264 @@ export async function getKhataContacts(businessId: string, search?: string) {
 /**
  * Retrieves detailed person ledger with 6 independent figures and complete history
  */
+export interface ChronologicalLedgerEntry {
+  id: string;
+  contactId: string;
+  contactName: string;
+  contactPhone: string | null;
+  date: Date;
+  createdAt: Date;
+  activityType: 'GAVE_NEW' | 'RECEIVED_NEW' | 'LENT_REPAY' | 'BORROWED_REPAY';
+  activityLabel: string;
+  title: string;
+  moneyDirection: 'OUT' | 'IN';
+  balanceBucket: 'TO_RECEIVE' | 'TO_PAY';
+  amount: number;
+  previousBalance: number;
+  updatedBalance: number;
+  balanceAfter: number;
+  previousToReceive: number;
+  updatedToReceive: number;
+  previousToPay: number;
+  updatedToPay: number;
+  previousNetBalance: number;
+  updatedNetBalance: number;
+  paymentMode: PaymentMethod;
+  paymentRef?: string | null;
+  paymentDetails?: string | null;
+  notes?: string | null;
+  dueDate?: Date | null;
+  status?: KhataEntryStatus;
+  transactionId?: string;
+}
+
+export interface ContactChronologicalInput {
+  id: string;
+  name: string;
+  phone: string | null;
+  transactions: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    date: Date;
+    dueDate: Date | null;
+    description: string | null;
+    paymentMode: PaymentMethod;
+    paymentRef: string | null;
+    paymentDetails: string | null;
+    status: KhataEntryStatus;
+    createdAt: Date;
+  }>;
+  repayments: Array<{
+    id: string;
+    transactionId: string;
+    amount: number;
+    date: Date;
+    paymentMode: PaymentMethod;
+    paymentRef: string | null;
+    paymentDetails: string | null;
+    notes: string | null;
+    createdAt: Date;
+    transaction: {
+      type: string;
+    };
+  }>;
+}
+
+/**
+ * Builds a deterministic chronological ledger (oldest -> newest) for one contact,
+ * tracking independent Receivable and Payable running balances (never auto-offset).
+ */
+export function buildContactChronologicalLedger(
+  contact: ContactChronologicalInput
+): ChronologicalLedgerEntry[] {
+  type RawEvent = {
+    id: string;
+    date: Date;
+    createdAt: Date;
+    eventOrder: number;
+    activityType: 'GAVE_NEW' | 'RECEIVED_NEW' | 'LENT_REPAY' | 'BORROWED_REPAY';
+    activityLabel: string;
+    title: string;
+    moneyDirection: 'OUT' | 'IN';
+    balanceBucket: 'TO_RECEIVE' | 'TO_PAY';
+    amount: number;
+    paymentMode: PaymentMethod;
+    paymentRef: string | null;
+    paymentDetails: string | null;
+    notes: string | null;
+    dueDate: Date | null;
+    status?: KhataEntryStatus;
+    transactionId: string;
+  };
+
+  const rawEvents: RawEvent[] = [];
+
+  for (const tx of contact.transactions) {
+    const mode = (tx.paymentMode as PaymentMethod) || 'CASH';
+    if (tx.type === 'GAVE') {
+      rawEvents.push({
+        id: tx.id,
+        date: new Date(tx.date),
+        createdAt: new Date(tx.createdAt),
+        eventOrder: 0,
+        activityType: 'GAVE_NEW',
+        activityLabel: 'Given (To Receive)',
+        title: 'नई रकम दी (Lent)',
+        moneyDirection: 'OUT',
+        balanceBucket: 'TO_RECEIVE',
+        amount: round2(tx.amount),
+        paymentMode: mode,
+        paymentRef: tx.paymentRef,
+        paymentDetails: tx.paymentDetails,
+        notes: tx.description,
+        dueDate: tx.dueDate,
+        status: tx.status,
+        transactionId: tx.id,
+      });
+    } else {
+      rawEvents.push({
+        id: tx.id,
+        date: new Date(tx.date),
+        createdAt: new Date(tx.createdAt),
+        eventOrder: 0,
+        activityType: 'RECEIVED_NEW',
+        activityLabel: 'Taken (To Pay)',
+        title: 'नई रकम ली (Borrowed)',
+        moneyDirection: 'IN',
+        balanceBucket: 'TO_PAY',
+        amount: round2(tx.amount),
+        paymentMode: mode,
+        paymentRef: tx.paymentRef,
+        paymentDetails: tx.paymentDetails,
+        notes: tx.description,
+        dueDate: tx.dueDate,
+        status: tx.status,
+        transactionId: tx.id,
+      });
+    }
+  }
+
+  for (const r of contact.repayments) {
+    const repMode = (r.paymentMode as PaymentMethod) || 'CASH';
+    const isLentRepay = r.transaction.type === 'GAVE';
+
+    if (isLentRepay) {
+      rawEvents.push({
+        id: r.id,
+        date: new Date(r.date),
+        createdAt: new Date(r.createdAt),
+        eventOrder: 1,
+        activityType: 'LENT_REPAY',
+        activityLabel: 'Received Back',
+        title: 'पहले दी गई रकम वापस मिली (Received Back)',
+        moneyDirection: 'IN',
+        balanceBucket: 'TO_RECEIVE',
+        amount: round2(r.amount),
+        paymentMode: repMode,
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
+        notes: r.notes,
+        dueDate: null,
+        transactionId: r.transactionId,
+      });
+    } else {
+      rawEvents.push({
+        id: r.id,
+        date: new Date(r.date),
+        createdAt: new Date(r.createdAt),
+        eventOrder: 1,
+        activityType: 'BORROWED_REPAY',
+        activityLabel: 'Returned',
+        title: 'पहले ली गई रकम वापस की (Returned)',
+        moneyDirection: 'OUT',
+        balanceBucket: 'TO_PAY',
+        amount: round2(r.amount),
+        paymentMode: repMode,
+        paymentRef: r.paymentRef,
+        paymentDetails: r.paymentDetails,
+        notes: r.notes,
+        dueDate: null,
+        transactionId: r.transactionId,
+      });
+    }
+  }
+
+  rawEvents.sort((a, b) => {
+    const dDiff = a.date.getTime() - b.date.getTime();
+    if (dDiff !== 0) return dDiff;
+    const cDiff = a.createdAt.getTime() - b.createdAt.getTime();
+    if (cDiff !== 0) return cDiff;
+    if (a.eventOrder !== b.eventOrder) return a.eventOrder - b.eventOrder;
+    return a.id.localeCompare(b.id);
+  });
+
+  let runningToReceive = 0;
+  let runningToPay = 0;
+
+  return rawEvents.map((ev) => {
+    const previousToReceive = round2(runningToReceive);
+    const previousToPay = round2(runningToPay);
+    const previousNetBalance = round2(runningToReceive - runningToPay);
+
+    let previousBalance = 0;
+    let updatedBalance = 0;
+
+    if (ev.activityType === 'GAVE_NEW') {
+      previousBalance = previousToReceive;
+      runningToReceive = round2(runningToReceive + ev.amount);
+      updatedBalance = runningToReceive;
+    } else if (ev.activityType === 'LENT_REPAY') {
+      previousBalance = previousToReceive;
+      runningToReceive = round2(runningToReceive - ev.amount);
+      updatedBalance = runningToReceive;
+    } else if (ev.activityType === 'RECEIVED_NEW') {
+      previousBalance = previousToPay;
+      runningToPay = round2(runningToPay + ev.amount);
+      updatedBalance = runningToPay;
+    } else {
+      previousBalance = previousToPay;
+      runningToPay = round2(runningToPay - ev.amount);
+      updatedBalance = runningToPay;
+    }
+
+    const updatedToReceive = round2(runningToReceive);
+    const updatedToPay = round2(runningToPay);
+    const updatedNetBalance = round2(runningToReceive - runningToPay);
+
+    return {
+      id: ev.id,
+      contactId: contact.id,
+      contactName: contact.name,
+      contactPhone: contact.phone,
+      date: ev.date,
+      createdAt: ev.createdAt,
+      activityType: ev.activityType,
+      activityLabel: ev.activityLabel,
+      title: ev.title,
+      moneyDirection: ev.moneyDirection,
+      balanceBucket: ev.balanceBucket,
+      amount: ev.amount,
+      previousBalance,
+      updatedBalance,
+      balanceAfter: updatedBalance,
+      previousToReceive,
+      updatedToReceive,
+      previousToPay,
+      updatedToPay,
+      previousNetBalance,
+      updatedNetBalance,
+      paymentMode: ev.paymentMode,
+      paymentRef: ev.paymentRef,
+      paymentDetails: ev.paymentDetails,
+      notes: ev.notes,
+      dueDate: ev.dueDate,
+      status: ev.status,
+      transactionId: ev.transactionId,
+    };
+  });
+}
+
 export async function getKhataContactDetail(businessId: string, contactId: string) {
   const contact = await prisma.khataContact.findFirst({
     where: { id: contactId, businessId },
@@ -505,104 +763,8 @@ export async function getKhataContactDetail(businessId: string, contactId: strin
 
   const netPosition = round2(amountToReceive - amountToPay);
 
-  // Build unified chronological activity ledger
-  const activityLedger: Array<{
-    id: string;
-    date: Date;
-    activityType: 'GAVE_NEW' | 'RECEIVED_NEW' | 'LENT_REPAY' | 'BORROWED_REPAY';
-    title: string;
-    moneyDirection: 'OUT' | 'IN'; // OUT (red) or IN (green)
-    amount: number;
-    balanceAfter?: number;
-    paymentMode: PaymentMethod;
-    paymentRef?: string | null;
-    paymentDetails?: string | null;
-    notes?: string | null;
-    dueDate?: Date | null;
-    status?: KhataEntryStatus;
-    transactionId?: string;
-  }> = [];
-
-  for (const tx of contact.transactions) {
-    const mode = (tx.paymentMode as PaymentMethod) || 'CASH';
-    if (tx.type === 'GAVE') {
-      activityLedger.push({
-        id: tx.id,
-        date: tx.date,
-        activityType: 'GAVE_NEW',
-        title: 'नई रकम दी (Lent)',
-        moneyDirection: 'OUT',
-        amount: round2(tx.amount),
-        balanceAfter: round2(tx.balanceAmount),
-        paymentMode: mode,
-        paymentRef: tx.paymentRef,
-        paymentDetails: tx.paymentDetails,
-        dueDate: tx.dueDate,
-        notes: tx.description,
-        status: tx.status,
-        transactionId: tx.id,
-      });
-    } else {
-      activityLedger.push({
-        id: tx.id,
-        date: tx.date,
-        activityType: 'RECEIVED_NEW',
-        title: 'नई रकम ली (Borrowed)',
-        moneyDirection: 'IN',
-        amount: round2(tx.amount),
-        balanceAfter: round2(tx.balanceAmount),
-        paymentMode: mode,
-        paymentRef: tx.paymentRef,
-        paymentDetails: tx.paymentDetails,
-        dueDate: tx.dueDate,
-        notes: tx.description,
-        status: tx.status,
-        transactionId: tx.id,
-      });
-    }
-  }
-
-  for (const r of contact.repayments) {
-    const repMode = (r.paymentMode as PaymentMethod) || 'CASH';
-    const isLentRepay = r.transaction.type === 'GAVE';
-
-    if (isLentRepay) {
-      // User lent money earlier and now received repayment back -> money came IN
-      activityLedger.push({
-        id: r.id,
-        date: r.date,
-        activityType: 'LENT_REPAY',
-        title: 'पहले दी गई रकम वापस मिली (Received Back)',
-        moneyDirection: 'IN',
-        amount: round2(r.amount),
-        balanceAfter: round2(r.transaction.balanceAmount),
-        paymentMode: repMode,
-        paymentRef: r.paymentRef,
-        paymentDetails: r.paymentDetails,
-        notes: r.notes,
-        transactionId: r.transactionId,
-      });
-    } else {
-      // User borrowed money earlier and is now returning repayment -> money went OUT
-      activityLedger.push({
-        id: r.id,
-        date: r.date,
-        activityType: 'BORROWED_REPAY',
-        title: 'पहले ली गई रकम वापस की (Returned)',
-        moneyDirection: 'OUT',
-        amount: round2(r.amount),
-        balanceAfter: round2(r.transaction.balanceAmount),
-        paymentMode: repMode,
-        paymentRef: r.paymentRef,
-        paymentDetails: r.paymentDetails,
-        notes: r.notes,
-        transactionId: r.transactionId,
-      });
-    }
-  }
-
-  // Sort unified ledger by date descending
-  activityLedger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Build deterministic chronological ledger and present newest first
+  const activityLedger = buildContactChronologicalLedger(contact).reverse();
 
   let status: 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED' = 'SETTLED';
   let statusLabel = 'हिसाब पूरा';

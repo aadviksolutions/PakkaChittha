@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ModulePageShell } from '@/components/shared/ModulePageShell';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
-import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
+import KhataConsolidatedReportView from '@/components/free-khata/KhataConsolidatedReportView';
 import {
   Download,
   FileSpreadsheet,
@@ -34,9 +34,10 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Users,
 } from 'lucide-react';
 
-type MainTab = 'overview' | 'sales' | 'purchases' | 'gst' | 'reconciliation' | 'registers';
+type MainTab = 'overview' | 'sales' | 'purchases' | 'gst' | 'reconciliation' | 'registers' | 'khata';
 type RegisterSubTab = 'cash' | 'bank' | 'expenses' | 'receivables' | 'payables' | 'pnl';
 type GstSubTab = 'gstr1' | 'gstr3b';
 
@@ -83,7 +84,7 @@ export default function ReportsPage() {
 
   // Load data whenever filters or tab changes
   useEffect(() => {
-    if (!canAdvancedReports) return;
+    if (!canAdvancedReports || activeTab === 'khata') return;
     loadTabContent();
   }, [canAdvancedReports, activeTab, financialYear, periodType, periodValue, startDate, endDate]);
 
@@ -370,11 +371,12 @@ export default function ReportsPage() {
 
   if (!canAdvancedReports) {
     return (
-      <FeatureNotAvailable
-        featureName="Accounts & GST Intelligence Engine"
-        requiredPlanName="Growth or Scale"
-        description="Comprehensive Sales Register, Purchase Register, GSTR-1 preparation, GSTR-3B offline JSON exports, GSTR-2B 2-way reconciliation, Cash Book, Bank Book, and Profit & Loss reports require a Pakka Chittha Growth or Scale subscription."
-      />
+      <div className="space-y-4">
+        <KhataConsolidatedReportView
+          backHref="/free-khata"
+          backLabel="Back to Personal Khata"
+        />
+      </div>
     );
   }
 
@@ -512,6 +514,7 @@ export default function ReportsPage() {
               { id: 'gst', label: 'GST Returns (GSTR-1 & 3B)', icon: ShieldCheck },
               { id: 'reconciliation', label: 'GSTR-2B Reconciliation', icon: Sparkles },
               { id: 'registers', label: 'Financial Books & P&L', icon: Landmark },
+              { id: 'khata', label: 'Personal Khata Report', icon: Users },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1988,6 +1991,15 @@ export default function ReportsPage() {
               </div>
             )}
           </div>
+        )}
+        {/* =========================================================================
+            TAB 7: PERSONAL KHATA CONSOLIDATED REPORT & EXCEL / PDF EXPORTS
+            ========================================================================= */}
+        {activeTab === 'khata' && (
+          <KhataConsolidatedReportView
+            backHref="/free-khata"
+            backLabel="Open Personal Khata"
+          />
         )}
       </div>
     </ModulePageShell>

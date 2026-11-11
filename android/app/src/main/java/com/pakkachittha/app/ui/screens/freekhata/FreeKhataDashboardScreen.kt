@@ -37,6 +37,7 @@ import java.util.*
 fun FreeKhataDashboardScreen(
     viewModel: FreeKhataViewModel,
     onOpenDrawer: () -> Unit,
+    onNavigateToReports: () -> Unit = {},
     isHindi: Boolean = false
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -130,7 +131,16 @@ fun FreeKhataDashboardScreen(
             PakkachitthaTopBar(
                 title = if (isHindi) "पर्सनल खाता" else "Personal Khata",
                 subtitle = if (isHindi) "हर पैसे का हिसाब, बिल्कुल आसान।" else "Every rupee tracked, crystal clear and simple.",
-                onNavigationClick = onOpenDrawer
+                onNavigationClick = onOpenDrawer,
+                actions = {
+                    IconButton(onClick = onNavigateToReports) {
+                        Icon(
+                            imageVector = Icons.Default.Assessment,
+                            contentDescription = "Khata Reports",
+                            tint = TextWhite
+                        )
+                    }
+                }
             )
         },
         containerColor = BackgroundLight

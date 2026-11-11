@@ -16,6 +16,7 @@ import com.pakkachittha.app.ui.screens.auth.RegisterScreen
 import com.pakkachittha.app.ui.screens.customers.CustomerListScreen
 import com.pakkachittha.app.ui.screens.dashboard.DashboardScreen
 import com.pakkachittha.app.ui.screens.freekhata.FreeKhataDashboardScreen
+import com.pakkachittha.app.ui.screens.freekhata.FreeKhataReportsScreen
 import com.pakkachittha.app.ui.screens.inventory.InventoryScreen
 import com.pakkachittha.app.ui.screens.invoices.CreateInvoiceScreen
 import com.pakkachittha.app.ui.screens.invoices.InvoiceDetailScreen
@@ -202,6 +203,16 @@ fun AppNavHost(
                     FreeKhataDashboardScreen(
                         viewModel = freeKhataViewModel,
                         onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                        onNavigateToReports = { navController.navigate(Screen.FreeKhataReports.route) },
+                        isHindi = isHindi
+                    )
+                }
+
+                // Free Khata Consolidated Reports (Shared Backend APIs)
+                composable(Screen.FreeKhataReports.route) {
+                    FreeKhataReportsScreen(
+                        viewModel = freeKhataViewModel,
+                        onNavigateBack = { navController.popBackStack() },
                         isHindi = isHindi
                     )
                 }

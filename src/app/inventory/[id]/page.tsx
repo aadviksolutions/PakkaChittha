@@ -271,8 +271,8 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const profitMargin =
     product.sellingPrice > 0
       ? Math.round(
-          ((product.sellingPrice - product.purchasePrice) / product.sellingPrice) * 100
-        )
+        ((product.sellingPrice - product.purchasePrice) / product.sellingPrice) * 100
+      )
       : 0;
 
   return (
@@ -441,26 +441,24 @@ function ProductDetailContent({ params }: { params: Promise<{ id: string }> }) {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            m.type === 'PURCHASE_RECEIVED'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : m.type === 'SALE_DEDUCTION'
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${m.type === 'PURCHASE_RECEIVED'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : m.type === 'SALE_DEDUCTION'
                               ? 'bg-blue-50 text-blue-700 border border-blue-200'
                               : m.type === 'SALE_RETURN'
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : m.type === 'PURCHASE_RETURN'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200'
-                          }`}
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : m.type === 'PURCHASE_RETURN'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}
                         >
                           {m.type.replace(/_/g, ' ')}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-extrabold whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-0.5 ${
-                            isPositive ? 'text-emerald-600' : 'text-rose-600'
-                          }`}
+                          className={`inline-flex items-center gap-0.5 ${isPositive ? 'text-emerald-600' : 'text-rose-600'
+                            }`}
                         >
                           {isPositive ? (
                             <ArrowUpRight className="w-3.5 h-3.5" />

@@ -135,6 +135,7 @@ fun PakkachitthaDrawer(
                 DrawerItem("Customers & Parties", Screen.Customers.route, Icons.Default.People),
                 DrawerItem("Inventory & Stock", Screen.Inventory.route, Icons.Default.Inventory2),
                 DrawerItem("Personal Khata", Screen.FreeKhata.route, Icons.Default.AccountBalanceWallet, "Free"),
+                DrawerItem("Khata Reports (PDF/XLSX)", Screen.FreeKhataReports.route, Icons.Default.Assessment, "PDF"),
                 DrawerItem("Ghar Kharcha", Screen.GharKharcha.route, Icons.Default.Home, "Free"),
                 DrawerItem("Subscription & Plans", Screen.Subscription.route, Icons.Default.Star, "Pro"),
                 DrawerItem("Business Settings", Screen.Settings.route, Icons.Default.Settings)

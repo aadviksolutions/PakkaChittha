@@ -31,6 +31,7 @@ import {
   FileSpreadsheet,
   Edit2,
   Trash2,
+  BarChart3,
 } from 'lucide-react';
 import {
   TransactionModal,
@@ -422,7 +423,14 @@ function PersonalKhataDashboardContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/free-khata/reports"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#071F38] hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+          >
+            <BarChart3 className="w-4 h-4 text-emerald-400" />
+            <span>Reports &amp; PDF/Excel</span>
+          </Link>
           <LanguageSelector variant="compact" />
           <button
             type="button"
@@ -502,13 +510,12 @@ function PersonalKhataDashboardContent() {
               {t('freeKhata.netPosition')}
             </span>
             <span
-              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                kpis.netPosition > 0
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : kpis.netPosition < 0
+              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${kpis.netPosition > 0
+                ? 'bg-emerald-100 text-emerald-800'
+                : kpis.netPosition < 0
                   ? 'bg-rose-100 text-rose-800'
                   : 'bg-slate-100 text-slate-700'
-              }`}
+                }`}
             >
               {kpis.netPosition > 0 ? `+ ${t('freeKhata.toReceiveStatus')}` : kpis.netPosition < 0 ? `- ${t('freeKhata.toPayStatus')}` : t('freeKhata.settled')}
             </span>
@@ -516,13 +523,12 @@ function PersonalKhataDashboardContent() {
 
           <div className="mt-3">
             <span
-              className={`text-2xl sm:text-3xl font-black tracking-tight block ${
-                kpis.netPosition > 0
-                  ? 'text-emerald-600'
-                  : kpis.netPosition < 0
+              className={`text-2xl sm:text-3xl font-black tracking-tight block ${kpis.netPosition > 0
+                ? 'text-emerald-600'
+                : kpis.netPosition < 0
                   ? 'text-rose-600'
                   : 'text-slate-700'
-              }`}
+                }`}
             >
               {kpis.netPosition > 0 && '+ '}
               {kpis.netPosition < 0 && '- '}₹
@@ -532,8 +538,8 @@ function PersonalKhataDashboardContent() {
               {kpis.netPosition > 0
                 ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक मिलने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to receive in total.`)
                 : kpis.netPosition < 0
-                ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक देने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to pay in total.`)
-                : (isHi ? 'आपका कुल हिसाब बराबर है।' : 'Your accounts are completely balanced.')}
+                  ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक देने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to pay in total.`)
+                  : (isHi ? 'आपका कुल हिसाब बराबर है।' : 'Your accounts are completely balanced.')}
             </span>
           </div>
         </div>
@@ -663,11 +669,10 @@ function PersonalKhataDashboardContent() {
         <button
           type="button"
           onClick={() => setActiveTab('CONTACTS')}
-          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'CONTACTS'
-              ? 'bg-[#071F38] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
+          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'CONTACTS'
+            ? 'bg-[#071F38] text-white shadow-xs'
+            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
         >
           {t('freeKhata.contacts')} ({data?.contacts?.length || 0})
         </button>
@@ -675,11 +680,10 @@ function PersonalKhataDashboardContent() {
         <button
           type="button"
           onClick={() => setActiveTab('TRANSACTIONS')}
-          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'TRANSACTIONS'
-              ? 'bg-[#071F38] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
+          className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'TRANSACTIONS'
+            ? 'bg-[#071F38] text-white shadow-xs'
+            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
         >
           {t('freeKhata.transactions')} ({data?.recentTransactions?.length || 0})
         </button>
@@ -688,11 +692,10 @@ function PersonalKhataDashboardContent() {
           <button
             type="button"
             onClick={() => setActiveTab('OVERDUE')}
-            className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'OVERDUE'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-            }`}
+            className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'OVERDUE'
+              ? 'bg-rose-600 text-white shadow-xs'
+              : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+              }`}
           >
             {t('freeKhata.overdue')} ({kpis.overdueCount})
           </button>
@@ -784,13 +787,12 @@ function PersonalKhataDashboardContent() {
 
                         {/* Status Badge */}
                         <span
-                          className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
-                            c.status === 'TO_RECEIVE'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : c.status === 'TO_PAY'
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full ${c.status === 'TO_RECEIVE'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : c.status === 'TO_PAY'
                               ? 'bg-rose-100 text-rose-800'
                               : 'bg-slate-100 text-slate-700'
-                          }`}
+                            }`}
                         >
                           {badgeLabel}
                         </span>
@@ -817,9 +819,8 @@ function PersonalKhataDashboardContent() {
                         <div className="mt-1.5 px-1 flex items-center justify-between text-[10.5px]">
                           <span className="text-slate-500">{t('freeKhata.netPosition')}:</span>
                           <strong
-                            className={`font-black ${
-                              c.netPosition >= 0 ? 'text-emerald-700' : 'text-rose-700'
-                            }`}
+                            className={`font-black ${c.netPosition >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                              }`}
                           >
                             {c.netPosition >= 0 ? '+ ' : '- '}₹
                             {Math.abs(c.netPosition).toLocaleString('en-IN')}
@@ -909,14 +910,30 @@ function PersonalKhataDashboardContent() {
                 <option value="OTHER">Other</option>
               </select>
 
+              <a
+                href="/api/free-khata/reports/export?format=xlsx"
+                className="p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                title="Download Professional Excel (.xlsx) Workbook"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                <span className="hidden sm:inline">Excel (.xlsx)</span>
+              </a>
+              <Link
+                href="/free-khata/reports"
+                className="p-2 bg-[#071F38] text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                title="Open Consolidated Reports, PDF & Share"
+              >
+                <BarChart3 className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline">Full Report</span>
+              </Link>
               <button
                 type="button"
                 onClick={handleExportCSV}
                 className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
-                title="Excel / CSV Export"
+                title="Quick CSV Export"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-                <span className="hidden sm:inline">Excel Export</span>
+                <FileSpreadsheet className="w-4 h-4 text-slate-600" />
+                <span className="hidden sm:inline">CSV</span>
               </button>
             </div>
           </div>
@@ -937,9 +954,8 @@ function PersonalKhataDashboardContent() {
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          isGave ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-                        }`}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGave ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                          }`}
                       >
                         {isGave ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
                       </div>
@@ -953,13 +969,12 @@ function PersonalKhataDashboardContent() {
                             {tx.contactName}
                           </Link>
                           <span
-                            className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${
-                              tx.paymentMode === 'UPI'
-                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                : tx.paymentMode === 'CASH'
+                            className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${tx.paymentMode === 'UPI'
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                              : tx.paymentMode === 'CASH'
                                 ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                 : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}
+                              }`}
                           >
                             {tx.paymentMode}
                           </span>
@@ -975,22 +990,20 @@ function PersonalKhataDashboardContent() {
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`font-black text-sm block ${
-                          isGave ? 'text-rose-600' : 'text-emerald-600'
-                        }`}
+                        className={`font-black text-sm block ${isGave ? 'text-rose-600' : 'text-emerald-600'
+                          }`}
                       >
                         {isGave ? '- ' : '+ '}₹{tx.amount.toLocaleString('en-IN')}
                       </span>
 
                       <div className="flex items-center justify-end gap-1.5 mt-0.5">
                         <span
-                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${
-                            tx.status === 'SETTLED'
-                              ? 'bg-slate-100 text-slate-600'
-                              : tx.status === 'PARTIAL'
+                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${tx.status === 'SETTLED'
+                            ? 'bg-slate-100 text-slate-600'
+                            : tx.status === 'PARTIAL'
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-rose-100 text-rose-800'
-                          }`}
+                            }`}
                         >
                           {tx.status === 'SETTLED' ? (isHi ? 'हिसाब पूरा' : 'Settled') : tx.status === 'PARTIAL' ? (isHi ? 'आंशिक' : 'Partial') : (isHi ? 'बाकी' : 'Pending')}
                         </span>
@@ -1130,6 +1143,50 @@ function PersonalKhataDashboardContent() {
         />
       )}
     </div>
+  );
+}
+
+export default function FreeKhataPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Personal Khata...</div>}>
+      <PersonalKhataDashboardContent />
+    </Suspense>
+  );
+}
+    </div >
+  );
+}
+
+export default function FreeKhataPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Personal Khata...</div>}>
+      <PersonalKhataDashboardContent />
+    </Suspense>
+  );
+}
+    </div >
+  );
+}
+
+export default function FreeKhataPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Personal Khata...</div>}>
+      <PersonalKhataDashboardContent />
+    </Suspense>
+  );
+}
+    </div >
+  );
+}
+
+export default function FreeKhataPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Personal Khata...</div>}>
+      <PersonalKhataDashboardContent />
+    </Suspense>
+  );
+}
+    </div >
   );
 }
 

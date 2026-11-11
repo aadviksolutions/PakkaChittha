@@ -25,7 +25,10 @@ import {
   Filter,
   FileSpreadsheet,
   Check,
+  Loader2,
 } from 'lucide-react';
+import ReportShareModal from '@/components/free-khata/ReportShareModal';
+import type { ReportDatePreset } from '@/lib/services/khataReportService';
 import {
   TransactionModal,
   ContactOption,
@@ -49,6 +52,9 @@ interface ActivityLedgerItem {
   moneyDirection: 'OUT' | 'IN';
   amount: number;
   balanceAfter?: number;
+  previousBalance?: number;
+  updatedBalance?: number;
+  balanceBucket?: 'TO_RECEIVE' | 'TO_PAY';
   paymentMode: PaymentMethod;
   paymentRef?: string | null;
   paymentDetails?: string | null;
@@ -122,6 +128,11 @@ export default function PersonLedgerPage({
   const [searchFilter, setSearchFilter] = useState('');
   const [modeFilter, setModeFilter] = useState<string>('ALL');
   const [directionFilter, setDirectionFilter] = useState<'ALL' | 'OUT' | 'IN'>('ALL');
+  const [dateRangeFilter, setDateRangeFilter] = useState<ReportDatePreset>('ALL');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+  const [downloadingExport, setDownloadingExport] = useState<'xlsx' | 'pdf' | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // Modals state
   const [txModalOpen, setTxModalOpen] = useState(false);
@@ -302,6 +313,9 @@ export default function PersonLedgerPage({
 
   // Filtered Activity Ledger
   const filteredActivities = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
     return (data?.activityLedger || []).filter((item) => {
       const q = searchFilter.toLowerCase().trim();
       const matchesSearch =
@@ -315,9 +329,82 @@ export default function PersonLedgerPage({
       if (modeFilter !== 'ALL' && item.paymentMode !== modeFilter) return false;
       if (directionFilter !== 'ALL' && item.moneyDirection !== directionFilter) return false;
 
+      if (dateRangeFilter !== 'ALL') {
+        const d = new Date(item.date);
+        const itemYmd = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        if (dateRangeFilter === 'TODAY') {
+          if (itemYmd !== todayStr) return false;
+        } else if (dateRangeFilter === 'THIS_WEEK') {
+          const anchor = new Date(`${todayStr}T00:00:00Z`);
+          const diff = (anchor.getUTCDay() + 6) % 7;
+          const monday = new Date(anchor);
+          monday.setUTCDate(anchor.getUTCDate() - diff);
+          const mondayStr = monday.toISOString().slice(0, 10);
+          if (itemYmd < mondayStr || itemYmd > todayStr) return false;
+        } else if (dateRangeFilter === 'THIS_MONTH') {
+          if (itemYmd.slice(0, 7) !== todayStr.slice(0, 7)) return false;
+        } else if (dateRangeFilter === 'THIS_YEAR') {
+          if (itemYmd.slice(0, 4) !== todayStr.slice(0, 4)) return false;
+        } else if (dateRangeFilter === 'CUSTOM') {
+          if (customStartDate && itemYmd < customStartDate) return false;
+          if (customEndDate && itemYmd > customEndDate) return false;
+        }
+      }
+
       return true;
     });
-  }, [data?.activityLedger, searchFilter, modeFilter, directionFilter]);
+  }, [
+    data?.activityLedger,
+    searchFilter,
+    modeFilter,
+    directionFilter,
+    dateRangeFilter,
+    customStartDate,
+    customEndDate,
+  ]);
+
+  const exportQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('dateRange', dateRangeFilter);
+    if (dateRangeFilter === 'CUSTOM') {
+      if (customStartDate) params.set('startDate', customStartDate);
+      if (customEndDate) params.set('endDate', customEndDate);
+    }
+    if (modeFilter !== 'ALL') params.set('paymentMode', modeFilter);
+    return params.toString();
+  }, [dateRangeFilter, customStartDate, customEndDate, modeFilter]);
+
+  const handleDownloadStatement = async (format: 'xlsx' | 'pdf') => {
+    if (!data) return;
+    try {
+      setDownloadingExport(format);
+      const res = await fetch(
+        `/api/free-khata/reports/export?format=${format}&contactId=${encodeURIComponent(contactId)}&${exportQueryParams}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to generate ${format.toUpperCase()} statement.`);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const match = cd.match(/filename="([^"]+)"/);
+      const filename =
+        match?.[1] ||
+        `khata-party-${data.contact.name.toLowerCase().replace(/\s+/g, '-')}.${format}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unable to download statement.');
+    } finally {
+      setDownloadingExport(null);
+    }
+  };
 
   // Print Statement
   const handlePrintStatement = () => {
@@ -443,8 +530,8 @@ export default function PersonLedgerPage({
           </div>
         </div>
 
-        {/* Action Buttons: WhatsApp, Statement, Edit & Delete */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Action Buttons: WhatsApp, Excel/PDF, Print, Share, Edit & Delete */}
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           {contact.phone && (summary.amountToReceive > 0 || summary.amountToPay > 0) && (
             <button
               type="button"
@@ -458,12 +545,61 @@ export default function PersonLedgerPage({
 
           <button
             type="button"
+            disabled={downloadingExport !== null}
+            onClick={() => handleDownloadStatement('xlsx')}
+            className="px-2.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
+            title="Download Party Statement (Excel .xlsx)"
+          >
+            {downloadingExport === 'xlsx' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+            )}
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={downloadingExport !== null}
+            onClick={() => handleDownloadStatement('pdf')}
+            className="px-2.5 py-2 bg-[#071F38] hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60"
+            title="Download Party Statement (PDF)"
+          >
+            {downloadingExport === 'pdf' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 text-rose-300" />
+            )}
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintStatement}
+            className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+            title="Print Statement"
+          >
+            <Printer className="w-4 h-4 text-slate-700" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShareModalOpen(true)}
+            className="px-2.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+            title="Share Party Report"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleExportStatementCSV}
             className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
-            title="Download Statement (CSV)"
+            title="Quick CSV Export"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-            <span className="hidden sm:inline">Statement</span>
+            <Download className="w-4 h-4 text-slate-600" />
+            <span className="hidden md:inline">CSV</span>
           </button>
 
           <button
@@ -652,7 +788,38 @@ export default function PersonLedgerPage({
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <select
+              aria-label="Date range filter"
+              value={dateRangeFilter}
+              onChange={(e) => setDateRangeFilter(e.target.value as ReportDatePreset)}
+              className="text-xs p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none"
+            >
+              <option value="ALL">All Time</option>
+              <option value="TODAY">Today</option>
+              <option value="THIS_WEEK">This Week</option>
+              <option value="THIS_MONTH">This Month</option>
+              <option value="THIS_YEAR">This Year</option>
+              <option value="CUSTOM">Custom Range</option>
+            </select>
+
+            {dateRangeFilter === 'CUSTOM' && (
+              <>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="text-xs p-1.5 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </>
+            )}
+
             <select
               value={directionFilter}
               onChange={(e) => setDirectionFilter(e.target.value as any)}
@@ -719,7 +886,17 @@ export default function PersonLedgerPage({
                       </div>
 
                       <div className="text-[11px] text-slate-500 mt-0.5 space-x-1">
-                        <span>{formatDate(act.date)}</span>
+                        <span>
+                          {new Date(act.date).toLocaleString('en-IN', {
+                            timeZone: 'Asia/Kolkata',
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
+                        </span>
                         {act.notes && <span>• {act.notes}</span>}
                         {act.paymentRef && <span>• Ref: {act.paymentRef}</span>}
                         {act.dueDate && <span>• Due: {formatDate(act.dueDate)}</span>}
@@ -735,22 +912,28 @@ export default function PersonLedgerPage({
                       {isOut ? '- ' : '+ '}₹{act.amount.toLocaleString('en-IN')}
                     </span>
 
-                    {act.balanceAfter !== undefined && (
+                    {(act.previousBalance !== undefined && act.updatedBalance !== undefined) ? (
+                      <span className="text-[10px] text-slate-500 block mt-0.5 tabular-nums">
+                        Prev: ₹{act.previousBalance.toLocaleString('en-IN')} → New: <strong className="text-[#071F38]">₹{act.updatedBalance.toLocaleString('en-IN')}</strong>
+                      </span>
+                    ) : act.balanceAfter !== undefined ? (
                       <span className="text-[10px] text-slate-400 block mt-0.5">
                         बाकी: ₹{act.balanceAfter.toLocaleString('en-IN')}
                       </span>
-                    )}
+                    ) : null}
 
-                    <div className="flex items-center justify-end gap-1.5 mt-1">
-                      {act.transactionId && (act.activityType === 'GAVE_NEW' || act.activityType === 'RECEIVED_NEW') && (act.balanceAfter ?? 0) > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRepayForTx(act.transactionId!)}
-                          className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer"
-                        >
-                          वापसी दर्ज करें
-                        </button>
-                      )}
+                    <div className="flex items-center justify-end gap-1.5 mt-1 print:hidden">
+                      {act.transactionId &&
+                        (act.activityType === 'GAVE_NEW' || act.activityType === 'RECEIVED_NEW') &&
+                        (data.transactions.find((t) => t.id === act.transactionId)?.balanceAmount ?? 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRepayForTx(act.transactionId!)}
+                            className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer"
+                          >
+                            वापसी दर्ज करें
+                          </button>
+                        )}
                       <button
                         type="button"
                         onClick={() => handleEditActivity(act)}
@@ -834,6 +1017,37 @@ export default function PersonLedgerPage({
             setWaTarget(null);
           }}
           target={waTarget}
+        />
+      )}
+
+      {data && (
+        <ReportShareModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          title={`Share Party Statement — ${contact.name}`}
+          subject={`Khata Statement — ${contact.name} (Pakka Chittha)`}
+          shareText={[
+            `*Party Khata Statement: ${contact.name}*`,
+            contact.phone ? `Mobile: ${contact.phone}` : '',
+            '',
+            `Current To Receive (लेनी है): ₹${summary.amountToReceive.toLocaleString('en-IN')}`,
+            `Current To Pay (देनी है): ₹${summary.amountToPay.toLocaleString('en-IN')}`,
+            `Net Position (वर्तमान स्थिति): ₹${summary.netPosition.toLocaleString('en-IN')}`,
+            `Total Given: ₹${summary.totalGiven.toLocaleString('en-IN')} | Received Back: ₹${summary.totalReceivedBack.toLocaleString('en-IN')}`,
+            `Total Taken: ₹${summary.totalTaken.toLocaleString('en-IN')} | Returned: ₹${summary.totalReturned.toLocaleString('en-IN')}`,
+            `Entries Shown: ${filteredActivities.length}`,
+            '',
+            'Generated via Pakka Chittha / LenDen',
+          ]
+            .filter(Boolean)
+            .join('\n')}
+          recipientPhone={contact.phone}
+          recipientEmail={contact.email}
+          pdfExportUrl={`/api/free-khata/reports/export?format=pdf&contactId=${encodeURIComponent(contactId)}&${exportQueryParams}`}
+          excelExportUrl={`/api/free-khata/reports/export?format=xlsx&contactId=${encodeURIComponent(contactId)}&${exportQueryParams}`}
+          pdfFileName={`khata-party-${contact.name.toLowerCase().replace(/\s+/g, '-')}.pdf`}
+          excelFileName={`khata-party-${contact.name.toLowerCase().replace(/\s+/g, '-')}.xlsx`}
+          onPrint={handlePrintStatement}
         />
       )}
     </div>

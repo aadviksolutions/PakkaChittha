@@ -6,6 +6,10 @@ const PUBLIC_PATHS = [
   '/login',
   '/register',
   '/pricing',
+  '/gst-billing-software',
+  '/udhaar-khata-management',
+  '/inventory-stock-software',
+  '/ghar-kharcha-app',
   '/view',
   '/api/auth/login',
   '/api/auth/register',
@@ -24,11 +28,37 @@ const PUBLIC_PATHS = [
   '/api/webhooks/razorpay',
 ];
 
+const NOINDEX_PREFIXES = [
+  '/login',
+  '/register',
+  '/select-mode',
+  '/welcome',
+  '/dashboard',
+  '/free-khata',
+  '/ghar-kharcha',
+  '/invoices',
+  '/customers',
+  '/inventory',
+  '/purchases',
+  '/suppliers',
+  '/quotations',
+  '/expenses',
+  '/reports',
+  '/settings',
+  '/staff',
+  '/subscription',
+  '/whatsapp',
+  '/platform-admin',
+  '/view',
+];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static files, Next.js internal chunks, media assets, uploads, and icons
+  // Allow static files, Next.js internal chunks, media assets, uploads, robots/sitemap, and icons
   if (
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.startsWith('/uploads') ||
@@ -40,7 +70,9 @@ export function middleware(request: NextRequest) {
     pathname.endsWith('.mp4') ||
     pathname.endsWith('.webm') ||
     pathname.endsWith('.json') ||
-    pathname.endsWith('.webp')
+    pathname.endsWith('.webp') ||
+    pathname.endsWith('.txt') ||
+    pathname.endsWith('.xml')
   ) {
     return NextResponse.next();
   }
@@ -87,6 +119,14 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  const isNoindexRoute =
+    (pathname === '/' && Boolean(sessionToken)) ||
+    NOINDEX_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+  if (isNoindexRoute) {
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+
   return response;
 }
 
@@ -97,8 +137,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - robots.txt & sitemap.xml
      * - public files (svg, png, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|txt|xml)$).*)',
   ],
 };

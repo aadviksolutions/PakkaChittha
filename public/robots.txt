@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Allow: /gst-billing-software
+Allow: /udhaar-khata-management
+Allow: /inventory-stock-software
+Allow: /ghar-kharcha-app
+Allow: /pricing
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /select-mode
+Disallow: /api/
+Disallow: /free-khata
+Disallow: /ghar-kharcha
+Disallow: /invoices
+Disallow: /customers
+Disallow: /inventory
+Disallow: /purchases
+Disallow: /suppliers
+Disallow: /quotations
+Disallow: /expenses
+Disallow: /reports
+Disallow: /settings
+Disallow: /staff
+Disallow: /subscription
+Disallow: /whatsapp
+Disallow: /platform-admin
+Disallow: /view
+
+Sitemap: https://pakkachittha.com/sitemap.xml
+

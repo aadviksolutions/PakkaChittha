@@ -1,9 +1,15 @@
+import type { Metadata } from 'next';
 import { getCurrentSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { PlatformRole } from '@prisma/client';
 import { AdminLayoutShell } from '@/components/admin/AdminLayoutShell';
+import { NOINDEX_METADATA } from '@/lib/seo/constants';
 
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = {
+  title: 'Platform Admin | Pakka Chittha',
+  ...NOINDEX_METADATA,
+};
 
 export default async function PlatformAdminLayout({
   children,

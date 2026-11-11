@@ -130,7 +130,6 @@ export function Sidebar({
     }
     if (item.id === 'purchases') return isAllowed('canManagePurchases');
     if (item.id === 'suppliers') return isAllowed('canManageSuppliers');
-    if (item.id === 'reports') return isAllowed('canAdvancedReports');
     if (item.id === 'staff') return isAllowed('canManageStaff');
     return true;
   });

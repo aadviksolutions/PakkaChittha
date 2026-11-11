@@ -256,6 +256,15 @@ export const FREE_KHATA_NAVIGATION_ITEMS: NavigationItem[] = [
     description: 'लोगों को देने वाली बाकी रकम',
   },
   {
+    id: 'free-khata-reports',
+    name: 'Hisab Reports (PDF/Excel)',
+    href: '/free-khata/reports',
+    iconName: 'BarChart3',
+    badge: 'PDF/XLSX',
+    badgeColor: 'blue',
+    description: 'Consolidated receivable/payable report, Excel workbook & PDF statement',
+  },
+  {
     id: 'free-khata-reminders',
     name: 'WhatsApp Reminders',
     href: '/free-khata?view=reminders',

@@ -681,48 +681,48 @@ function PurchaseCreationForm() {
                     <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                       Amount Paid (₹)
                     </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-extrabold text-slate-900 text-xs"
-                />
-              </div>
-
-              {parsedPaid > 0 && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Payment Mode
-                    </label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
-                    >
-                      <option value="BANK_TRANSFER">Bank Transfer / NEFT / RTGS</option>
-                      <option value="UPI">UPI</option>
-                      <option value="CHEQUE">Cheque</option>
-                      <option value="CASH">Cash</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      UTR / Transaction Ref
-                    </label>
                     <input
-                      type="text"
-                      placeholder="e.g. UTR # or Cheque #"
-                      value={paymentReference}
-                      onChange={(e) => setPaymentReference(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-extrabold text-slate-900 text-xs"
                     />
                   </div>
-                </>
-              )}
+
+                  {parsedPaid > 0 && (
+                    <>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Payment Mode
+                        </label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
+                        >
+                          <option value="BANK_TRANSFER">Bank Transfer / NEFT / RTGS</option>
+                          <option value="UPI">UPI</option>
+                          <option value="CHEQUE">Cheque</option>
+                          <option value="CASH">Cash</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          UTR / Transaction Ref
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. UTR # or Cheque #"
+                          value={paymentReference}
+                          onChange={(e) => setPaymentReference(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 text-[11px] text-blue-800 space-y-1">
@@ -739,9 +739,8 @@ function PurchaseCreationForm() {
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
                 <span className="text-slate-500">Remaining Balance:</span>
                 <span
-                  className={`font-extrabold ${
-                    balanceDue > 0 ? 'text-rose-700' : 'text-emerald-700'
-                  }`}
+                  className={`font-extrabold ${balanceDue > 0 ? 'text-rose-700' : 'text-emerald-700'
+                    }`}
                 >
                   ₹{balanceDue.toLocaleString('en-IN')}
                 </span>

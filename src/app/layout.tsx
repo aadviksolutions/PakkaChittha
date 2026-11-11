@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
+import { SITE_URL } from '@/lib/seo/constants';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,6 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Pakka Chittha | Billing • Inventory • Udhari • Reports',
   description:
     'Simple billing, inventory management, udhari tracking, and business reports for Indian businesses.',
