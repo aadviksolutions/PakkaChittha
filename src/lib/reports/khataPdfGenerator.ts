@@ -70,15 +70,16 @@ function loadNotoFonts(): { regular: string | null; bold: string | null } {
 function loadLogoPng(): Buffer | null {
   if (cachedLogoBuffer !== undefined) return cachedLogoBuffer;
   try {
-    const candidates = [
-      path.join(process.cwd(), 'public', 'pakka-chittha-logo.png'),
-      path.join(process.cwd(), 'public', 'logo.png'),
-    ];
-    for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) {
-        cachedLogoBuffer = fs.readFileSync(candidate);
-        return cachedLogoBuffer;
-      }
+    // Static path expressions allow Turbopack file tracing without scanning process.cwd().
+    const primaryPath = path.join(process.cwd(), 'public', 'pakka-chittha-logo.png');
+    if (fs.existsSync(primaryPath)) {
+      cachedLogoBuffer = fs.readFileSync(primaryPath);
+      return cachedLogoBuffer;
+    }
+    const fallbackPath = path.join(process.cwd(), 'public', 'logo.png');
+    if (fs.existsSync(fallbackPath)) {
+      cachedLogoBuffer = fs.readFileSync(fallbackPath);
+      return cachedLogoBuffer;
     }
   } catch {
     // Logo optional if missing
