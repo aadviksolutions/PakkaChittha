@@ -81,7 +81,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
     return (
       <nav
         aria-label="Super Admin Mobile Bar"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(7,31,56,0.06)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
+        className="print:hidden lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(7,31,56,0.06)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
       >
         <div className="max-w-md mx-auto grid grid-cols-5 gap-1 items-center">
           {superAdminItems.map((item, idx) => {
@@ -258,7 +258,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
   return (
     <nav
       aria-label="Mobile Navigation Bar"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(7,31,56,0.06)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
+      className="print:hidden lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(7,31,56,0.06)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
     >
       <div className="max-w-md mx-auto grid grid-cols-5 gap-1 items-center">
         {commercialItems.map((item, idx) => {

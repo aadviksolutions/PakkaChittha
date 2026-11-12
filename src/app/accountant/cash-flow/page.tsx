@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { CreditCard, Download, RefreshCw } from 'lucide-react';
+import { CreditCard, Download, Printer, RefreshCw } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface FyOption {
@@ -137,7 +138,17 @@ function CashFlowContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="Cash Flow Statement (Direct Method)"
+        subtitle="Cash & Bank movement across Operating, Investing, and Financing activities"
+        periodLabel={fyCode ? `FY ${fyCode}` : 'Current FY'}
+        branchLabel={
+          branchId === 'ALL'
+            ? 'All Branches'
+            : activeBusiness?.branches?.find((b) => b.id === branchId)?.name
+        }
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-[#EA580C]" />
@@ -189,6 +200,15 @@ function CashFlowContent() {
           </button>
           <button
             type="button"
+            disabled={!statement}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+          <button
+            type="button"
             onClick={() => void loadStatement()}
             className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer"
           >
@@ -233,6 +253,8 @@ function CashFlowContent() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="Cash Flow Statement (Direct Method) — PakkaChittha Accountant ERP." />
     </div>
   );
 }

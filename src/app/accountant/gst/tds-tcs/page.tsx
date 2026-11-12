@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Percent, PlusCircle, RefreshCw } from 'lucide-react';
+import { Percent, PlusCircle, Printer, RefreshCw } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface TdsSectionRule {
@@ -163,7 +164,12 @@ function TdsTcsContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="TDS / TCS Section Threshold & Provision Register"
+        subtitle="Sections 194C, 194J, 194H, 194I, 194Q & 206C(1H) FY Threshold Monitor"
+        periodLabel={register?.fyCode ? `FY ${register.fyCode}` : 'Current FY'}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Percent className="w-5 h-5 text-[#EA580C]" />
@@ -176,13 +182,24 @@ function TdsTcsContent() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void loadRegister()}
-          className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer self-start"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          <button
+            type="button"
+            disabled={!register}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+          <button
+            type="button"
+            onClick={() => void loadRegister()}
+            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {msg && (
@@ -198,7 +215,7 @@ function TdsTcsContent() {
       )}
 
       {register && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 print:block">
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
               <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -308,7 +325,7 @@ function TdsTcsContent() {
 
           <form
             onSubmit={postDeduction}
-            className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4 h-fit"
+            className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4 h-fit"
           >
             <div>
               <h2 className="text-sm font-black text-[#071F38]">Post TDS Provision Journal</h2>
@@ -405,6 +422,8 @@ function TdsTcsContent() {
           </form>
         </div>
       )}
+
+      <ReportPrintFooter note="TDS / TCS Section Threshold Register — PakkaChittha Accountant ERP." />
     </div>
   );
 }

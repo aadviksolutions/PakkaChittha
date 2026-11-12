@@ -101,6 +101,15 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     description: 'Business name, logo, address, GSTIN and invoice branding',
   },
   {
+    id: 'staff',
+    name: 'Staff & Roles',
+    href: '/staff',
+    iconName: 'ShieldCheck',
+    badge: 'Roles',
+    badgeColor: 'blue',
+    description: 'Create team users, assign ERP roles & Scale permissions',
+  },
+  {
     id: 'printer-settings',
     name: 'Printer Settings',
     href: '/settings/printer',
@@ -456,6 +465,15 @@ export const ACCOUNTANT_NAVIGATION_ITEMS: NavigationItem[] = [
     href: '/accountant/settings',
     iconName: 'Settings',
     description: 'Financial years, branch defaults, and workspace feature flags',
+  },
+  {
+    id: 'acc-staff',
+    name: 'Staff, Roles & CA Access',
+    href: '/staff',
+    iconName: 'ShieldCheck',
+    badge: 'Admin',
+    badgeColor: 'blue',
+    description: 'Create staff accounts, assign roles & manage Scale CA access',
   },
   {
     id: 'acc-daybook',

@@ -5,10 +5,12 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  Printer,
   RefreshCw,
   Send,
 } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface Gstr1HsnRow {
@@ -146,7 +148,14 @@ function Gstr1Content() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="GSTR-1 Outward Supplies Return"
+        subtitle="Official GSTN B2B, B2C, CDNR & HSN-wise Outward Supplies Statement"
+        periodLabel={`${MONTHS[month - 1] || month} ${year}`}
+        gstinOverride={payload?.gstin}
+        referenceLabel={payload?.fp ? `Return Period: ${payload.fp}` : undefined}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-[#EA580C]" />
@@ -193,6 +202,14 @@ function Gstr1Content() {
                 <Download className="w-3.5 h-3.5" />
                 CSV
               </a>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[#071F38] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </button>
               <button
                 type="button"
                 disabled={submitting}
@@ -285,6 +302,8 @@ function Gstr1Content() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="GSTR-1 Return Statement — PakkaChittha Accountant ERP." />
     </div>
   );
 }
@@ -294,7 +313,7 @@ function StatCard({ label, value, dark = false }: { label: string; value: string
     <div
       className={`rounded-2xl border p-4 ${
         dark
-          ? 'bg-[#071F38] text-white border-[#071F38]'
+          ? 'bg-[#071F38] text-white border-[#071F38] print-surface-light'
           : 'bg-white text-[#071F38] border-slate-200/90'
       }`}
     >

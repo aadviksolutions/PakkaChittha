@@ -65,8 +65,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isLocked = !isSuperAdmin && !isFreeKhata && !isGharKharcha && isTrial && isExpired && pathname !== '/subscription';
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC] flex flex-col font-sans text-slate-900 selection:bg-slate-200">
-      <CinematicIntro />
+    <div className="min-h-screen bg-[#F6F9FC] print:bg-white flex flex-col font-sans text-slate-900 selection:bg-slate-200">
+      <div className="print:hidden">
+        <CinematicIntro />
+      </div>
       {/* Sidebar Navigation */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}
@@ -77,7 +79,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area with dynamic left padding for sidebar */}
       <div
-        className={`flex-1 flex flex-col transition-[padding] duration-200 ease-in-out ${
+        className={`flex-1 flex flex-col transition-[padding] duration-200 ease-in-out print:pl-0 ${
           desktopCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
@@ -93,7 +95,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         />
 
         {/* Dynamic Page Container with bottom padding for mobile navigation bar */}
-        <main className="flex-1 p-3.5 sm:p-5 lg:p-7 pb-24 sm:pb-28 lg:pb-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-5 lg:p-7 pb-24 sm:pb-28 lg:pb-8 max-w-7xl w-full mx-auto print:p-0 print:pb-0 print:max-w-none print-report-root">
           {isLocked ? (
             <TrialExpiredLockScreen businessName={activeBusiness?.name} />
           ) : (

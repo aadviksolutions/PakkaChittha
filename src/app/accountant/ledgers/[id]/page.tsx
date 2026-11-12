@@ -3,8 +3,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, BookOpen, RefreshCw } from 'lucide-react';
+import { ArrowLeft, BookOpen, Printer, RefreshCw } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface FyOption {
@@ -118,7 +119,24 @@ function LedgerStatementContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title={statement ? `Ledger Account — ${statement.ledger.name}` : 'Ledger Statement'}
+        subtitle={
+          statement
+            ? `${statement.ledger.groupName} (${statement.ledger.groupType})${
+                statement.ledger.code ? ` · Code: ${statement.ledger.code}` : ''
+              }`
+            : 'Ledger Account Statement'
+        }
+        periodLabel={
+          startDate || endDate
+            ? `${startDate || 'Start'} to ${endDate || 'Present'}${fyCode ? ` (FY ${fyCode})` : ''}`
+            : fyCode
+              ? `FY ${fyCode}`
+              : 'Current FY'
+        }
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Link
             href="/accountant/ledgers"
@@ -167,6 +185,15 @@ function LedgerStatementContent() {
             onChange={(e) => setEndDate(e.target.value)}
             className="text-xs border border-slate-200 rounded-xl px-2.5 py-2 bg-slate-50"
           />
+          <button
+            type="button"
+            disabled={!statement}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
           <button
             type="button"
             onClick={() => void loadStatement()}
@@ -300,6 +327,8 @@ function LedgerStatementContent() {
           </div>
         )}
       </div>
+
+      <ReportPrintFooter note="Ledger Account Statement — PakkaChittha Accountant ERP." />
     </div>
   );
 }

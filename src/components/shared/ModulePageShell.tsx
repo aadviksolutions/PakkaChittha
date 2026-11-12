@@ -14,6 +14,7 @@ interface ModulePageShellProps {
   children: React.ReactNode;
   actionButtonText?: string;
   actionButtonType?: string;
+  hideHeaderInPrint?: boolean;
 }
 
 export function ModulePageShell({
@@ -24,6 +25,7 @@ export function ModulePageShell({
   children,
   actionButtonText,
   actionButtonType,
+  hideHeaderInPrint = false,
 }: ModulePageShellProps) {
   const router = useRouter();
   const { openAction } = useActionModal();
@@ -39,7 +41,7 @@ export function ModulePageShell({
   return (
     <div className="space-y-6">
       {/* Breadcrumb & Navigation Back */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <button
           type="button"
           onClick={handleBack}
@@ -54,7 +56,11 @@ export function ModulePageShell({
       </div>
 
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div
+        className={`bg-white rounded-2xl p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+          hideHeaderInPrint ? 'print:hidden' : 'print:border-slate-300 print:shadow-none print:rounded-none print:p-3'
+        }`}
+      >
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">

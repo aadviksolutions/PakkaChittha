@@ -1,8 +1,9 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, GitBranch, Plus, Settings, Check } from 'lucide-react';
+import { Calendar, GitBranch, Plus, Settings, Check, ShieldCheck } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -178,19 +179,30 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5">
-        <div className="flex items-center gap-2">
-          <Settings className="w-5 h-5 text-[#EA580C]" />
-          <h1 className="text-xl font-black text-[#071F38] tracking-tight">
-            {initialTab === 'branches'
-              ? 'Branches & Multi-Location Setup'
-              : 'Accounting Settings · Branches & Financial Years'}
-          </h1>
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5 text-[#EA580C]" />
+            <h1 className="text-xl font-black text-[#071F38] tracking-tight">
+              {initialTab === 'branches'
+                ? 'Branches & Multi-Location Setup'
+                : 'Accounting Settings · Branches & Financial Years'}
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Configure branches (up to {maxBranches} locations on Scale) and Indian April–March
+            Financial Years.
+          </p>
         </div>
-        <p className="text-xs text-slate-500 mt-1">
-          Configure branches (up to {maxBranches} locations on Scale) and Indian April–March
-          Financial Years.
-        </p>
+        {canManageBranches && (
+          <Link
+            href="/staff"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold transition-colors shrink-0"
+          >
+            <ShieldCheck className="w-4 h-4 text-orange-400" />
+            Manage Staff, Roles & CA Access
+          </Link>
+        )}
       </div>
 
       {/* Branches Section */}

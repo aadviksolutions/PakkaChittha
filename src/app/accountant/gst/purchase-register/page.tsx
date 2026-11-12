@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Download, RefreshCw, Truck } from 'lucide-react';
+import { Download, Printer, RefreshCw, Truck } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface PurchaseRegisterRow {
@@ -169,7 +170,16 @@ function PurchaseItcRegisterContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="Purchase & ITC Eligibility Register"
+        subtitle="Supplier inward supplies with Section 17(5) blocked credit classification & eligible Input Tax Credit"
+        periodLabel={
+          month === 'ALL'
+            ? 'All Periods'
+            : `${MONTHS[Number(month) - 1] || month} ${year}`
+        }
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Truck className="w-5 h-5 text-[#EA580C]" />
@@ -211,6 +221,15 @@ function PurchaseItcRegisterContent() {
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
+          </button>
+          <button
+            type="button"
+            disabled={!data}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
           </button>
           <button
             type="button"
@@ -315,6 +334,8 @@ function PurchaseItcRegisterContent() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="Purchase & ITC Eligibility Register — PakkaChittha Accountant ERP." />
     </div>
   );
 }
@@ -330,7 +351,7 @@ function MetricCard({
 }) {
   const cls =
     tone === 'dark'
-      ? 'bg-[#071F38] text-white border-[#071F38]'
+      ? 'bg-[#071F38] text-white border-[#071F38] print-surface-light'
       : tone === 'emerald'
         ? 'bg-emerald-50/70 text-emerald-900 border-emerald-200'
         : tone === 'amber'

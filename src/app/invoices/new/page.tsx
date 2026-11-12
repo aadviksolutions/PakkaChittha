@@ -36,15 +36,13 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
 import { GstFetchBox } from '@/components/gst/GstFetchBox';
 
-interface CustomerOption {
-  id: string;
-  name: string;
-  mobile: string;
-  email?: string | null;
-  gstin: string | null;
-  billingAddress: string | null;
-  totalOutstanding?: number;
-}
+import CustomerAutocompleteField, {
+  CustomerDraft,
+  CustomerOption,
+  EMPTY_CUSTOMER_DRAFT,
+  draftFromCustomer,
+  resolveOrCreateCustomer,
+} from '@/components/shared/CustomerAutocompleteField';
 
 interface CatalogProductOption {
   id: string;
@@ -82,9 +80,7 @@ function InvoiceCreationForm() {
   // 2. Customer State
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState(preselectedCustomerId);
-  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
-  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
-  const customerDropdownRef = useRef<HTMLDivElement>(null);
+  const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
 
   // Quick Add Customer Modal State
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
@@ -209,8 +205,11 @@ function InvoiceCreationForm() {
       .then((data) => {
         if (data?.success && Array.isArray(data.customers)) {
           setCustomers(data.customers);
-          if (!selectedCustomerId && data.customers.length > 0 && !preselectedCustomerId && !editInvoiceId) {
-            setSelectedCustomerId(data.customers[0].id);
+          if (preselectedCustomerId) {
+            const matched = data.customers.find((c: CustomerOption) => c.id === preselectedCustomerId);
+            if (matched) {
+              setCustomerDraft(draftFromCustomer(matched));
+            }
           }
         }
       })
@@ -230,12 +229,6 @@ function InvoiceCreationForm() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
-        customerDropdownRef.current &&
-        !customerDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsCustomerDropdownOpen(false);
-      }
-      if (
         productDropdownRef.current &&
         !productDropdownRef.current.contains(event.target as Node)
       ) {
@@ -245,18 +238,6 @@ function InvoiceCreationForm() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Filtered Customers based on Search Query
-  const filteredCustomers = useMemo(() => {
-    if (!customerSearchQuery.trim()) return customers.slice(0, 8);
-    const q = customerSearchQuery.toLowerCase().trim();
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        (c.mobile && c.mobile.includes(q)) ||
-        (c.gstin && c.gstin.toLowerCase().includes(q))
-    );
-  }, [customers, customerSearchQuery]);
 
   // Filtered Products based on Search Query
   const filteredProducts = useMemo(() => {
@@ -280,7 +261,6 @@ function InvoiceCreationForm() {
     enableRounding: true,
   });
 
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
 
   // Line Items Operations
   const handleAddItemRow = () => {
@@ -529,7 +509,7 @@ function InvoiceCreationForm() {
 
     if (existing) {
       setSelectedCustomerId(existing.id);
-      setIsCustomerDropdownOpen(false);
+      setCustomerDraft(draftFromCustomer(existing));
       toast.success('Selected Cash Sale / Walk-in Customer');
       return;
     }
@@ -548,7 +528,7 @@ function InvoiceCreationForm() {
       if (res.ok && data.success && data.customer) {
         setCustomers((prev) => [data.customer, ...prev]);
         setSelectedCustomerId(data.customer.id);
-        setIsCustomerDropdownOpen(false);
+        setCustomerDraft(draftFromCustomer(data.customer));
         toast.success('Selected Walk-in / Cash Sale Customer');
       } else {
         throw new Error(data.error || 'Failed to create cash sale customer');
@@ -583,8 +563,7 @@ function InvoiceCreationForm() {
 
       setCustomers((prev) => [data.customer, ...prev]);
       setSelectedCustomerId(data.customer.id);
-      setCustomerSearchQuery('');
-      setIsCustomerDropdownOpen(false);
+      setCustomerDraft(draftFromCustomer(data.customer));
       setAddCustomerOpen(false);
 
       setNewCustName('');
@@ -605,9 +584,10 @@ function InvoiceCreationForm() {
   const handleFinalizeBill = async (isDraft = false, action: 'save' | 'print' | 'share' | 'draft' = 'save') => {
     setError(null);
 
-    if (!selectedCustomerId) {
-      setError('Please select a customer or click "⚡ Cash Sale".');
-      toast.error('Please select a customer or click "⚡ Cash Sale".');
+    if (!selectedCustomerId && customerDraft.name.trim().length < 2) {
+      const msg = 'Please enter a customer name (at least 2 chars), select an existing customer, or click "⚡ Cash Sale".';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -622,13 +602,33 @@ function InvoiceCreationForm() {
     setActiveAction(isDraft ? 'draft' : action);
 
     try {
+      let resolvedCustomerId = selectedCustomerId;
+      if (!resolvedCustomerId) {
+        const resolved = await resolveOrCreateCustomer({
+          selectedCustomerId: '',
+          customers,
+          draft: customerDraft,
+        });
+        resolvedCustomerId = resolved.customerId;
+        if (resolved.createdCustomer) {
+          setCustomers((prev) => [resolved.createdCustomer!, ...prev]);
+          setSelectedCustomerId(resolved.customerId);
+          setCustomerDraft(draftFromCustomer(resolved.createdCustomer));
+          toast.success(`New customer "${resolved.createdCustomer.name}" saved!`);
+        } else {
+          const existing = customers.find((c) => c.id === resolved.customerId);
+          setSelectedCustomerId(resolved.customerId);
+          if (existing) setCustomerDraft(draftFromCustomer(existing));
+        }
+      }
+
       const endpoint = isEditMode ? `/api/invoices/${editInvoiceId}` : '/api/invoices';
       const method = isEditMode ? 'PUT' : 'POST';
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerId: selectedCustomerId,
+          customerId: resolvedCustomerId,
           invoiceDate,
           dueDate,
           gstType,
@@ -770,7 +770,11 @@ function InvoiceCreationForm() {
                 <button
                   type="button"
                   onClick={() => {
-                    setNewCustName(customerSearchQuery);
+                    setNewCustName(customerDraft.name);
+                    setNewCustMobile(customerDraft.mobile);
+                    setNewCustGstin(customerDraft.gstin);
+                    setNewCustEmail(customerDraft.email);
+                    setNewCustAddress(customerDraft.billingAddress);
                     setAddCustomerError(null);
                     setAddCustomerOpen(true);
                   }}
@@ -782,147 +786,37 @@ function InvoiceCreationForm() {
               </div>
             </div>
 
-            {/* Searchable Customer Dropdown */}
-            <div ref={customerDropdownRef} className="relative">
-              {selectedCustomer ? (
-                <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-bold text-xs text-slate-900 truncate">{selectedCustomer.name}</span>
-                      {selectedCustomer.gstin && (
-                        <span className="text-[10px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-semibold">
-                          GST: {selectedCustomer.gstin}
-                        </span>
-                      )}
-                      {selectedCustomer.totalOutstanding !== undefined && selectedCustomer.totalOutstanding > 0 && (
-                        <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                          Udhaar: ₹{selectedCustomer.totalOutstanding.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-2 text-slate-500 text-[11px] font-mono mt-0.5">
-                      <span>{selectedCustomer.mobile || 'No phone'}</span>
-                      {selectedCustomer.billingAddress && (
-                        <span className="font-sans text-slate-500 truncate max-w-xs">
-                          • {selectedCustomer.billingAddress}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomerDropdownOpen(true);
-                      setCustomerSearchQuery('');
-                    }}
-                    className="shrink-0 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded-md transition-colors cursor-pointer"
-                  >
-                    Change
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={customerSearchQuery}
-                    onChange={(e) => {
-                      setCustomerSearchQuery(e.target.value);
-                      setIsCustomerDropdownOpen(true);
-                    }}
-                    onFocus={() => setIsCustomerDropdownOpen(true)}
-                    placeholder="Search customer by name or mobile number..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-slate-900 transition-all font-medium text-xs"
-                  />
-                </div>
-              )}
-
-              {/* Dropdown Results */}
-              {isCustomerDropdownOpen && (
-                <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in duration-150">
-                  <div className="px-2.5 py-1.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between text-[11px]">
-                    <span className="text-slate-500 font-medium">Select customer or Walk-in:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomerDropdownOpen(false);
-                        setNewCustName(customerSearchQuery);
-                        setAddCustomerError(null);
-                        setAddCustomerOpen(true);
-                      }}
-                      className="text-emerald-700 font-bold hover:underline cursor-pointer"
-                    >
-                      + Add New Customer
-                    </button>
-                  </div>
-
-                  {filteredCustomers.length === 0 ? (
-                    <div className="p-3 text-center text-slate-500 space-y-2">
-                      <p className="text-xs">No matching customers found for "{customerSearchQuery}".</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleSelectCashSale}
-                          className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-md transition-colors cursor-pointer"
-                        >
-                          ⚡ Walk-in / Cash Sale
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsCustomerDropdownOpen(false);
-                            setNewCustName(customerSearchQuery);
-                            setAddCustomerError(null);
-                            setAddCustomerOpen(true);
-                          }}
-                          className="px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md hover:bg-slate-800 transition-colors cursor-pointer"
-                        >
-                          + Add "{customerSearchQuery || 'Customer'}"
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {filteredCustomers.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCustomerId(c.id);
-                            setIsCustomerDropdownOpen(false);
-                            setCustomerSearchQuery('');
-                          }}
-                          className={`w-full px-3 py-2 text-left hover:bg-emerald-50/60 transition-colors flex items-center justify-between group cursor-pointer ${
-                            selectedCustomerId === c.id ? 'bg-emerald-50/40' : ''
-                          }`}
-                        >
-                          <div>
-                            <p className="font-bold text-slate-900 text-xs group-hover:text-emerald-800">
-                              {c.name}
-                            </p>
-                            <p className="text-[11px] text-slate-500 font-mono">
-                              {c.mobile ? c.mobile : 'No phone'}
-                              {c.gstin && ` • GST: ${c.gstin}`}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {c.totalOutstanding !== undefined && c.totalOutstanding > 0 && (
-                              <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                Udhaar: ₹{c.totalOutstanding.toFixed(2)}
-                              </span>
-                            )}
-                            {selectedCustomerId === c.id && (
-                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* Blank-by-default Typeable Customer Autocomplete & Inline New Customer Entry */}
+            <CustomerAutocompleteField
+              customers={customers}
+              selectedCustomerId={selectedCustomerId}
+              draft={customerDraft}
+              onChange={({ selectedCustomerId: nextId, draft: nextDraft }) => {
+                setSelectedCustomerId(nextId);
+                setCustomerDraft(nextDraft);
+              }}
+              showEmail
+              placeholder="Type customer name, mobile, or GSTIN..."
+              gstLookupSlot={
+                <GstFetchBox
+                  gstin={customerDraft.gstin}
+                  onGstinChange={(val) =>
+                    setCustomerDraft((prev) => ({ ...prev, gstin: val }))
+                  }
+                  onDetailsFetched={(details) => {
+                    setCustomerDraft((prev) => ({
+                      ...prev,
+                      gstin: details.gstin,
+                      name: prev.name || details.tradeName || details.legalName,
+                      billingAddress: prev.billingAddress || details.address,
+                    }));
+                    toast.success(
+                      `GST details fetched for ${details.tradeName || details.legalName}!`
+                    );
+                  }}
+                />
+              }
+            />
           </div>
 
           {/* Invoice Details & Collapsible More Settings */}

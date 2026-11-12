@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Download, Receipt, RefreshCw } from 'lucide-react';
+import { Download, Printer, Receipt, RefreshCw } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface SalesRegisterRow {
@@ -139,7 +140,16 @@ function SalesTaxRegisterContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="GST Sales Tax Register"
+        subtitle="Outward supply register splitting B2B vs B2C taxable values and CGST / SGST / IGST output tax"
+        periodLabel={
+          month === 'ALL'
+            ? 'All Periods'
+            : `${MONTHS[Number(month) - 1] || month} ${year}`
+        }
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-[#EA580C]" />
@@ -181,6 +191,15 @@ function SalesTaxRegisterContent() {
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
+          </button>
+          <button
+            type="button"
+            disabled={!data}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
           </button>
           <button
             type="button"
@@ -269,6 +288,8 @@ function SalesTaxRegisterContent() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="GST Sales Tax Register — PakkaChittha Accountant ERP." />
     </div>
   );
 }
@@ -286,7 +307,7 @@ function MetricCard({
     <div
       className={`rounded-2xl border p-4 ${
         dark
-          ? 'bg-[#071F38] text-white border-[#071F38]'
+          ? 'bg-[#071F38] text-white border-[#071F38] print-surface-light'
           : 'bg-white text-[#071F38] border-slate-200/90'
       }`}
     >

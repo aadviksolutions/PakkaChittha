@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Download, RefreshCw, Users } from 'lucide-react';
+import { Download, Printer, RefreshCw, Users } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface AgeingBuckets {
@@ -167,7 +168,12 @@ function ReceivablesPayablesContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title={`${tab === 'RECEIVABLES' ? 'Receivables' : 'Payables'} Ageing Summary`}
+        subtitle="Bill-by-bill Sundry Debtors & Creditors ageing schedule"
+        periodLabel={asOfDate ? `As of ${asOfDate}` : 'Current Date'}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#EA580C]" />
@@ -221,6 +227,16 @@ function ReceivablesPayablesContent() {
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV
+          </button>
+
+          <button
+            type="button"
+            disabled={!activeSide}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
           </button>
 
           <button
@@ -385,6 +401,8 @@ function ReceivablesPayablesContent() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="Receivables & Payables Ageing Schedule — PakkaChittha Accountant ERP." />
     </div>
   );
 }
@@ -404,7 +422,7 @@ function BucketCard({
     <div
       className={`rounded-2xl border p-4 ${
         dark
-          ? 'bg-[#071F38] text-white border-[#071F38]'
+          ? 'bg-[#071F38] text-white border-[#071F38] print-surface-light'
           : warn
             ? 'bg-rose-50/70 border-rose-200 text-rose-900'
             : 'bg-white border-slate-200/90 text-[#071F38]'

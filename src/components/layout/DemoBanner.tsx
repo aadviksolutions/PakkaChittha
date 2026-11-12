@@ -95,7 +95,7 @@ export function DemoBanner() {
 
   return (
     <>
-      <aside aria-label="Demo Mode Notification" className="w-full bg-[#071F38] text-white px-3 sm:px-6 py-2.5 shadow-md border-b border-slate-700/80 z-40 relative">
+      <aside aria-label="Demo Mode Notification" className="print:hidden w-full bg-[#071F38] text-white px-3 sm:px-6 py-2.5 shadow-md border-b border-slate-700/80 z-40 relative">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
           {/* Left: Banner Title & Plan Indicator */}
           <div className="flex items-center gap-2.5 flex-wrap">

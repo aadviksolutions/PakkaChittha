@@ -7,9 +7,11 @@ import {
   CheckCircle2,
   Download,
   Landmark,
+  Printer,
   RefreshCw,
 } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface FyOption {
@@ -169,7 +171,17 @@ function BalanceSheetContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="Balance Sheet (Sources & Application of Funds)"
+        subtitle="Schedule-aligned Balance Sheet derived from double-entry Trial Balance & P&L"
+        periodLabel={fyCode ? `FY ${fyCode}` : 'Current FY'}
+        branchLabel={
+          branchId === 'ALL'
+            ? 'All Branches'
+            : activeBusiness?.branches?.find((b) => b.id === branchId)?.name
+        }
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <Landmark className="w-5 h-5 text-[#EA580C]" />
@@ -238,6 +250,15 @@ function BalanceSheetContent() {
           </button>
           <button
             type="button"
+            disabled={!statement}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
+          <button
+            type="button"
             onClick={() => void loadStatement()}
             className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer"
           >
@@ -281,7 +302,7 @@ function BalanceSheetContent() {
                 />
               </div>
             </div>
-            <div className="px-5 py-4 bg-[#071F38] text-white flex items-center justify-between text-sm font-black">
+            <div className="px-5 py-4 bg-[#071F38] text-white flex items-center justify-between text-sm font-black print-surface-light">
               <span>Total Liabilities &amp; Equity</span>
               <span className="font-mono">{formatInr(statement.liabilitiesAndEquity.total)}</span>
             </div>
@@ -299,13 +320,15 @@ function BalanceSheetContent() {
                 <SectionBlock title="Current Assets" sections={statement.assets.currentAssets} />
               </div>
             </div>
-            <div className="px-5 py-4 bg-[#071F38] text-white flex items-center justify-between text-sm font-black">
+            <div className="px-5 py-4 bg-[#071F38] text-white flex items-center justify-between text-sm font-black print-surface-light">
               <span>Total Assets</span>
               <span className="font-mono">{formatInr(statement.assets.total)}</span>
             </div>
           </div>
         </div>
       )}
+
+      <ReportPrintFooter note="Schedule-aligned Balance Sheet — PakkaChittha Accountant ERP." />
     </div>
   );
 }

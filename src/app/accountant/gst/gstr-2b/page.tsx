@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, RefreshCw, ShieldAlert, Upload } from 'lucide-react';
+import { CheckCircle2, Printer, RefreshCw, ShieldAlert, Upload } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
+import { getCurrentFinancialYear } from '@/lib/reports/financialYear';
 
 interface ReconciliationRow {
   key: string;
@@ -72,11 +74,13 @@ function Gstr2bContent() {
   const { activeBusiness } = useAuth();
   const activeBusinessId = activeBusiness?.id;
 
+  const now = new Date();
+  const defaultPeriod = `${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}`;
   const [recentImports, setRecentImports] = useState<RecentImport[]>([]);
   const [result, setResult] = useState<ReconciliationResult | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [returnPeriod, setReturnPeriod] = useState('102026');
-  const [financialYear, setFinancialYear] = useState('2026-2027');
+  const [returnPeriod, setReturnPeriod] = useState(defaultPeriod);
+  const [financialYear, setFinancialYear] = useState(() => getCurrentFinancialYear());
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -188,7 +192,12 @@ function Gstr2bContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="GSTR-2A / 2B ITC Reconciliation Report"
+        subtitle="Supplier filing match summary against commercial Purchase Register"
+        periodLabel={`Period ${returnPeriod} (FY ${financialYear})`}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-[#EA580C]" />
@@ -227,6 +236,15 @@ function Gstr2bContent() {
               className="hidden"
             />
           </label>
+          <button
+            type="button"
+            disabled={!result}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
           <button
             type="button"
             onClick={() => void loadHistory()}
@@ -373,6 +391,8 @@ function Gstr2bContent() {
           )}
         </div>
       )}
+
+      <ReportPrintFooter note="GSTR-2B ITC Reconciliation Statement — PakkaChittha Accountant ERP." />
     </div>
   );
 }

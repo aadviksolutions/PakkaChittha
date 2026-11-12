@@ -92,7 +92,7 @@ export function TrialCountdownBanner() {
     return (
       <aside
         aria-label="Free Trial Expiry Countdown"
-        className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-3.5 sm:px-6 py-2.5 shadow-md border-b border-orange-400/40 relative z-40 animate-in fade-in"
+        className="print:hidden w-full bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-3.5 sm:px-6 py-2.5 shadow-md border-b border-orange-400/40 relative z-40 animate-in fade-in"
       >
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4 text-xs">
           <div className="flex items-center gap-2.5 text-center sm:text-left">
@@ -129,7 +129,7 @@ export function TrialCountdownBanner() {
   return (
     <aside
       aria-label="Free Trial Active Notice"
-      className="w-full bg-[#071F38] text-white px-3.5 sm:px-6 py-2 border-b border-slate-700/60 relative z-30"
+      className="print:hidden w-full bg-[#071F38] text-white px-3.5 sm:px-6 py-2 border-b border-slate-700/60 relative z-30"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">

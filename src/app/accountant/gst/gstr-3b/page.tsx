@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Calculator, Download, FileJson, RefreshCw, Send } from 'lucide-react';
+import { Calculator, Download, FileJson, Printer, RefreshCw, Send } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface TaxVectorTotal {
@@ -149,7 +150,14 @@ function Gstr3bContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="GSTR-3B Monthly Return & Rule 88A ITC Offset"
+        subtitle="Table 3.1 Outward Liability, Table 4 Eligible ITC & Rule 88A Electronic Credit Ledger Utilization"
+        periodLabel={`${MONTHS[month - 1] || month} ${year}`}
+        gstinOverride={payload?.gstin}
+        referenceLabel={payload?.ret_period ? `Return Period: ${payload.ret_period}` : undefined}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Calculator className="w-5 h-5 text-[#EA580C]" />
@@ -196,6 +204,14 @@ function Gstr3bContent() {
                 <Download className="w-3.5 h-3.5" />
                 CSV
               </a>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[#071F38] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </button>
               <button
                 type="button"
                 disabled={submitting}
@@ -315,6 +331,8 @@ function Gstr3bContent() {
           </div>
         </>
       )}
+
+      <ReportPrintFooter note="GSTR-3B Summary & ITC Utilization — PakkaChittha Accountant ERP." />
     </div>
   );
 }
@@ -330,7 +348,7 @@ function SummaryTile({
 }) {
   const cls =
     tone === 'dark'
-      ? 'bg-[#071F38] text-white border-[#071F38]'
+      ? 'bg-[#071F38] text-white border-[#071F38] print-surface-light'
       : tone === 'emerald'
         ? 'bg-emerald-50/70 text-emerald-900 border-emerald-200'
         : tone === 'amber'

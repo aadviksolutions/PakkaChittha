@@ -3,8 +3,9 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BookOpen, Plus, RefreshCw } from 'lucide-react';
+import { BookOpen, Plus, Printer, RefreshCw } from 'lucide-react';
 import { AccountantScaleGate } from '@/components/accountant/AccountantScaleGate';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
 import { useAuth } from '@/context/AuthContext';
 
 interface DayBookVoucher {
@@ -92,7 +93,13 @@ function DayBookContent() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <ReportPrintHeader
+        title="Accounting Day Book"
+        subtitle="Chronological register of double-entry vouchers across Sales, Purchases, Payments, Receipts, Contra & Journals"
+        periodLabel={startDate || endDate ? `${startDate || 'Start'} to ${endDate || 'Present'}` : 'All Dates'}
+        referenceLabel={voucherType ? `Type: ${voucherType}` : undefined}
+      />
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-[#EA580C]" />
@@ -137,6 +144,15 @@ function DayBookContent() {
             <Plus className="w-3.5 h-3.5" />
             New Voucher
           </Link>
+          <button
+            type="button"
+            disabled={vouchers.length === 0}
+            onClick={() => window.print()}
+            className="px-3.5 py-2 rounded-xl bg-[#071F38] hover:bg-[#0D2E50] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print
+          </button>
           <button
             type="button"
             onClick={() => void loadDayBook()}
@@ -225,6 +241,8 @@ function DayBookContent() {
           </div>
         )}
       </div>
+
+      <ReportPrintFooter note="Accounting Day Book — Chronological Voucher Register." />
     </div>
   );
 }

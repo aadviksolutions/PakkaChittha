@@ -21,9 +21,10 @@ export async function GET(request: NextRequest) {
     const monthNum = parseInt(monthParam, 10);
     const yearNum = parseInt(yearParam, 10);
     const returnPeriod = `${String(monthNum).padStart(2, '0')}${yearNum}`;
+    const fyStartYear = monthNum >= 4 ? yearNum : yearNum - 1;
 
     const filterRange = resolveDateFilterRange({
-      financialYear: `${yearNum}-${yearNum + 1}`,
+      financialYear: `${fyStartYear}-${fyStartYear + 1}`,
       periodType: 'MONTH',
       periodValue: String(monthNum),
     });

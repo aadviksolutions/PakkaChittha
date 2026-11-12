@@ -166,6 +166,7 @@ export function Sidebar({
       case 'acc-approvals': return t('accountant.approvals');
       case 'acc-audit': return t('accountant.auditTrail');
       case 'acc-settings': return t('accountant.settings');
+      case 'acc-staff': return t('nav.staff');
       default: return item.name;
     }
   };
@@ -174,6 +175,13 @@ export function Sidebar({
     activeBusiness?.erpRole ||
     (activeBusiness?.role === 'ACCOUNTANT' ? 'ACCOUNTANT' : 'OWNER');
   const canAccountantErp = isAllowed('canAccountantErp');
+
+  const filteredAccountantItems = ACCOUNTANT_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
+    if (item.id === 'acc-staff') {
+      return isAllowed('canManageStaff') && (erpRole === 'OWNER' || erpRole === 'MANAGER');
+    }
+    return true;
+  });
 
   // Filter business items dynamically based on plan entitlements and role governance
   const filteredBusinessItems = BUSINESS_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
@@ -237,7 +245,7 @@ export function Sidebar({
         scope: 'BUSINESS_WORKSPACE' as const,
         description: 'Professional Indian Accounting & GST ERP',
         badge: 'SCALE ERP',
-        items: ACCOUNTANT_NAVIGATION_ITEMS,
+        items: filteredAccountantItems,
       },
     ];
   } else {
@@ -269,7 +277,7 @@ export function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`print:hidden fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
           } ${isCollapsed ? 'lg:w-20' : 'lg:w-64 w-[85vw] max-w-[300px]'}`}
       >
         {/* Brand Header */}

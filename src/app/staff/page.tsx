@@ -522,7 +522,10 @@ export default function StaffPage() {
   const isOwner =
     currentUserRole === 'BUSINESS_OWNER' ||
     currentUserRole === 'OWNER' ||
-    currentUserErpRole === 'OWNER';
+    currentUserErpRole === 'OWNER' ||
+    activeBusiness?.erpRole === 'OWNER' ||
+    activeBusiness?.role === 'BUSINESS_OWNER' ||
+    activeBusiness?.role === 'OWNER';
 
   const fetchStaff = useCallback(async () => {
     if (!canManageStaff) return;

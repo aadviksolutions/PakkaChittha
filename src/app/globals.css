@@ -135,15 +135,59 @@
 
 /* Print utility styles */
 @media print {
-  .no-print {
+  .no-print,
+  .print\:hidden {
     display: none !important;
   }
+  html,
   body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-report-root {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print-report-root .overflow-x-auto {
+    overflow: visible !important;
+  }
+  .print-report-root table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+  }
+  .print-report-root thead {
+    display: table-header-group;
+  }
+  .print-report-root tr,
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .print-report-root th,
+  .print-report-root td {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  /* Convert heavy dark ink-blotting summary cards into crisp executive print cards */
+  .print-surface-light {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+  .print-surface-light * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
   }
   @page {
-    margin: 12mm;
+    margin: 10mm 11mm;
     size: A4 portrait;
   }
 }

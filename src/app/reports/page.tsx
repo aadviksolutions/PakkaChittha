@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { ModulePageShell } from '@/components/shared/ModulePageShell';
+import { ReportPrintHeader, ReportPrintFooter } from '@/components/shared/ReportPrintChrome';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
+import { getCurrentFinancialYear, getAvailableFinancialYears } from '@/lib/reports/financialYear';
 import KhataConsolidatedReportView from '@/components/free-khata/KhataConsolidatedReportView';
 import {
   Download,
@@ -41,10 +45,45 @@ type MainTab = 'overview' | 'sales' | 'purchases' | 'gst' | 'reconciliation' | '
 type RegisterSubTab = 'cash' | 'bank' | 'expenses' | 'receivables' | 'payables' | 'pnl';
 type GstSubTab = 'gstr1' | 'gstr3b';
 
+const INDIAN_MONTH_OPTIONS = [
+  { value: '4', label: 'April' },
+  { value: '5', label: 'May' },
+  { value: '6', label: 'June' },
+  { value: '7', label: 'July' },
+  { value: '8', label: 'August' },
+  { value: '9', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+  { value: '1', label: 'January' },
+  { value: '2', label: 'February' },
+  { value: '3', label: 'March' },
+];
+
+function getDefaultQuarterForMonth(monthNum: number): string {
+  if (monthNum >= 4 && monthNum <= 6) return 'Q1';
+  if (monthNum >= 7 && monthNum <= 9) return 'Q2';
+  if (monthNum >= 10 && monthNum <= 12) return 'Q3';
+  return 'Q4';
+}
+
+function resolveCalendarYearForMonth(financialYear: string, monthStr: string): number {
+  const [startStr, endStr] = financialYear.split('-');
+  const startYear = parseInt(startStr, 10) || new Date().getFullYear();
+  const endYear = parseInt(endStr, 10) || startYear + 1;
+  const m = parseInt(monthStr, 10);
+  return m >= 1 && m <= 3 ? endYear : startYear;
+}
+
 export default function ReportsPage() {
   const toast = useToast();
+  const { activeBusiness } = useAuth();
   const { isAllowed } = useEntitlements();
   const canAdvancedReports = isAllowed('canAdvancedReports');
+  const canAccountantErp = isAllowed('canAccountantErp');
+
+  const currentMonthStr = String(new Date().getMonth() + 1);
+  const financialYearOptions = getAvailableFinancialYears();
 
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<MainTab>('overview');
@@ -52,9 +91,10 @@ export default function ReportsPage() {
   const [gstSubTab, setGstSubTab] = useState<GstSubTab>('gstr1');
 
   // Universal Period Filters
-  const [financialYear, setFinancialYear] = useState<string>('2026-2027');
+  const [financialYear, setFinancialYear] = useState<string>(() => getCurrentFinancialYear());
   const [periodType, setPeriodType] = useState<'FY' | 'QUARTER' | 'MONTH' | 'CUSTOM'>('FY');
-  const [periodValue, setPeriodValue] = useState<string>('10'); // Default Oct
+  const [periodValue, setPeriodValue] = useState<string>(currentMonthStr);
+  const [gstMonth, setGstMonth] = useState<string>(currentMonthStr);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
@@ -66,9 +106,10 @@ export default function ReportsPage() {
   const [purchaseItcEligibility, setPurchaseItcEligibility] = useState('ALL');
   const [purchaseStatus, setPurchaseStatus] = useState('ALL');
 
-  // Loading States
+  // Loading & Error States
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [tabError, setTabError] = useState<string | null>(null);
 
   // Data States
   const [overviewData, setOverviewData] = useState<any>(null);
@@ -78,81 +119,119 @@ export default function ReportsPage() {
   const [gstr1Data, setGstr1Data] = useState<any>(null);
   const [gstr3bData, setGstr3bData] = useState<any>(null);
   const [reconciliationData, setReconciliationData] = useState<any>(null);
+  const [recentImports2b, setRecentImports2b] = useState<any[]>([]);
   const [uploading2b, setUploading2b] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load data whenever filters or tab changes
-  useEffect(() => {
-    if (!canAdvancedReports || activeTab === 'khata') return;
-    loadTabContent();
-  }, [canAdvancedReports, activeTab, financialYear, periodType, periodValue, startDate, endDate]);
+  const getQueryString = useCallback(
+    (extraParams?: Record<string, string>) => {
+      const params = new URLSearchParams({
+        financialYear,
+        periodType,
+        periodValue,
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+        ...(extraParams || {}),
+      });
+      return params.toString();
+    },
+    [financialYear, periodType, periodValue, startDate, endDate]
+  );
 
-  const getQueryString = (extraParams?: Record<string, string>) => {
-    const params = new URLSearchParams({
-      financialYear,
-      periodType,
-      periodValue,
-      ...(startDate ? { startDate } : {}),
-      ...(endDate ? { endDate } : {}),
-      ...(extraParams || {}),
-    });
-    return params.toString();
-  };
-
-  const loadTabContent = async () => {
+  const loadTabContent = useCallback(async () => {
     try {
       setLoading(true);
+      setTabError(null);
+
       if (activeTab === 'overview') {
-        const res = await fetch(`/api/reports/accounts-overview?${getQueryString()}`);
-        if (!res.ok) throw new Error('Failed to load accounts overview');
+        const res = await fetch(`/api/reports/accounts-overview?${getQueryString()}`, { cache: 'no-store' });
         const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to load accounts overview');
         setOverviewData(json.data);
       } else if (activeTab === 'sales') {
         const extra: Record<string, string> = {};
         if (salesCustomerType !== 'ALL') extra.customerType = salesCustomerType;
         if (salesTaxRate !== 'ALL') extra.taxRate = salesTaxRate;
         if (salesSearch.trim()) extra.search = salesSearch.trim();
-        const res = await fetch(`/api/reports/sales-register?${getQueryString(extra)}`);
-        if (!res.ok) throw new Error('Failed to load sales register');
+        const res = await fetch(`/api/reports/sales-register?${getQueryString(extra)}`, { cache: 'no-store' });
         const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to load sales register');
         setSalesData(json.data);
       } else if (activeTab === 'purchases') {
         const extra: Record<string, string> = {};
         if (purchaseItcEligibility !== 'ALL') extra.itcEligibility = purchaseItcEligibility;
         if (purchaseStatus !== 'ALL') extra.status = purchaseStatus;
         if (purchaseSearch.trim()) extra.search = purchaseSearch.trim();
-        const res = await fetch(`/api/reports/purchase-register?${getQueryString(extra)}`);
-        if (!res.ok) throw new Error('Failed to load purchase register');
+        const res = await fetch(`/api/reports/purchase-register?${getQueryString(extra)}`, { cache: 'no-store' });
         const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to load purchase register');
         setPurchaseData(json.data);
       } else if (activeTab === 'registers') {
-        const res = await fetch(`/api/reports/financial-registers?${getQueryString()}`);
-        if (!res.ok) throw new Error('Failed to load financial registers');
+        const res = await fetch(`/api/reports/financial-registers?${getQueryString()}`, { cache: 'no-store' });
         const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to load financial registers');
         setRegistersData(json);
       } else if (activeTab === 'gst') {
+        const calYear = resolveCalendarYearForMonth(financialYear, gstMonth);
         if (gstSubTab === 'gstr1') {
-          const res = await fetch(`/api/reports/gstr1?month=${periodValue}&year=${financialYear.split('-')[0]}`);
-          if (res.ok) {
-            const json = await res.json();
-            setGstr1Data(json.data);
+          const res = await fetch(`/api/reports/gstr1?month=${gstMonth}&year=${calYear}`, { cache: 'no-store' });
+          const json = await res.json();
+          if (!res.ok) {
+            setGstr1Data(null);
+            throw new Error(json?.error || 'Failed to generate GSTR-1 return');
           }
+          setGstr1Data(json.data);
         } else {
-          const res = await fetch(`/api/reports/gstr3b?month=${periodValue}&year=${financialYear.split('-')[0]}`);
-          if (res.ok) {
-            const json = await res.json();
-            setGstr3bData(json);
+          const res = await fetch(`/api/reports/gstr3b?month=${gstMonth}&year=${calYear}`, { cache: 'no-store' });
+          const json = await res.json();
+          if (!res.ok) {
+            setGstr3bData(null);
+            throw new Error(json?.error || 'Failed to generate GSTR-3B return');
           }
+          setGstr3bData(json);
         }
+      } else if (activeTab === 'reconciliation') {
+        const res = await fetch('/api/reports/gstr2b', { cache: 'no-store' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Failed to load GSTR-2B import history');
+        setRecentImports2b(json.recentImports || []);
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error fetching report data');
+      const msg = err instanceof Error ? err.message : 'Error fetching report data';
+      setTabError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [
+    activeTab,
+    financialYear,
+    gstMonth,
+    gstSubTab,
+    getQueryString,
+    purchaseItcEligibility,
+    purchaseSearch,
+    purchaseStatus,
+    salesCustomerType,
+    salesSearch,
+    salesTaxRate,
+    toast,
+  ]);
+
+  // Load data whenever filters, sub-tabs, or main tab changes
+  useEffect(() => {
+    if (!canAdvancedReports || activeTab === 'khata') return;
+    if (periodType === 'CUSTOM' && (!startDate || !endDate)) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadTabContent();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canAdvancedReports, activeTab, periodType, startDate, endDate, loadTabContent]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -188,31 +267,81 @@ export default function ReportsPage() {
   };
 
   const handleDownloadGstr1Json = () => {
-    const m = periodValue;
-    const y = financialYear.split('-')[0];
+    const m = gstMonth;
+    const y = resolveCalendarYearForMonth(financialYear, m);
     window.open(`/api/reports/gstr1?month=${m}&year=${y}&download=true`, '_blank');
     toast.success('Official GSTN GSTR-1 JSON downloaded for portal upload!');
   };
 
   const handleDownloadGstr1Csv = () => {
-    const m = periodValue;
-    const y = financialYear.split('-')[0];
+    const m = gstMonth;
+    const y = resolveCalendarYearForMonth(financialYear, m);
     window.open(`/api/reports/gstr1?month=${m}&year=${y}&format=csv&download=true`, '_blank');
     toast.success('GSTR-1 CSV summary downloaded!');
   };
 
   const handleDownloadGstr3bJson = () => {
-    const m = periodValue;
-    const y = financialYear.split('-')[0];
+    const m = gstMonth;
+    const y = resolveCalendarYearForMonth(financialYear, m);
     window.open(`/api/reports/gstr3b?month=${m}&year=${y}&download=true`, '_blank');
     toast.success('Official GSTN GSTR-3B JSON downloaded for portal upload!');
   };
 
   const handleDownloadGstr3bCsv = () => {
-    const m = periodValue;
-    const y = financialYear.split('-')[0];
+    const m = gstMonth;
+    const y = resolveCalendarYearForMonth(financialYear, m);
     window.open(`/api/reports/gstr3b?month=${m}&year=${y}&format=csv&download=true`, '_blank');
     toast.success('GSTR-3B CSV summary downloaded!');
+  };
+
+  const handleLoadSavedImport = async (importId: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/reports/gstr2b?importId=${encodeURIComponent(importId)}`, {
+        cache: 'no-store',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.data) throw new Error(json?.error || 'Failed to load saved GSTR-2B run');
+      const imp = json.data;
+      const entries = Array.isArray(imp.entries) ? imp.entries : [];
+      const matchedRows = entries.filter((e: any) => e.status === 'MATCHED');
+      const atRiskRows = entries.filter((e: any) => e.status === 'MISSING_IN_2B');
+      const unclaimedRows = entries.filter((e: any) => e.status === 'MISSING_IN_PURCHASES');
+      setReconciliationData({
+        returnPeriod: imp.returnPeriod,
+        financialYear: imp.financialYear,
+        summary: {
+          totalInGstr2b: imp.totalInvoices || 0,
+          matchedCount: imp.matchedCount || 0,
+          mismatchCount: imp.mismatchCount || 0,
+          missingIn2bCount: imp.missingIn2bCount || 0,
+          missingInPurchasesCount: imp.missingInBooksCount || 0,
+          reconciledItc: matchedRows.reduce((s: number, r: any) => s + Number(r.gstr2bTax || r.booksTax || 0), 0),
+          atRiskItc: atRiskRows.reduce((s: number, r: any) => s + Number(r.booksTax || 0), 0),
+          unclaimedItc: unclaimedRows.reduce((s: number, r: any) => s + Number(r.gstr2bTax || 0), 0),
+          matchPercentage:
+            entries.length > 0 ? Math.round(((imp.matchedCount || 0) / entries.length) * 100) : 0,
+        },
+        rows: entries.map((e: any) => ({
+          status: e.status,
+          supplierGstin: e.supplierGstin,
+          supplierName: e.supplierName || '—',
+          invoiceNumber: e.invoiceNumber,
+          invoiceDate:
+            typeof e.invoiceDate === 'string'
+              ? e.invoiceDate.split('T')[0]
+              : new Date(e.invoiceDate).toISOString().split('T')[0],
+          booksTax: Number(e.booksTax ?? 0),
+          gstr2bTax: Number(e.gstr2bTax ?? 0),
+          taxDifference: Number(e.taxDifference ?? 0),
+          notes: e.notes || '',
+        })),
+      });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Unable to load saved reconciliation');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // GSTR-2B File Upload & Reconciliation
@@ -222,9 +351,10 @@ export default function ReportsPage() {
 
     try {
       setUploading2b(true);
+      const calYear = resolveCalendarYearForMonth(financialYear, gstMonth);
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('returnPeriod', `${String(periodValue).padStart(2, '0')}${financialYear.split('-')[0]}`);
+      formData.append('returnPeriod', `${String(gstMonth).padStart(2, '0')}${calYear}`);
       formData.append('financialYear', financialYear);
 
       const res = await fetch('/api/reports/gstr2b', {
@@ -237,6 +367,7 @@ export default function ReportsPage() {
 
       setReconciliationData(json.data);
       toast.success(`Successfully reconciled ${json.data.summary.totalInGstr2b} GSTR-2B invoices against your purchases!`);
+      void loadTabContent();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Error processing GSTR-2B file');
     } finally {
@@ -380,18 +511,59 @@ export default function ReportsPage() {
     );
   }
 
+  const activePrintTitleMap: Record<MainTab, string> = {
+    overview: 'Accounts Overview & Tax Summary',
+    sales: 'Sales Register & HSN Summary',
+    purchases: 'Purchase Register & Eligible ITC',
+    gst: gstSubTab === 'gstr1' ? 'GSTR-1 Outward Supplies Statement' : 'GSTR-3B Monthly Tax Summary',
+    reconciliation: 'GSTR-2B ITC Reconciliation Report',
+    registers:
+      registerSubTab === 'cash'
+        ? 'Physical Cash Book Ledger'
+        : registerSubTab === 'bank'
+          ? 'Bank & UPI Book Ledger'
+          : registerSubTab === 'expenses'
+            ? 'Operating Expense Register'
+            : registerSubTab === 'receivables'
+              ? 'Customer Outstanding Receivables'
+              : registerSubTab === 'payables'
+                ? 'Supplier Payable Ledger'
+                : 'Statement of Profit & Loss (P&L)',
+    khata: 'Personal Khata Consolidated Report',
+  };
+
+  const activePeriodLabel =
+    activeTab === 'gst'
+      ? `${INDIAN_MONTH_OPTIONS.find((m) => m.value === gstMonth)?.label || gstMonth} ${resolveCalendarYearForMonth(financialYear, gstMonth)} (FY ${financialYear})`
+      : periodType === 'FY'
+        ? `FY ${financialYear}`
+        : periodType === 'QUARTER'
+          ? `${periodValue} · FY ${financialYear}`
+          : periodType === 'MONTH'
+            ? `${INDIAN_MONTH_OPTIONS.find((m) => m.value === periodValue)?.label || periodValue} ${resolveCalendarYearForMonth(financialYear, periodValue)} (FY ${financialYear})`
+            : startDate && endDate
+              ? `${startDate} to ${endDate}`
+              : `Custom · FY ${financialYear}`;
+
   return (
     <ModulePageShell
       title="Accounts & GST Reporting"
       description="Production-grade commercial financial intelligence: Sales Register with HSN, Purchase Register with ITC verification, GSTR-1 / GSTR-3B portal JSON returns, GSTR-2B reconciliation, Cash/Bank books, and Profit & Loss."
       targetPhase="Financial & Tax Intelligence"
+      hideHeaderInPrint
     >
       <div className="space-y-6">
+        <ReportPrintHeader
+          title={activePrintTitleMap[activeTab]}
+          subtitle={`Commercial Accounts & Statutory Register — ${activeBusiness?.name || 'Business Workspace'}`}
+          periodLabel={activePeriodLabel}
+        />
+
         {/* =========================================================================
             1. UNIVERSAL FILTER & ACTION CONTROL BAR
             Financial Year, Period Type, Refresh & Print actions
             ========================================================================= */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <div className="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             {/* Financial Year Selector */}
             <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
@@ -402,10 +574,11 @@ export default function ReportsPage() {
                 onChange={(e) => setFinancialYear(e.target.value)}
                 className="bg-transparent text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer"
               >
-                <option value="2027-2028">2027-2028</option>
-                <option value="2026-2027">2026-2027</option>
-                <option value="2025-2026">2025-2026</option>
-                <option value="2024-2025">2024-2025</option>
+                {financialYearOptions.map((fy) => (
+                  <option key={fy} value={fy}>
+                    {fy}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -415,7 +588,15 @@ export default function ReportsPage() {
               <span className="text-xs font-semibold text-slate-600">View:</span>
               <select
                 value={periodType}
-                onChange={(e) => setPeriodType(e.target.value as any)}
+                onChange={(e) => {
+                  const next = e.target.value as 'FY' | 'QUARTER' | 'MONTH' | 'CUSTOM';
+                  setPeriodType(next);
+                  if (next === 'QUARTER' && !['Q1', 'Q2', 'Q3', 'Q4'].includes(periodValue)) {
+                    setPeriodValue(getDefaultQuarterForMonth(new Date().getMonth() + 1));
+                  } else if (next === 'MONTH' && ['Q1', 'Q2', 'Q3', 'Q4'].includes(periodValue)) {
+                    setPeriodValue(gstMonth || currentMonthStr);
+                  }
+                }}
                 className="bg-transparent text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer"
               >
                 <option value="FY">Full Financial Year</option>
@@ -428,7 +609,7 @@ export default function ReportsPage() {
             {/* Quarter or Month Selector */}
             {periodType === 'QUARTER' && (
               <select
-                value={periodValue}
+                value={['Q1', 'Q2', 'Q3', 'Q4'].includes(periodValue) ? periodValue : 'Q3'}
                 onChange={(e) => setPeriodValue(e.target.value)}
                 className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 cursor-pointer"
               >
@@ -442,21 +623,17 @@ export default function ReportsPage() {
             {periodType === 'MONTH' && (
               <select
                 value={periodValue}
-                onChange={(e) => setPeriodValue(e.target.value)}
+                onChange={(e) => {
+                  setPeriodValue(e.target.value);
+                  setGstMonth(e.target.value);
+                }}
                 className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 cursor-pointer"
               >
-                <option value="4">April</option>
-                <option value="5">May</option>
-                <option value="6">June</option>
-                <option value="7">July</option>
-                <option value="8">August</option>
-                <option value="9">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-                <option value="1">January</option>
-                <option value="2">February</option>
-                <option value="3">March</option>
+                {INDIAN_MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
               </select>
             )}
 
@@ -481,6 +658,16 @@ export default function ReportsPage() {
 
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
+            {canAccountantErp && (
+              <Link
+                href="/accountant"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 text-xs font-bold rounded-xl transition-colors"
+                title="Open Scale Accountant ERP Statements & Ledgers"
+              >
+                <Landmark className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Accountant ERP</span>
+              </Link>
+            )}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -492,11 +679,11 @@ export default function ReportsPage() {
             </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
-              title="Print active report"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              title="Print active report in A4 format"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Print</span>
+              <span>Print Statement</span>
             </button>
           </div>
         </div>
@@ -505,7 +692,7 @@ export default function ReportsPage() {
             2. MAIN MODULE TABS
             Accounts Overview | Sales Register | Purchase Register | GST Returns | GSTR-2B Reconciler | Financial Books
             ========================================================================= */}
-        <div className="border-b border-slate-200 overflow-x-auto scrollbar-none">
+        <div className="print:hidden border-b border-slate-200 overflow-x-auto scrollbar-none">
           <nav className="flex space-x-2 sm:space-x-4 min-w-max">
             {[
               { id: 'overview', label: 'Accounts Overview', icon: Layers },
@@ -538,9 +725,39 @@ export default function ReportsPage() {
 
         {/* Loading Spinner */}
         {loading && (
-          <div className="py-12 flex flex-col items-center justify-center gap-3">
+          <div className="print:hidden py-12 flex flex-col items-center justify-center gap-3">
             <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
             <p className="text-xs text-slate-500 font-medium">Aggregating live business transactions & tax registers...</p>
+          </div>
+        )}
+
+        {/* Inline Error Banner (e.g. missing 15-digit GSTIN or validation error) */}
+        {!loading && tabError && activeTab !== 'khata' && (
+          <div className="print:hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 text-xs text-amber-900">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Could not load this report section</p>
+                <p className="text-amber-800 mt-0.5">{tabError}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {tabError.toLowerCase().includes('gstin') && (
+                <Link
+                  href="/settings"
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold"
+                >
+                  Add GSTIN in Settings
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => void loadTabContent()}
+                className="px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 cursor-pointer"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         )}
 
@@ -621,10 +838,10 @@ export default function ReportsPage() {
             </div>
 
             {/* GST Liability & Input Tax Credit Position */}
-            <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] text-white p-5 rounded-2xl shadow-md">
+            <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] text-white p-5 rounded-2xl shadow-md print-surface-light">
               <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-700/80 gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+                  <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 print:hidden">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
@@ -634,7 +851,7 @@ export default function ReportsPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 print:hidden">
                   <button
                     onClick={() => { setActiveTab('gst'); setGstSubTab('gstr3b'); }}
                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
@@ -752,7 +969,7 @@ export default function ReportsPage() {
                   </div>
                   <button
                     onClick={() => { setActiveTab('registers'); setRegisterSubTab('receivables'); }}
-                    className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="print:hidden text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>View Ledgers</span>
                     <ChevronRight className="w-3 h-3" />
@@ -787,7 +1004,7 @@ export default function ReportsPage() {
         {!loading && activeTab === 'sales' && salesData && (
           <div className="space-y-5">
             {/* Action & Filter Header */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 flex-1">
                 {/* Search */}
                 <div className="relative min-w-[200px] flex-1 max-w-sm">
@@ -868,7 +1085,7 @@ export default function ReportsPage() {
                 <span className="text-[10px] text-slate-500 font-bold uppercase block">IGST</span>
                 <span className="text-sm font-bold text-slate-900 font-mono">₹{salesData.summary.igstTotal.toFixed(2)}</span>
               </div>
-              <div className="bg-slate-900 text-white p-3 rounded-xl">
+              <div className="bg-slate-900 text-white p-3 rounded-xl print-surface-light">
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Sales</span>
                 <span className="text-sm font-bold text-white font-mono">₹{salesData.summary.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
@@ -1005,7 +1222,7 @@ export default function ReportsPage() {
         {!loading && activeTab === 'purchases' && purchaseData && (
           <div className="space-y-5">
             {/* Filter & Action Header */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 flex-1">
                 <div className="relative min-w-[200px] flex-1 max-w-sm">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
@@ -1086,7 +1303,7 @@ export default function ReportsPage() {
                 <span className="text-[10px] text-rose-700 font-bold uppercase block">Ineligible/Blocked</span>
                 <span className="text-sm font-bold text-rose-800 font-mono">₹{purchaseData.summary.ineligibleItcTotal.toFixed(2)}</span>
               </div>
-              <div className="bg-slate-900 text-white p-3 rounded-xl">
+              <div className="bg-slate-900 text-white p-3 rounded-xl print-surface-light">
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Grand Total</span>
                 <span className="text-sm font-bold text-white font-mono">₹{purchaseData.summary.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
@@ -1172,29 +1389,49 @@ export default function ReportsPage() {
             ========================================================================= */}
         {!loading && activeTab === 'gst' && (
           <div className="space-y-6">
-            {/* Sub-tab Toggle: GSTR-1 vs GSTR-3B */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => { setGstSubTab('gstr1'); loadTabContent(); }}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    gstSubTab === 'gstr1' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  GSTR-1 (Outward Supplies)
-                </button>
-                <button
-                  onClick={() => { setGstSubTab('gstr3b'); loadTabContent(); }}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    gstSubTab === 'gstr3b' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  GSTR-3B (Monthly Summary)
-                </button>
+            {/* Sub-tab Toggle & Return Month Selector */}
+            <div className="print:hidden flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    onClick={() => setGstSubTab('gstr1')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      gstSubTab === 'gstr1' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    GSTR-1 (Outward Supplies)
+                  </button>
+                  <button
+                    onClick={() => setGstSubTab('gstr3b')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      gstSubTab === 'gstr3b' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    GSTR-3B (Monthly Summary)
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                  <span className="text-[11px] font-semibold text-slate-500">Return Month:</span>
+                  <select
+                    value={gstMonth}
+                    onChange={(e) => {
+                      setGstMonth(e.target.value);
+                      if (periodType === 'MONTH') setPeriodValue(e.target.value);
+                    }}
+                    className="bg-transparent text-xs font-bold text-slate-900 focus:outline-hidden cursor-pointer"
+                  >
+                    {INDIAN_MONTH_OPTIONS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label} {resolveCalendarYearForMonth(financialYear, m.value)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {gstSubTab === 'gstr1' ? (
                   <>
                     <button
@@ -1336,12 +1573,186 @@ export default function ReportsPage() {
                     </table>
                   </div>
                 </div>
+
+                {/* Table 5: B2CL (Inter-state Large > 2.5L) */}
+                {(gstr1Data.b2cl?.length || 0) > 0 && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Table 5: B2CL (Inter-State B2C Large Invoices &gt; ₹2,50,000)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2 px-3">Place of Supply</th>
+                            <th className="py-2 px-3">Invoice #</th>
+                            <th className="py-2 px-3">Date</th>
+                            <th className="py-2 px-3 text-right">Invoice Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                          {gstr1Data.b2cl.flatMap((entry: any) =>
+                            entry.inv.map((inv: any, idx: number) => (
+                              <tr key={`${entry.pos}_${inv.inum}_${idx}`} className="hover:bg-slate-50">
+                                <td className="py-2 px-3">{entry.pos}</td>
+                                <td className="py-2 px-3 font-bold text-slate-900">{inv.inum}</td>
+                                <td className="py-2 px-3 text-slate-500">{inv.idt}</td>
+                                <td className="py-2 px-3 text-right font-bold">₹{inv.val.toFixed(2)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table 9B: Credit / Debit Notes (CDNR) */}
+                {(gstr1Data.cdnr?.length || 0) > 0 && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Table 9B: Credit &amp; Debit Notes (Registered Persons)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2 px-3">Party GSTIN</th>
+                            <th className="py-2 px-3">Note #</th>
+                            <th className="py-2 px-3">Type</th>
+                            <th className="py-2 px-3">Note Date</th>
+                            <th className="py-2 px-3">Orig Invoice</th>
+                            <th className="py-2 px-3 text-right">Note Value</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                          {gstr1Data.cdnr.flatMap((party: any) =>
+                            party.nt.map((nt: any, idx: number) => (
+                              <tr key={`${party.ctin}_${nt.nt_num}_${idx}`} className="hover:bg-slate-50">
+                                <td className="py-2 px-3 font-bold text-slate-900">{party.ctin}</td>
+                                <td className="py-2 px-3">{nt.nt_num}</td>
+                                <td className="py-2 px-3 font-sans">{nt.ntty === 'C' ? 'Credit Note' : 'Debit Note'}</td>
+                                <td className="py-2 px-3 text-slate-500">{nt.nt_dt}</td>
+                                <td className="py-2 px-3">{nt.inum}</td>
+                                <td className="py-2 px-3 text-right font-bold">₹{nt.val.toFixed(2)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table 12: HSN-wise Summary of Outward Supplies */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                  <h4 className="text-xs font-bold text-slate-900 flex items-center justify-between">
+                    <span>Table 12: HSN-wise Summary of Outward Supplies</span>
+                    <span className="text-[11px] text-slate-400">{gstr1Data.hsn?.data?.length || 0} HSN Codes</span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                        <tr>
+                          <th className="py-2 px-3">HSN</th>
+                          <th className="py-2 px-3">Description</th>
+                          <th className="py-2 px-3">UQC</th>
+                          <th className="py-2 px-3 text-right">Total Qty</th>
+                          <th className="py-2 px-3 text-right">Taxable Value</th>
+                          <th className="py-2 px-3 text-right">IGST</th>
+                          <th className="py-2 px-3 text-right">CGST</th>
+                          <th className="py-2 px-3 text-right">SGST</th>
+                          <th className="py-2 px-3 text-right">Total Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                        {!gstr1Data.hsn?.data?.length ? (
+                          <tr><td colSpan={9} className="py-4 text-center text-slate-400 font-sans">No HSN summary rows in this period.</td></tr>
+                        ) : (
+                          gstr1Data.hsn.data.map((h: any, idx: number) => (
+                            <tr key={`${h.hsn_sc}_${idx}`} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 font-bold text-slate-900">{h.hsn_sc}</td>
+                              <td className="py-2 px-3 font-sans text-slate-700">{h.desc || '—'}</td>
+                              <td className="py-2 px-3">{h.uqc}</td>
+                              <td className="py-2 px-3 text-right">{h.qty}</td>
+                              <td className="py-2 px-3 text-right">₹{Number(h.txval || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right">₹{Number(h.iamt || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right">₹{Number(h.camt || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right">₹{Number(h.samt || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right font-bold text-slate-900">₹{Number(h.val || 0).toFixed(2)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Table 13: Documents Issued */}
+                {(gstr1Data.doc_issue?.doc_det?.length || 0) > 0 && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Table 13: Documents Issued Summary
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2 px-3">Nature of Document</th>
+                            <th className="py-2 px-3">Sr. No. From</th>
+                            <th className="py-2 px-3">Sr. No. To</th>
+                            <th className="py-2 px-3 text-right">Total Number</th>
+                            <th className="py-2 px-3 text-right">Cancelled</th>
+                            <th className="py-2 px-3 text-right">Net Issued</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                          {gstr1Data.doc_issue.doc_det.flatMap((d: any) =>
+                            d.docs.map((doc: any, idx: number) => (
+                              <tr key={`${d.doc_num}_${idx}`} className="hover:bg-slate-50">
+                                <td className="py-2 px-3 font-sans font-semibold text-slate-800">{d.doc_typ}</td>
+                                <td className="py-2 px-3">{doc.from}</td>
+                                <td className="py-2 px-3">{doc.to}</td>
+                                <td className="py-2 px-3 text-right">{doc.totnum}</td>
+                                <td className="py-2 px-3 text-right text-rose-600">{doc.canc}</td>
+                                <td className="py-2 px-3 text-right font-bold text-slate-900">{doc.net_issue}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* GSTR-3B View */}
             {gstSubTab === 'gstr3b' && gstr3bData && (
               <div className="space-y-5">
+                {/* Summary Banner */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Return Period</span>
+                    <span className="text-sm font-bold text-slate-900 font-mono">{gstr3bData.ret_period}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">GSTIN</span>
+                    <span className="text-sm font-bold text-slate-900 font-mono">{gstr3bData.gstin || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Gross Turnover</span>
+                    <span className="text-sm font-bold text-slate-900 font-mono">
+                      ₹{Number(gstr3bData.filing_metadata?.grossTurnover || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase block">Net GST Payable</span>
+                    <span className="text-sm font-bold text-orange-700 font-mono">
+                      ₹{Number(gstr3bData.filing_metadata?.netGstPayable?.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
                 {/* Table 3.1 Outward Liability */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
                   <h4 className="text-xs font-bold text-slate-900">
@@ -1431,7 +1842,7 @@ export default function ReportsPage() {
                           <td className="py-2.5 px-3 text-right text-slate-400">₹0.00</td>
                           <td className="py-2.5 px-3 text-right text-slate-400">₹0.00</td>
                         </tr>
-                        <tr className="bg-slate-900 text-white font-bold">
+                        <tr className="bg-slate-900 text-white font-bold print-surface-light">
                           <td className="py-2.5 px-3 font-sans text-white">
                             (C) Net ITC Available (A - B)
                           </td>
@@ -1449,6 +1860,83 @@ export default function ReportsPage() {
                     </table>
                   </div>
                 </div>
+
+                {/* Table 3.2: Inter-state supplies to unregistered persons (when present) */}
+                {(gstr3bData.inter_sup?.unreg_details?.length || 0) > 0 && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Table 3.2: Inter-State Supplies Made to Unregistered Persons
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2 px-3">Place of Supply (State Code)</th>
+                            <th className="py-2 px-3 text-right">Total Taxable Value</th>
+                            <th className="py-2 px-3 text-right">Amount of Integrated Tax (IGST)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-xs">
+                          {gstr3bData.inter_sup.unreg_details.map((row: any, idx: number) => (
+                            <tr key={`${row.pos}_${idx}`}>
+                              <td className="py-2 px-3 font-semibold">{row.pos}</td>
+                              <td className="py-2 px-3 text-right">₹{Number(row.txval || 0).toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right font-bold">₹{Number(row.iamt || 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table 6.1: Payment of Tax (Net GST Payable Summary) */}
+                {gstr3bData.filing_metadata?.netGstPayable && (
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Table 6.1: Payment of Tax — Net GST Cash Liability After Eligible ITC
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-600 uppercase text-[10px]">
+                          <tr>
+                            <th className="py-2.5 px-3">Tax Head</th>
+                            <th className="py-2.5 px-3 text-right">Output Liability</th>
+                            <th className="py-2.5 px-3 text-right">Eligible ITC Credit</th>
+                            <th className="py-2.5 px-3 text-right">Net Payable in Cash</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-xs">
+                          <tr>
+                            <td className="py-2.5 px-3 font-sans font-semibold text-slate-800">IGST</td>
+                            <td className="py-2.5 px-3 text-right">₹{(gstr3bData.sup_details?.osup_det?.iamt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-700">₹{(gstr3bData.itc_elg?.itc_net?.iamt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900">₹{(gstr3bData.filing_metadata.netGstPayable.igst || 0).toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2.5 px-3 font-sans font-semibold text-slate-800">CGST</td>
+                            <td className="py-2.5 px-3 text-right">₹{(gstr3bData.sup_details?.osup_det?.camt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-700">₹{(gstr3bData.itc_elg?.itc_net?.camt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900">₹{(gstr3bData.filing_metadata.netGstPayable.cgst || 0).toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2.5 px-3 font-sans font-semibold text-slate-800">SGST / UTGST</td>
+                            <td className="py-2.5 px-3 text-right">₹{(gstr3bData.sup_details?.osup_det?.samt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-700">₹{(gstr3bData.itc_elg?.itc_net?.samt || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900">₹{(gstr3bData.filing_metadata.netGstPayable.sgst || 0).toFixed(2)}</td>
+                          </tr>
+                          <tr className="bg-orange-50/70 font-bold">
+                            <td className="py-2.5 px-3 font-sans text-orange-950">Total Net Tax Payable</td>
+                            <td colSpan={2} className="py-2.5 px-3" />
+                            <td className="py-2.5 px-3 text-right text-orange-800">
+                              ₹{(gstr3bData.filing_metadata.netGstPayable.total || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1460,7 +1948,7 @@ export default function ReportsPage() {
         {!loading && activeTab === 'reconciliation' && (
           <div className="space-y-6">
             {/* Upload & Reconcile Banner */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="print:hidden bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
                   <Sparkles className="w-6 h-6" />
@@ -1509,6 +1997,40 @@ export default function ReportsPage() {
                 )}
               </div>
             </div>
+
+            {/* Saved Recent GSTR-2B Reconciliation Runs */}
+            {recentImports2b.length > 0 && (
+              <div className="print:hidden bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    Saved GSTR-2B Reconciliation Runs ({recentImports2b.length})
+                  </h4>
+                  <span className="text-[11px] text-slate-400">Click a saved import to view details</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {recentImports2b.map((imp: any) => (
+                    <button
+                      key={imp.id}
+                      type="button"
+                      onClick={() => void handleLoadSavedImport(imp.id)}
+                      className="text-left p-3 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-slate-900 font-mono">
+                          Period {imp.returnPeriod} ({imp.financialYear})
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                          {imp.matchedCount}/{imp.totalInvoices} Matched
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">
+                        {imp.sourceFileName || 'GSTR-2B Import'} · Mismatches: {imp.mismatchCount}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Reconciliation KPI Cards */}
             {reconciliationData && (
@@ -1649,7 +2171,7 @@ export default function ReportsPage() {
         {!loading && activeTab === 'registers' && registersData && (
           <div className="space-y-5">
             {/* Sub-tab Navigation */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
+            <div className="print:hidden flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
               <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 {[
                   { id: 'cash', label: 'Cash Book' },
@@ -1840,7 +2362,7 @@ export default function ReportsPage() {
                   </div>
 
                   {/* Net Profit */}
-                  <div className="flex items-center justify-between py-3 bg-slate-900 text-white px-4 rounded-xl">
+                  <div className="flex items-center justify-between py-3 bg-slate-900 text-white px-4 rounded-xl print-surface-light">
                     <span className="text-xs font-bold">ESTIMATED NET OPERATING PROFIT</span>
                     <div className="text-right">
                       <span className={`text-base font-mono font-black ${registersData.profitability.netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -2001,6 +2523,8 @@ export default function ReportsPage() {
             backLabel="Open Personal Khata"
           />
         )}
+
+        {activeTab !== 'khata' && <ReportPrintFooter />}
       </div>
     </ModulePageShell>
   );

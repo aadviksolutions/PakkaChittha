@@ -20,13 +20,13 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
-interface CustomerOption {
-  id: string;
-  name: string;
-  mobile: string;
-  gstin?: string | null;
-  billingAddress?: string | null;
-}
+import CustomerAutocompleteField, {
+  CustomerDraft,
+  CustomerOption,
+  EMPTY_CUSTOMER_DRAFT,
+  draftFromCustomer,
+  resolveOrCreateCustomer,
+} from '@/components/shared/CustomerAutocompleteField';
 
 interface ProductOption {
   id: string;
@@ -64,13 +64,7 @@ function NewQuotationContent() {
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [customCustomer, setCustomCustomer] = useState({
-    name: '',
-    mobile: '',
-    gstin: '',
-    billingAddress: '',
-  });
-  const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [customerDraft, setCustomerDraft] = useState<CustomerDraft>(EMPTY_CUSTOMER_DRAFT);
 
   const [quotationDate, setQuotationDate] = useState(new Date().toISOString().split('T')[0]);
   const defaultValid = new Date();
@@ -131,8 +125,10 @@ function NewQuotationContent() {
         }
         const q = d.quotation;
         setEditQuotationNumber(q.quotationNumber || '');
-        setIsNewCustomer(false);
         setSelectedCustomerId(q.customerId || '');
+        if (q.customer) {
+          setCustomerDraft(draftFromCustomer(q.customer));
+        }
         if (q.quotationDate) setQuotationDate(String(q.quotationDate).slice(0, 10));
         if (q.validUntil) setValidUntil(String(q.validUntil).slice(0, 10));
         if (q.gstType === 'CGST_SGST' || q.gstType === 'IGST' || q.gstType === 'EXEMPT') {
@@ -238,13 +234,22 @@ function NewQuotationContent() {
           const rawPhone = c.tel?.[0] || '';
           const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
 
-          setIsNewCustomer(true);
-          setCustomCustomer((prev) => ({
-            ...prev,
-            name: rawName || prev.name,
-            mobile: cleanPhone || prev.mobile,
-          }));
-          toast.success(`Contact "${rawName}" loaded!`);
+          const matched = cleanPhone
+            ? customers.find((cust) => (cust.mobile || '').replace(/\D/g, '').endsWith(cleanPhone))
+            : undefined;
+          if (matched) {
+            setSelectedCustomerId(matched.id);
+            setCustomerDraft(draftFromCustomer(matched));
+            toast.success(`Matched existing customer "${matched.name}"!`);
+          } else {
+            setSelectedCustomerId('');
+            setCustomerDraft((prev) => ({
+              ...prev,
+              name: rawName || prev.name,
+              mobile: cleanPhone || prev.mobile,
+            }));
+            toast.success(`Contact "${rawName}" loaded!`);
+          }
         }
       } catch (err) {
         console.warn('Contact picker cancelled or failed:', err);
@@ -280,8 +285,8 @@ function NewQuotationContent() {
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'SENT' = 'DRAFT') => {
     e.preventDefault();
 
-    if (!selectedCustomerId && (!customCustomer.name || !customCustomer.mobile)) {
-      toast.error('Please select an existing customer or enter customer details.');
+    if (!selectedCustomerId && customerDraft.name.trim().length < 2) {
+      toast.error('Please enter a customer name (at least 2 characters) or select an existing customer.');
       return;
     }
 
@@ -292,26 +297,17 @@ function NewQuotationContent() {
 
     try {
       setSubmitting(true);
-      let customerIdToUse = selectedCustomerId;
-
-      // If new customer, create in customer directory first
-      if (isNewCustomer || !customerIdToUse) {
-        const custRes = await fetch('/api/customers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: customCustomer.name.trim(),
-            mobile: customCustomer.mobile.trim(),
-            gstin: customCustomer.gstin.trim() || undefined,
-            billingAddress: customCustomer.billingAddress.trim() || undefined,
-            openingBalance: 0,
-          }),
-        });
-        const custData = await custRes.json();
-        if (!custRes.ok || !custData.success) {
-          throw new Error(custData.error || 'Failed to register customer');
-        }
-        customerIdToUse = custData.customer.id;
+      const resolved = await resolveOrCreateCustomer({
+        selectedCustomerId,
+        customers,
+        draft: customerDraft,
+      });
+      const customerIdToUse = resolved.customerId;
+      if (resolved.createdCustomer) {
+        setCustomers((prev) => [resolved.createdCustomer!, ...prev]);
+        setSelectedCustomerId(resolved.customerId);
+        setCustomerDraft(draftFromCustomer(resolved.createdCustomer));
+        toast.success(`New customer "${resolved.createdCustomer.name}" added!`);
       }
 
       const payload = {
@@ -444,90 +440,16 @@ function NewQuotationContent() {
               </button>
             </div>
 
-            {!isNewCustomer ? (
-              <div className="space-y-1.5">
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => {
-                    if (e.target.value === 'NEW') {
-                      setIsNewCustomer(true);
-                      setSelectedCustomerId('');
-                    } else {
-                      setSelectedCustomerId(e.target.value);
-                    }
-                  }}
-                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
-                >
-                  <option value="">Select Existing Customer...</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.mobile})
-                    </option>
-                  ))}
-                  <option value="NEW">+ Add New Customer</option>
-                </select>
-
-                <p className="text-[11px] text-slate-500">
-                  Or{' '}
-                  <button
-                    type="button"
-                    onClick={() => setIsNewCustomer(true)}
-                    className="text-emerald-700 font-bold hover:underline cursor-pointer"
-                  >
-                    enter custom details directly
-                  </button>
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-800 text-[11px]">New Customer Info</span>
-                  <button
-                    type="button"
-                    onClick={() => setIsNewCustomer(false)}
-                    className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                  >
-                    Choose Existing
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Customer Name *"
-                    value={customCustomer.name}
-                    onChange={(e) => setCustomCustomer({ ...customCustomer, name: e.target.value })}
-                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                  />
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Mobile Number *"
-                    value={customCustomer.mobile}
-                    onChange={(e) => setCustomCustomer({ ...customCustomer, mobile: e.target.value })}
-                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 font-mono focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="GSTIN (Optional)"
-                    value={customCustomer.gstin}
-                    onChange={(e) => setCustomCustomer({ ...customCustomer, gstin: e.target.value.toUpperCase() })}
-                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 font-mono uppercase focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Billing / Delivery Address..."
-                    value={customCustomer.billingAddress}
-                    onChange={(e) => setCustomCustomer({ ...customCustomer, billingAddress: e.target.value })}
-                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-              </div>
-            )}
+            <CustomerAutocompleteField
+              customers={customers}
+              selectedCustomerId={selectedCustomerId}
+              draft={customerDraft}
+              onChange={({ selectedCustomerId: nextId, draft: nextDraft }) => {
+                setSelectedCustomerId(nextId);
+                setCustomerDraft(nextDraft);
+              }}
+              placeholder="Type customer name, mobile, or GSTIN..."
+            />
           </div>
 
           {/* Quotation Metadata Column */}
