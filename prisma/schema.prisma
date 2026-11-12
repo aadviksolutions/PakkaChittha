@@ -18,6 +18,29 @@ enum BusinessRole {
   BILLING_STAFF
   ACCOUNTANT
   INVENTORY_MANAGER
+  OWNER
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum AccessScopeType {
+  ALL
+  SELECTED
+}
+
+enum AccountantInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 enum SubscriptionPlan {
@@ -99,14 +122,21 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  memberships       BusinessMembership[]
-  sessions          Session[]
-  khataContacts     KhataContact[]
-  khataTransactions KhataTransaction[]
-  khataRepayments   KhataRepayment[]
-  householdMemberships HouseholdMember[]
+  memberships                  BusinessMembership[]
+  sessions                     Session[]
+  khataContacts                KhataContact[]
+  khataTransactions            KhataTransaction[]
+  khataRepayments              KhataRepayment[]
+  householdMemberships         HouseholdMember[]
   createdHouseholdTransactions HouseholdTransaction[]
-  sentHouseholdInvitations HouseholdInvitation[]
+  sentHouseholdInvitations     HouseholdInvitation[]
+  accountantAccesses           AccountantBusinessAccess[] @relation("AccountantUser")
+  grantedAccountantAccesses    AccountantBusinessAccess[] @relation("AccountantGrantedBy")
+  sentAccountantInvitations    AccountantInvitation[]     @relation("AccountantInvitedBy")
+  acceptedAccountantInvites    AccountantInvitation[]     @relation("AccountantAcceptedBy")
+  requestedApprovals           ApprovalRequest[]          @relation("ApprovalRequestedBy")
+  decidedApprovals             ApprovalRequest[]          @relation("ApprovalDecidedBy")
+  auditEvents                  AuditEvent[]
 
   @@index([email])
   @@index([googleId])
@@ -161,28 +191,47 @@ model Business {
   khataTransactions  KhataTransaction[]
   khataRepayments    KhataRepayment[]
   subscriptionPayments SubscriptionPayment[]
-  creditDebitNotes   CreditDebitNote[]
-  gstr2bImports      Gstr2bImport[]
-  quotations         Quotation[]
-  quotationSequence  QuotationSequence?
+  creditDebitNotes      CreditDebitNote[]
+  gstr2bImports         Gstr2bImport[]
+  quotations            Quotation[]
+  quotationSequence     QuotationSequence?
+  branches              Branch[]
+  financialYears        FinancialYear[]
+  roles                 Role[]
+  accountantInvitations AccountantInvitation[]
+  accountantAccesses    AccountantBusinessAccess[]
+  approvalRequests      ApprovalRequest[]
+  auditEvents           AuditEvent[]
+  featureFlags          FeatureFlag[]
+  accountingGroups      AccountingGroup[]
+  ledgers               Ledger[]
+  vouchers              Voucher[]
+  ledgerBalances        LedgerBalance[]
 
   @@index([name])
 }
 
 model BusinessMembership {
-  id         String       @id @default(cuid())
-  userId     String
-  businessId String
-  role       BusinessRole @default(BUSINESS_OWNER)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  userId          String
+  businessId      String
+  role            BusinessRole @default(BUSINESS_OWNER)
+  branchIds       String[]     @default([])
+  financialYears  String[]     @default([])
+  permissions     String[]     @default([])
+  isActive        Boolean      @default(true)
+  invitedByUserId String?
+  revokedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business        Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@unique([userId, businessId])
   @@index([userId])
   @@index([businessId])
+  @@index([isActive])
 }
 
 model Subscription {
@@ -213,15 +262,229 @@ model Session {
   sessionToken String    @unique
   userId       String
   businessId   String?
+  branchId     String?
   expiresAt    DateTime
   createdAt    DateTime  @default(now())
 
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   business     Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  branch       Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([sessionToken])
   @@index([userId])
   @@index([businessId])
+  @@index([branchId])
+}
+
+// ============================================================
+// PHASE 1: MULTI-BRANCH, FINANCIAL YEARS, RBAC, ACCOUNTANT & AUDIT
+// ============================================================
+
+model Branch {
+  id         String    @id @default(cuid())
+  businessId String
+  name       String
+  code       String
+  gstin      String?
+  state      String?
+  city       String?
+  address    String?
+  isDefault  Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sessions   Session[]
+  vouchers   Voucher[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@index([businessId, isActive])
+}
+
+model FinancialYear {
+  id          String    @id @default(cuid())
+  businessId  String
+  code        String
+  label       String
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean   @default(true)
+  isClosed    Boolean   @default(false)
+  lockedUntil DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@index([businessId, isActive])
+}
+
+model Role {
+  id              String           @id @default(cuid())
+  businessId      String?
+  key             String
+  name            String
+  description     String?
+  isSystem        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  business        Business?        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  rolePermissions RolePermission[]
+
+  @@unique([businessId, key])
+  @@index([key])
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  module          String
+  description     String?
+  createdAt       DateTime         @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  allowed      Boolean    @default(true)
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model AccountantInvitation {
+  id                  String                     @id @default(cuid())
+  businessId          String
+  invitedEmail        String
+  invitedName         String?
+  invitedByUserId     String
+  tokenHash           String                     @unique
+  branchScope         AccessScopeType            @default(ALL)
+  branchIds           String[]                   @default([])
+  fyScope             AccessScopeType            @default(ALL)
+  financialYears      String[]                   @default([])
+  permissions         String[]                   @default([])
+  canApproveSensitive Boolean                    @default(false)
+  canFileGst          Boolean                    @default(false)
+  status              AccountantInvitationStatus @default(PENDING)
+  acceptedByUserId    String?
+  acceptedAt          DateTime?
+  revokedAt           DateTime?
+  expiresAt           DateTime
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  business            Business                   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invitedBy           User                       @relation("AccountantInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedBy          User?                      @relation("AccountantAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([invitedEmail, status])
+  @@index([tokenHash])
+}
+
+model AccountantBusinessAccess {
+  id                  String          @id @default(cuid())
+  userId              String
+  businessId          String
+  grantedByUserId     String
+  branchScope         AccessScopeType @default(ALL)
+  branchIds           String[]        @default([])
+  fyScope             AccessScopeType @default(ALL)
+  financialYears      String[]        @default([])
+  permissions         String[]        @default([])
+  canApproveSensitive Boolean         @default(false)
+  canFileGst          Boolean         @default(false)
+  isActive            Boolean         @default(true)
+  revokedAt           DateTime?
+  revokedReason       String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  user                User            @relation("AccountantUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy           User            @relation("AccountantGrantedBy", fields: [grantedByUserId], references: [id], onDelete: Cascade)
+  business            Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@index([userId, isActive])
+  @@index([businessId, isActive])
+}
+
+model ApprovalRequest {
+  id                String         @id @default(cuid())
+  businessId        String
+  requestedByUserId String
+  decidedByUserId   String?
+  requestType       String
+  entityType        String
+  entityId          String?
+  title             String
+  summary           String?
+  payload           Json?
+  status            ApprovalStatus @default(PENDING)
+  decisionNotes     String?
+  decidedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  business          Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  requestedBy       User           @relation("ApprovalRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Cascade)
+  decidedBy         User?          @relation("ApprovalDecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([requestedByUserId])
+}
+
+model AuditEvent {
+  id            String    @id @default(cuid())
+  businessId    String
+  actorUserId   String
+  actorEmail    String?
+  actorName     String?
+  actorRole     String?
+  action        String
+  entityType    String
+  entityId      String?
+  previousValue Json?
+  newValue      Json?
+  reason        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  actor         User      @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@index([businessId, entityType, entityId])
+  @@index([actorUserId])
+}
+
+model FeatureFlag {
+  id         String    @id @default(cuid())
+  businessId String?
+  key        String
+  enabled    Boolean   @default(false)
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, key])
+  @@index([key])
 }
 
 model Customer {
@@ -1307,4 +1570,164 @@ model DiscountUsage {
   @@index([businessId])
 }
 
+// ============================================================================
+// ERP PHASE 2 — DOUBLE-ENTRY ACCOUNTING ENGINE (SCALE PLAN ONLY)
+// ============================================================================
+
+enum AccountingGroupType {
+  ASSETS
+  LIABILITIES
+  INCOME
+  EXPENSES
+  CAPITAL
+}
+
+enum VoucherType {
+  SALES
+  PURCHASE
+  PAYMENT
+  RECEIPT
+  CONTRA
+  JOURNAL
+  DEBIT_NOTE
+  CREDIT_NOTE
+  OPENING_BALANCE
+  CLOSING_ENTRY
+}
+
+enum VoucherStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+enum LedgerNature {
+  DEBIT_NORMAL
+  CREDIT_NORMAL
+}
+
+model AccountingGroup {
+  id            String              @id @default(cuid())
+  businessId    String
+  name          String
+  description   String?
+  type          AccountingGroupType
+  parentGroupId String?
+  sortOrder     Int                 @default(0)
+  isSystem      Boolean             @default(false)
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  business      Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  parentGroup   AccountingGroup?    @relation("GroupHierarchy", fields: [parentGroupId], references: [id], onDelete: SetNull)
+  childGroups   AccountingGroup[]   @relation("GroupHierarchy")
+  ledgers       Ledger[]
+
+  @@index([businessId])
+  @@index([type])
+  @@index([parentGroupId])
+}
+
+model Ledger {
+  id                   String              @id @default(cuid())
+  businessId           String
+  name                 String
+  code                 String?
+  groupId              String
+  nature               LedgerNature
+  openingBalance       Decimal             @default(0) @db.Decimal(15, 2)
+  openingBalanceType   String              @default("DR")
+  fyCode               String              @default("ALL")
+  isSystem             Boolean             @default(false)
+  isActive             Boolean             @default(true)
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  business             Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  group                AccountingGroup     @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  voucherEntries       VoucherEntry[]
+  balances             LedgerBalance[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@index([groupId])
+  @@index([nature])
+}
+
+model Voucher {
+  id              String        @id @default(cuid())
+  businessId      String
+  branchId        String?
+  fyCode          String
+  voucherType     VoucherType
+  voucherNumber   String
+  voucherDate     DateTime      @db.Date
+  narration       String?
+  totalAmount     Decimal       @default(0) @db.Decimal(15, 2)
+  status          VoucherStatus @default(DRAFT)
+  referenceType   String?
+  referenceId     String?
+  postedAt        DateTime?
+  postedBy        String?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
+  reversalOfId    String?
+  createdBy       String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branch          Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  reversalOf      Voucher?      @relation("VoucherReversal", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversals       Voucher[]     @relation("VoucherReversal")
+  entries         VoucherEntry[]
+
+  @@unique([businessId, fyCode, voucherNumber])
+  @@index([businessId])
+  @@index([branchId])
+  @@index([fyCode])
+  @@index([voucherType])
+  @@index([voucherDate])
+  @@index([status])
+  @@index([referenceType, referenceId])
+}
+
+model VoucherEntry {
+  id           String   @id @default(cuid())
+  voucherId    String
+  ledgerId     String
+  debitAmount  Decimal  @default(0) @db.Decimal(15, 2)
+  creditAmount Decimal  @default(0) @db.Decimal(15, 2)
+  narration    String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  voucher      Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  ledger       Ledger   @relation(fields: [ledgerId], references: [id], onDelete: Restrict)
+
+  @@index([voucherId])
+  @@index([ledgerId])
+}
+
+model LedgerBalance {
+  id         String   @id @default(cuid())
+  businessId String
+  ledgerId   String
+  fyCode     String
+  openingDr  Decimal  @default(0) @db.Decimal(15, 2)
+  openingCr  Decimal  @default(0) @db.Decimal(15, 2)
+  totalDr    Decimal  @default(0) @db.Decimal(15, 2)
+  totalCr    Decimal  @default(0) @db.Decimal(15, 2)
+  updatedAt  DateTime @updatedAt
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  ledger     Ledger   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
+
+  @@unique([ledgerId, fyCode])
+  @@index([businessId])
+  @@index([ledgerId])
+}
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommercialAccess, AuthError } from '@/lib/auth/guards';
+import { requireCommercialAccess, NON_VIEWER_ROLES, AuthError } from '@/lib/auth/guards';
 import { voidInvoice } from '@/lib/services/invoiceService';
 
 export async function POST(
@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { business, session } = await requireCommercialAccess();
+    const { business, session } = await requireCommercialAccess(undefined, NON_VIEWER_ROLES);
     const { id } = await params;
     const body = await req.json();
 

@@ -361,42 +361,49 @@ function NewQuotationContent() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
-      {/* Top Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-        <div className="flex items-center gap-3">
+    <div className="max-w-6xl mx-auto space-y-3 pb-20 md:pb-8">
+      {/* Compact Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/quotations"
             className="p-1.5 text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            title="Back to quotations"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
               {isEditMode
                 ? `Edit Quotation${editQuotationNumber ? ` (${editQuotationNumber})` : ''}`
                 : 'Create New Quotation'}
             </h1>
-            <p className="text-xs text-slate-500">
-              Generate a formal commercial quote with branding, price estimates &amp; tax breakdown.
+            <p className="text-[11px] text-slate-500">
+              {activeBusiness?.name ? `${activeBusiness.name} • ` : ''}Generate quote with price estimates &amp; tax breakdown
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5 bg-slate-900 text-white px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold">
+            <span className="text-slate-300 font-sans text-[11px] font-normal">Total</span>
+            <span className="text-emerald-400 tabular-nums">
+              ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
           <button
             type="button"
             onClick={(e) => handleSubmit(e, 'DRAFT')}
             disabled={submitting}
-            className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition-all cursor-pointer disabled:opacity-50"
           >
-            Save as Draft
+            Save Draft
           </button>
           <button
             type="button"
             onClick={(e) => handleSubmit(e, 'SENT')}
             disabled={submitting}
-            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow-2xs transition-all cursor-pointer disabled:opacity-50"
           >
             {submitting
               ? isEditMode
@@ -410,35 +417,35 @@ function NewQuotationContent() {
       </div>
 
       {loadingQuotation && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 font-medium">
+        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700 font-medium">
           Loading quotation details...
         </div>
       )}
 
-      <form className="space-y-6">
-        {/* 1. Customer & Quotation Meta */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
+      <form className="space-y-3 text-xs">
+        {/* 1. Customer & Quotation Meta (Compact 2-Column Top Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
           {/* Customer Selection Column */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <div className="md:col-span-6 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-emerald-600" />
-                Customer / Party Details *
+                Customer / Party *
               </label>
 
               <button
                 type="button"
                 onClick={handleImportContact}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
                 title="Select from Phone Contacts"
               >
                 <Phone className="w-3 h-3" />
-                <span>Import from Contacts</span>
+                <span>Import Contacts</span>
               </button>
             </div>
 
             {!isNewCustomer ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <select
                   value={selectedCustomerId}
                   onChange={(e) => {
@@ -449,7 +456,7 @@ function NewQuotationContent() {
                       setSelectedCustomerId(e.target.value);
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="">Select Existing Customer...</option>
                   {customers.map((c) => (
@@ -472,9 +479,9 @@ function NewQuotationContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+              <div className="space-y-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-800">New Customer Info</span>
+                  <span className="font-bold text-slate-800 text-[11px]">New Customer Info</span>
                   <button
                     type="button"
                     onClick={() => setIsNewCustomer(false)}
@@ -491,7 +498,7 @@ function NewQuotationContent() {
                     placeholder="Customer Name *"
                     value={customCustomer.name}
                     onChange={(e) => setCustomCustomer({ ...customCustomer, name: e.target.value })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                   />
                   <input
                     type="tel"
@@ -499,65 +506,64 @@ function NewQuotationContent() {
                     placeholder="Mobile Number *"
                     value={customCustomer.mobile}
                     onChange={(e) => setCustomCustomer({ ...customCustomer, mobile: e.target.value })}
-                    className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 font-mono focus:outline-hidden focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
 
-                <input
-                  type="text"
-                  placeholder="GSTIN (Optional)"
-                  value={customCustomer.gstin}
-                  onChange={(e) => setCustomCustomer({ ...customCustomer, gstin: e.target.value.toUpperCase() })}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono uppercase focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
-
-                <textarea
-                  rows={2}
-                  placeholder="Billing / Delivery Address..."
-                  value={customCustomer.billingAddress}
-                  onChange={(e) => setCustomCustomer({ ...customCustomer, billingAddress: e.target.value })}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="GSTIN (Optional)"
+                    value={customCustomer.gstin}
+                    onChange={(e) => setCustomCustomer({ ...customCustomer, gstin: e.target.value.toUpperCase() })}
+                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 font-mono uppercase focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Billing / Delivery Address..."
+                    value={customCustomer.billingAddress}
+                    onChange={(e) => setCustomCustomer({ ...customCustomer, billingAddress: e.target.value })}
+                    className="px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
               </div>
             )}
           </div>
 
           {/* Quotation Metadata Column */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <div className="md:col-span-6 space-y-2 md:border-l md:border-slate-100 md:pl-3">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
               Dates &amp; Tax Structure
             </label>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Quotation Date</label>
+                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Quotation Date</label>
                 <input
                   type="date"
                   value={quotationDate}
                   onChange={(e) => setQuotationDate(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:bg-white"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-[11px] focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Valid Until</label>
+                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Valid Until</label>
                 <input
                   type="date"
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:bg-white"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono text-[11px] focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tax Regime</label>
+                <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Tax Regime</label>
                 <select
                   value={gstType}
                   onChange={(e) => setGstType(e.target.value as any)}
-                  className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-hidden focus:bg-white"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-[11px] font-medium focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="CGST_SGST">Intra-State (CGST + SGST)</option>
                   <option value="IGST">Inter-State (IGST)</option>
@@ -565,16 +571,16 @@ function NewQuotationContent() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 pt-5">
-                <input
-                  type="checkbox"
-                  id="taxInclusive"
-                  checked={isTaxInclusive}
-                  onChange={(e) => setIsTaxInclusive(e.target.checked)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <label htmlFor="taxInclusive" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                  Rates are Tax Inclusive
+              <div className="flex items-end pb-1.5">
+                <label htmlFor="taxInclusive" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="taxInclusive"
+                    checked={isTaxInclusive}
+                    onChange={(e) => setIsTaxInclusive(e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Rates are Tax Inclusive</span>
                 </label>
               </div>
             </div>
@@ -582,23 +588,24 @@ function NewQuotationContent() {
         </div>
 
         {/* 2. Items & Pricing Section */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-emerald-600" />
-              Line Items &amp; Pricing
+              Line Items ({items.length})
             </h2>
             <button
               type="button"
               onClick={handleAddItem}
-              className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 hover:text-emerald-700 bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded-xl transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-800 hover:text-emerald-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3 h-3" />
               <span>Add Item</span>
             </button>
           </div>
 
-          <div className="space-y-3">
+          {/* MOBILE VIEW: Compact Stacked Cards */}
+          <div className="md:hidden space-y-2">
             {items.map((item, idx) => {
               const gross = item.quantity * item.rate;
               const disc = Math.min(gross, item.discount || 0);
@@ -609,106 +616,95 @@ function NewQuotationContent() {
               return (
                 <div
                   key={item.id}
-                  className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 space-y-3 text-xs"
+                  className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60 space-y-2 text-xs"
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="font-bold text-slate-400 mt-2 text-[11px]">#{idx + 1}</span>
-
-                    {/* Catalog Picker & Description */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <div>
-                        <select
-                          value={item.productId || ''}
-                          onChange={(e) => handleItemChange(item.id, 'productId', e.target.value || undefined)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden"
-                        >
-                          <option value="">Pick from Inventory...</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} (₹{p.sellingPrice})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <input
-                          type="text"
-                          required
-                          placeholder="Item Description or Custom Specification *"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden"
-                        />
-                      </div>
-                    </div>
-
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-slate-400 text-[10px]">#{idx + 1}</span>
+                    <select
+                      value={item.productId || ''}
+                      onChange={(e) => handleItemChange(item.id, 'productId', e.target.value || undefined)}
+                      className="flex-1 px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-900 text-xs focus:outline-hidden"
+                    >
+                      <option value="">Pick from Inventory...</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (₹{p.sellingPrice})
+                        </option>
+                      ))}
+                    </select>
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(item.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
                       title="Remove item"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Pricing inputs: Qty, Unit, Rate, Discount, Tax% */}
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 border-t border-slate-200/50">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Item Description or Custom Specification *"
+                    value={item.description}
+                    onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-md text-slate-900 font-medium text-xs focus:outline-hidden"
+                  />
+
+                  <div className="grid grid-cols-3 gap-1.5">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Quantity</label>
+                      <label className="block text-[10px] text-slate-500">Qty</label>
                       <input
                         type="number"
                         min="0.01"
                         step="any"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono text-slate-900 focus:outline-hidden"
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-center"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Unit</label>
+                      <label className="block text-[10px] text-slate-500">Unit</label>
                       <input
                         type="text"
                         value={item.unit}
                         onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
                         placeholder="Pcs"
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden"
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-900"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Rate (₹)</label>
+                      <label className="block text-[10px] text-slate-500">Rate (₹)</label>
                       <input
                         type="number"
                         min="0"
                         step="any"
                         value={item.rate}
                         onChange={(e) => handleItemChange(item.id, 'rate', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono text-slate-900 focus:outline-hidden"
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-right"
                       />
                     </div>
+                  </div>
 
+                  <div className="grid grid-cols-3 gap-1.5 items-end pt-1 border-t border-slate-200/60">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Discount (₹)</label>
+                      <label className="block text-[10px] text-slate-500">Disc (₹)</label>
                       <input
                         type="number"
                         min="0"
                         step="any"
                         value={item.discount}
                         onChange={(e) => handleItemChange(item.id, 'discount', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono text-slate-900 focus:outline-hidden"
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-right"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">GST Rate %</label>
+                      <label className="block text-[10px] text-slate-500">GST %</label>
                       <select
                         value={item.taxRate}
                         onChange={(e) => handleItemChange(item.id, 'taxRate', parseFloat(e.target.value) || 0)}
                         disabled={gstType === 'EXEMPT'}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-hidden"
+                        className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md text-slate-900 font-mono"
                       >
                         <option value="0">0%</option>
                         <option value="5">5%</option>
@@ -717,12 +713,11 @@ function NewQuotationContent() {
                         <option value="28">28%</option>
                       </select>
                     </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase">Line Total</label>
-                      <div className="py-1 px-2 font-mono font-bold text-slate-900 text-right bg-slate-100 rounded-lg">
+                    <div className="text-right">
+                      <span className="block text-[10px] text-slate-500">Total</span>
+                      <span className="font-mono font-bold text-slate-900">
                         ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -730,93 +725,222 @@ function NewQuotationContent() {
             })}
           </div>
 
-          {/* Grand Totals Summary Card */}
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-4 border-t border-slate-100">
-            <div className="w-full sm:w-1/2 space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-600 mb-1">
-                  Terms &amp; Conditions
-                </label>
-                <textarea
-                  rows={3}
-                  value={terms}
-                  onChange={(e) => setTerms(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:bg-white"
-                />
-              </div>
+          {/* DESKTOP VIEW: Clean Single-Row Table */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <th className="py-1.5 px-2 w-8 text-center">#</th>
+                  <th className="py-1.5 px-1.5 w-44">Inventory</th>
+                  <th className="py-1.5 px-1.5">Description *</th>
+                  <th className="py-1.5 px-1.5 w-18 text-right">Qty</th>
+                  <th className="py-1.5 px-1.5 w-18">Unit</th>
+                  <th className="py-1.5 px-1.5 w-24 text-right">Rate (₹)</th>
+                  <th className="py-1.5 px-1.5 w-22 text-right">Disc (₹)</th>
+                  <th className="py-1.5 px-1.5 w-18">GST %</th>
+                  <th className="py-1.5 px-2 w-28 text-right">Total (₹)</th>
+                  <th className="py-1.5 px-1.5 w-8"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.map((item, idx) => {
+                  const gross = item.quantity * item.rate;
+                  const disc = Math.min(gross, item.discount || 0);
+                  const taxable = gross - disc;
+                  const lineTax = (taxable * (item.taxRate || 0)) / 100;
+                  const lineTotal = taxable + lineTax;
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-600 mb-1">
-                  Customer Notes / Remarks
-                </label>
-                <textarea
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:bg-white"
-                />
-              </div>
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/70">
+                      <td className="py-1.5 px-2 text-center font-mono text-[11px] text-slate-400">
+                        {idx + 1}
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <select
+                          value={item.productId || ''}
+                          onChange={(e) => handleItemChange(item.id, 'productId', e.target.value || undefined)}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md text-slate-900 text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        >
+                          <option value="">Custom / Pick...</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} (₹{p.sellingPrice})
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Item Description or Spec *"
+                          value={item.description}
+                          onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-900 font-medium text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="any"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <input
+                          type="text"
+                          value={item.unit}
+                          onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                          placeholder="Pcs"
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md text-slate-900 text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.rate}
+                          onChange={(e) => handleItemChange(item.id, 'rate', parseFloat(e.target.value) || 0)}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.discount}
+                          onChange={(e) => handleItemChange(item.id, 'discount', parseFloat(e.target.value) || 0)}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md font-mono text-slate-900 text-right text-xs focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                        />
+                      </td>
+                      <td className="py-1.5 px-1.5">
+                        <select
+                          value={item.taxRate}
+                          onChange={(e) => handleItemChange(item.id, 'taxRate', parseFloat(e.target.value) || 0)}
+                          disabled={gstType === 'EXEMPT'}
+                          className="w-full px-1.5 py-1 bg-white border border-slate-200 rounded-md text-slate-900 font-mono text-xs focus:outline-hidden disabled:opacity-60"
+                        >
+                          <option value="0">0%</option>
+                          <option value="5">5%</option>
+                          <option value="12">12%</option>
+                          <option value="18">18%</option>
+                          <option value="28">28%</option>
+                        </select>
+                      </td>
+                      <td className="py-1.5 px-2 font-mono font-bold text-slate-900 text-right tabular-nums text-xs">
+                        ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-1.5 px-1.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* 3. Terms/Notes & Totals Summary (Compact 2-Column Bottom Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+          {/* Terms & Notes */}
+          <div className="md:col-span-7 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">
+                Terms &amp; Conditions
+              </label>
+              <textarea
+                rows={3}
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
+              />
             </div>
 
-            {/* Price Breakdown */}
-            <div className="w-full sm:w-80 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+            <div>
+              <label className="block text-[10px] font-bold uppercase text-slate-600 mb-0.5">
+                Customer Notes / Remarks
+              </label>
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-slate-900"
+              />
+            </div>
+          </div>
+
+          {/* Price Breakdown & Finalize CTA */}
+          <div className="md:col-span-5 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2.5 text-xs">
+            <div className="space-y-1">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal (Gross)</span>
-                <span className="font-mono font-semibold">₹{totals.subtotal.toFixed(2)}</span>
+                <span className="font-mono font-semibold tabular-nums">₹{totals.subtotal.toFixed(2)}</span>
               </div>
 
               {totals.discountTotal > 0 && (
                 <div className="flex justify-between text-emerald-700">
                   <span>Total Discount</span>
-                  <span className="font-mono font-semibold">-₹{totals.discountTotal.toFixed(2)}</span>
+                  <span className="font-mono font-semibold tabular-nums">-₹{totals.discountTotal.toFixed(2)}</span>
                 </div>
               )}
 
               <div className="flex justify-between text-slate-600">
                 <span>GST Tax Total</span>
-                <span className="font-mono font-semibold">₹{totals.taxTotal.toFixed(2)}</span>
+                <span className="font-mono font-semibold tabular-nums">₹{totals.taxTotal.toFixed(2)}</span>
               </div>
 
-              <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline text-sm font-bold text-slate-900">
-                <span>Estimated Total</span>
-                <span className="text-lg font-black text-slate-900 font-mono">
+              <div className="pt-1.5 border-t border-slate-200 flex justify-between items-baseline font-bold text-slate-900">
+                <span className="text-xs">Estimated Total</span>
+                <span className="text-base font-black text-slate-900 font-mono tabular-nums">
                   ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Bottom CTA */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Link
-            href="/quotations"
-            className="px-4 py-2 border border-slate-200 bg-white text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-50"
-          >
-            Cancel
-          </Link>
-          <button
-            type="button"
-            onClick={(e) => handleSubmit(e, 'DRAFT')}
-            disabled={submitting}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-xl hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
-          >
-            Save Draft
-          </button>
-          <button
-            type="button"
-            onClick={(e) => handleSubmit(e, 'SENT')}
-            disabled={submitting}
-            className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md disabled:opacity-50 cursor-pointer"
-          >
-            {submitting
-              ? isEditMode
-                ? 'Updating Quotation...'
-                : 'Creating Quotation...'
-              : isEditMode
-                ? 'Update & Finalize Quotation'
-                : 'Create & Finalize Quotation'}
-          </button>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Link
+                href="/quotations"
+                className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50"
+              >
+                Cancel
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, 'DRAFT')}
+                disabled={submitting}
+                className="px-3 py-1.5 bg-white border border-slate-300 text-slate-800 font-bold text-xs rounded-lg hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
+              >
+                Save Draft
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, 'SENT')}
+                disabled={submitting}
+                className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-2xs disabled:opacity-50 cursor-pointer"
+              >
+                {submitting
+                  ? isEditMode
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : isEditMode
+                    ? 'Update & Finalize'
+                    : 'Create & Finalize'}
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </div>

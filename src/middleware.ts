@@ -48,6 +48,7 @@ const NOINDEX_PREFIXES = [
   '/staff',
   '/subscription',
   '/whatsapp',
+  '/accountant',
   '/platform-admin',
   '/view',
 ];

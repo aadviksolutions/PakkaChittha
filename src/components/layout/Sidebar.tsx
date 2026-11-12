@@ -9,6 +9,7 @@ import {
   FREE_KHATA_NAVIGATION_ITEMS,
   BUSINESS_NAVIGATION_ITEMS,
   HOUSEHOLD_NAVIGATION_ITEMS,
+  ACCOUNTANT_NAVIGATION_ITEMS,
   NavigationItem,
 } from '@/data/navigation';
 import { BusinessProfileArea } from './BusinessProfileArea';
@@ -39,6 +40,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowRight,
+  Briefcase,
+  CheckSquare,
+  Calculator,
+  FileSpreadsheet,
+  Scale,
+  FolderLock,
+  GitBranch,
+  ClipboardList,
+  Wallet,
+  Percent,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -69,6 +80,16 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Store,
   Home,
   Landmark,
+  Briefcase,
+  CheckSquare,
+  Calculator,
+  FileSpreadsheet,
+  Scale,
+  FolderLock,
+  GitBranch,
+  ClipboardList,
+  Wallet,
+  Percent,
 };
 
 import { useEntitlements } from '@/hooks/useEntitlements';
@@ -118,11 +139,43 @@ export function Sidebar({
       case 'businesses': return t('nav.businesses');
       case 'plans': return t('nav.plans');
       case 'platform-settings': return t('nav.platformSettings');
+      case 'accountant-workspace': return t('accountant.workspaceTitle');
+      case 'acc-dashboard': return t('accountant.dashboard');
+      case 'acc-businesses': return t('accountant.businesses');
+      case 'acc-daybook': return t('accountant.dayBook');
+      case 'acc-ledgers': return t('accountant.ledgers');
+      case 'acc-vouchers': return t('accountant.vouchers');
+      case 'acc-journal': return t('accountant.journalRegister');
+      case 'acc-sales-reg': return t('accountant.salesRegister');
+      case 'acc-purchase-reg': return t('accountant.purchaseRegister');
+      case 'acc-gstr1': return t('accountant.gstr1');
+      case 'acc-gstr2b': return t('accountant.gstr2b');
+      case 'acc-gstr3b': return t('accountant.gstr3b');
+      case 'acc-einvoice': return t('accountant.einvoiceEway');
+      case 'acc-tds-tcs': return t('accountant.tdsTcs');
+      case 'acc-rec-pay': return t('accountant.receivablesPayables');
+      case 'acc-bank-rec': return t('accountant.bankReconciliation');
+      case 'acc-trial-bal': return t('accountant.trialBalance');
+      case 'acc-pnl': return t('accountant.profitLoss');
+      case 'acc-bs': return t('accountant.balanceSheet');
+      case 'acc-cashflow': return t('accountant.cashFlow');
+      case 'acc-inv-val': return t('accountant.inventoryValuation');
+      case 'acc-fin-rep': return t('accountant.financialReports');
+      case 'acc-ca-pack': return t('accountant.caAuditPack');
+      case 'acc-branches': return t('accountant.branches');
+      case 'acc-approvals': return t('accountant.approvals');
+      case 'acc-audit': return t('accountant.auditTrail');
+      case 'acc-settings': return t('accountant.settings');
       default: return item.name;
     }
   };
 
-  // Filter business items dynamically based on plan entitlements
+  const erpRole =
+    activeBusiness?.erpRole ||
+    (activeBusiness?.role === 'ACCOUNTANT' ? 'ACCOUNTANT' : 'OWNER');
+  const canAccountantErp = isAllowed('canAccountantErp');
+
+  // Filter business items dynamically based on plan entitlements and role governance
   const filteredBusinessItems = BUSINESS_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
     // Hide Free Udhaar Khata promotional link for customers on paid/commercial subscriptions
     if (item.id === 'free-khata-link') {
@@ -130,12 +183,25 @@ export function Sidebar({
     }
     if (item.id === 'purchases') return isAllowed('canManagePurchases');
     if (item.id === 'suppliers') return isAllowed('canManageSuppliers');
-    if (item.id === 'staff') return isAllowed('canManageStaff');
+    if (item.id === 'staff') {
+      return isAllowed('canManageStaff') && erpRole !== 'ACCOUNTANT' && erpRole !== 'VIEWER';
+    }
+    if (item.id === 'subscription') {
+      // Accountant and read-only viewers must never manage subscription or Razorpay billing
+      return erpRole === 'OWNER' || isSuperAdmin;
+    }
+    if (item.id === 'accountant-workspace') {
+      return (
+        canAccountantErp &&
+        (erpRole === 'OWNER' || erpRole === 'ACCOUNTANT' || erpRole === 'MANAGER')
+      );
+    }
     return true;
   });
 
   // Construct visible navigation groups based on current path, plan and role
   const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+  const isAccountantWorkspace = pathname.startsWith('/accountant') && canAccountantErp;
 
   let visibleGroups;
   if (isSuperAdmin) {
@@ -161,6 +227,17 @@ export function Sidebar({
         description: 'Personal ledger and WhatsApp reminders',
         badge: '100% Free',
         items: FREE_KHATA_NAVIGATION_ITEMS,
+      },
+    ];
+  } else if (isAccountantWorkspace) {
+    visibleGroups = [
+      {
+        id: 'accountant_erp_workspace',
+        title: t('accountant.workspaceTitle'),
+        scope: 'BUSINESS_WORKSPACE' as const,
+        description: 'Professional Indian Accounting & GST ERP',
+        badge: 'SCALE ERP',
+        items: ACCOUNTANT_NAVIGATION_ITEMS,
       },
     ];
   } else {
@@ -259,6 +336,19 @@ export function Sidebar({
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4 overscroll-contain">
+          {isAccountantWorkspace && !isCollapsed && (
+            <Link
+              href="/"
+              onClick={onCloseMobile}
+              className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[11px] font-semibold transition-colors"
+            >
+              <span className="flex items-center gap-1.5">
+                <ChevronLeft className="w-3.5 h-3.5" />
+                {t('accountant.backToBilling')}
+              </span>
+              <Store className="w-3.5 h-3.5 text-slate-500" />
+            </Link>
+          )}
           {visibleGroups.map((group) => {
             const isPlatformAdminGroup = group.scope === 'PLATFORM_ADMIN';
 
@@ -292,12 +382,17 @@ export function Sidebar({
                 <div className="space-y-0.5">
                   {group.items.map((item: NavigationItem) => {
                     const Icon = ICON_MAP[item.iconName] || LayoutDashboard;
+                    const itemPath = item.href.split('?')[0];
                     const isActive =
-                      item.href === '/'
+                      itemPath === '/'
                         ? pathname === '/'
-                        : item.href === '/platform-admin'
+                        : itemPath === '/platform-admin'
                           ? pathname === '/platform-admin'
-                          : pathname.startsWith(item.href);
+                          : itemPath === '/accountant'
+                            ? pathname === '/accountant'
+                            : item.id === 'acc-branches'
+                              ? false
+                              : pathname === itemPath || pathname.startsWith(itemPath + '/');
 
                     return (
                       <Link
@@ -383,14 +478,34 @@ export function Sidebar({
               <p className="text-[10px] text-slate-600 font-medium leading-tight mb-2">
                 {isSuperAdmin ? 'Platform Management & System Controls' : displayText}
               </p>
-              <Link
-                href={isSuperAdmin ? '/platform-admin' : '/subscription'}
-                onClick={onCloseMobile}
-                className="text-[10px] font-semibold text-slate-800 hover:text-purple-700 flex items-center gap-1 transition-colors"
-              >
-                {isSuperAdmin ? 'Open Control Center' : isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+              {isSuperAdmin ? (
+                <Link
+                  href="/platform-admin"
+                  onClick={onCloseMobile}
+                  className="text-[10px] font-semibold text-slate-800 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                >
+                  Open Control Center
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              ) : erpRole === 'ACCOUNTANT' ? (
+                <Link
+                  href="/accountant/businesses"
+                  onClick={onCloseMobile}
+                  className="text-[10px] font-semibold text-slate-800 hover:text-[#EA580C] flex items-center gap-1 transition-colors"
+                >
+                  Owner-Managed Plan · Switch Client
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              ) : (
+                <Link
+                  href="/subscription"
+                  onClick={onCloseMobile}
+                  className="text-[10px] font-semibold text-slate-800 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                >
+                  {isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              )}
 
               <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[9px] text-slate-400">
                 <span title="Powered by Lakshya Studios • Co-Powered by Lionoar Digital • Developed by Aadvik Solutions">

@@ -5,13 +5,14 @@ import {
   updatePayment,
   deletePayment,
 } from '@/lib/services/paymentService';
+import { autoPostPaymentVoucher } from '@/lib/accounting';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { business } = await requireCommercialAccess();
+    const { business, session } = await requireCommercialAccess();
     const { id } = await params;
     const body = await req.json();
 
@@ -24,6 +25,14 @@ export async function POST(
       notes: body.notes,
       idempotencyKey: body.idempotencyKey,
     });
+
+    if (!result.isDuplicate && result.payment?.id) {
+      try {
+        await autoPostPaymentVoucher(result.payment.id, business.id, undefined, session.user.id);
+      } catch (autoErr) {
+        console.error('[autoPostPaymentVoucher] Non-blocking hook error:', autoErr);
+      }
+    }
 
     return NextResponse.json(
       {

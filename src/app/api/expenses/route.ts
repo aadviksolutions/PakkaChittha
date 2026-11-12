@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireCommercialAccess } from '@/lib/auth/guards';
-import { PaymentMethod } from '@prisma/client';
+import { requireCommercialAccess, AuthError } from '@/lib/auth/guards';
+import { PaymentMethod, Prisma } from '@prisma/client';
+import { autoPostExpenseVoucher } from '@/lib/accounting';
+
+function resolveExpenseError(error: unknown, fallback: string) {
+  if (error instanceof AuthError) {
+    return { status: error.statusCode, message: error.message };
+  }
+  const message = error instanceof Error ? error.message : fallback;
+  const status =
+    message.includes('Unauthorized') || message.includes('Authentication')
+      ? 401
+      : message.includes('Commercial')
+        ? 403
+        : 500;
+  return { status, message };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +25,7 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
 
-    const where: any = {
+    const where: Prisma.ExpenseWhereInput = {
       businessId: authContext.business.id,
     };
 
@@ -43,12 +58,9 @@ export async function GET(request: NextRequest) {
         count: expenses.length,
       },
     });
-  } catch (error: any) {
-    const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);
-    return NextResponse.json(
-      { error: error.message || 'Unauthorized or failed to fetch expenses' },
-      { status }
-    );
+  } catch (error: unknown) {
+    const err = resolveExpenseError(error, 'Unauthorized or failed to fetch expenses');
+    return NextResponse.json({ error: err.message }, { status: err.status });
   }
 }
 
@@ -85,13 +97,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    try {
+      await autoPostExpenseVoucher(
+        expense.id,
+        authContext.business.id,
+        undefined,
+        authContext.session.user.id
+      );
+    } catch (autoErr) {
+      console.error('[autoPostExpenseVoucher] Non-blocking hook error:', autoErr);
+    }
+
     return NextResponse.json({ expense: { ...expense, description: expense.notes } }, { status: 201 });
-  } catch (error: any) {
-    const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);
-    return NextResponse.json(
-      { error: error.message || 'Failed to record expense' },
-      { status }
-    );
+  } catch (error: unknown) {
+    const err = resolveExpenseError(error, 'Failed to record expense');
+    return NextResponse.json({ error: err.message }, { status: err.status });
   }
 }
 
@@ -144,12 +164,9 @@ export async function PUT(request: NextRequest) {
     });
 
     return NextResponse.json({ expense: { ...updated, description: updated.notes } });
-  } catch (error: any) {
-    const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);
-    return NextResponse.json(
-      { error: error.message || 'Failed to update expense' },
-      { status }
-    );
+  } catch (error: unknown) {
+    const err = resolveExpenseError(error, 'Failed to update expense');
+    return NextResponse.json({ error: err.message }, { status: err.status });
   }
 }
 
@@ -180,11 +197,8 @@ export async function DELETE(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: 'Expense deleted successfully' });
-  } catch (error: any) {
-    const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);
-    return NextResponse.json(
-      { error: error.message || 'Failed to delete expense' },
-      { status }
-    );
+  } catch (error: unknown) {
+    const err = resolveExpenseError(error, 'Failed to delete expense');
+    return NextResponse.json({ error: err.message }, { status: err.status });
   }
 }

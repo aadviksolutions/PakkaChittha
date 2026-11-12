@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommercialAccess, AuthError } from '@/lib/auth/guards';
+import { requireCommercialAccess, NON_VIEWER_ROLES, AuthError } from '@/lib/auth/guards';
 import { getCustomers, createCustomer } from '@/lib/services/customerService';
 
 export async function GET(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { business } = await requireCommercialAccess();
+    const { business } = await requireCommercialAccess(undefined, NON_VIEWER_ROLES);
     const body = await req.json();
 
     const customer = await createCustomer(business.id, body);

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { SAMPLE_TRANSACTIONS } from '@/data/mockData';
 import {
   FileText,
   CheckCircle2,
@@ -11,12 +10,7 @@ import {
   ArrowRight,
   Printer,
   ChevronRight,
-  User,
 } from 'lucide-react';
-
-interface RecentTransactionsTableProps {
-  onViewInvoice?: (invoice: any) => void;
-}
 
 interface InvoiceRow {
   id: string;
@@ -30,9 +24,25 @@ interface InvoiceRow {
   status: string;
 }
 
-export function RecentTransactionsTable({
-  onViewInvoice,
-}: RecentTransactionsTableProps) {
+interface ApiInvoiceRow {
+  id: string;
+  invoiceNumber: string;
+  customerName?: string | null;
+  customer?: { name?: string | null; mobile?: string | null } | null;
+  customerMobile?: string | null;
+  invoiceDate: string;
+  dueDate?: string;
+  total: number;
+  balanceDue: number;
+  status: string;
+}
+
+interface RecentTransactionsTableProps {
+  onViewInvoice?: (invoice: InvoiceRow) => void;
+}
+
+export function RecentTransactionsTable(props: RecentTransactionsTableProps) {
+  void props.onViewInvoice;
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'UNPAID' | 'PAID'>('ALL');
@@ -44,7 +54,8 @@ export function RecentTransactionsTable({
       .then((data) => {
         if (!active) return;
         if (data?.success && Array.isArray(data.invoices) && data.invoices.length > 0) {
-          const mapped: InvoiceRow[] = data.invoices.map((inv: any) => ({
+          const rows = data.invoices as ApiInvoiceRow[];
+          const mapped: InvoiceRow[] = rows.map((inv) => ({
             id: inv.id,
             invoiceNumber: inv.invoiceNumber,
             customerName: inv.customerName || inv.customer?.name || 'Walk-in Customer',
@@ -57,35 +68,12 @@ export function RecentTransactionsTable({
           }));
           setInvoices(mapped);
         } else {
-          // Gracefully fall back to sample transactions if database is fresh
-          const fallback: InvoiceRow[] = SAMPLE_TRANSACTIONS.map((tx) => ({
-            id: tx.id,
-            invoiceNumber: tx.invoiceNumber,
-            customerName: tx.partyName,
-            customerMobile: tx.partyPhone,
-            invoiceDate: tx.date,
-            dueDate: tx.dueDate,
-            total: tx.amount,
-            balanceDue: tx.status === 'PAID' ? 0 : tx.amount - tx.paidAmount,
-            status: tx.status === 'PENDING' ? 'UNPAID' : tx.status,
-          }));
-          setInvoices(fallback);
+          setInvoices([]);
         }
       })
       .catch(() => {
         if (!active) return;
-        const fallback: InvoiceRow[] = SAMPLE_TRANSACTIONS.map((tx) => ({
-          id: tx.id,
-          invoiceNumber: tx.invoiceNumber,
-          customerName: tx.partyName,
-          customerMobile: tx.partyPhone,
-          invoiceDate: tx.date,
-          dueDate: tx.dueDate,
-          total: tx.amount,
-          balanceDue: tx.status === 'PAID' ? 0 : tx.amount - tx.paidAmount,
-          status: tx.status === 'PENDING' ? 'UNPAID' : tx.status,
-        }));
-        setInvoices(fallback);
+        setInvoices([]);
       })
       .finally(() => {
         if (active) setLoading(false);

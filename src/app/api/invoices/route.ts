@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommercialAccess, AuthError } from '@/lib/auth/guards';
+import { requireCommercialAccess, NON_VIEWER_ROLES, AuthError } from '@/lib/auth/guards';
 import { getInvoices, createInvoice } from '@/lib/services/invoiceService';
 import { InvoiceStatus } from '@prisma/client';
+import prisma from '@/lib/prisma';
+import { autoPostPaymentVoucher, autoPostSalesVoucher } from '@/lib/accounting';
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,10 +40,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { business, session } = await requireCommercialAccess();
+    const { business, session } = await requireCommercialAccess(undefined, NON_VIEWER_ROLES);
     const body = await req.json();
 
     const invoice = await createInvoice(business.id, session.user.id, body);
+
+    try {
+      await autoPostSalesVoucher(invoice.id, business.id, undefined, session.user.id);
+      if (invoice.paidAmount > 0) {
+        const initPayments = await prisma.payment.findMany({
+          where: { invoiceId: invoice.id },
+          select: { id: true },
+        });
+        for (const p of initPayments) {
+          await autoPostPaymentVoucher(p.id, business.id, undefined, session.user.id);
+        }
+      }
+    } catch (autoErr) {
+      console.error('[autoPostSalesVoucher] Non-blocking hook error:', autoErr);
+    }
 
     return NextResponse.json(
       {

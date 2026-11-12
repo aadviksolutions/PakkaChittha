@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ErpRole } from '@/lib/rbac/roles';
 
 export interface AuthUser {
   id: string;
@@ -21,7 +22,40 @@ export interface ActiveBusiness {
   city: string | null;
   state: string | null;
   currency: string;
-  role: 'BUSINESS_OWNER' | 'BILLING_STAFF' | 'ACCOUNTANT' | 'INVENTORY_MANAGER';
+  role:
+    | 'BUSINESS_OWNER'
+    | 'BILLING_STAFF'
+    | 'ACCOUNTANT'
+    | 'INVENTORY_MANAGER'
+    | 'OWNER'
+    | 'MANAGER'
+    | 'OPERATOR'
+    | 'VIEWER';
+  erpRole?: ErpRole;
+  permissions?: string[];
+  activeBranchId?: string | null;
+  branches?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    isDefault: boolean;
+    state: string | null;
+  }>;
+  financialYears?: Array<{
+    id: string;
+    code: string;
+    label: string;
+    isClosed: boolean;
+  }>;
+  accountantAccess?: {
+    branchScope: 'ALL' | 'SELECTED';
+    branchIds: string[];
+    fyScope: 'ALL' | 'SELECTED';
+    financialYears: string[];
+    canApproveSensitive: boolean;
+    canFileGst: boolean;
+    grantedByUserId: string;
+  } | null;
   logoUrl?: string | null;
   subscription: {
     plan: string;
@@ -34,17 +68,27 @@ export interface ActiveBusiness {
   } | null;
 }
 
+export interface AuthMembershipItem {
+  businessId: string;
+  businessName: string;
+  role: string;
+  erpRole?: ErpRole;
+  plan?: string | null;
+  branchScope?: string;
+  fyScope?: string;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   activeBusiness: ActiveBusiness | null;
-  memberships: {
-    businessId: string;
-    businessName: string;
-    role: string;
-  }[];
+  memberships: AuthMembershipItem[];
   loading: boolean;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  switchBusiness: (
+    businessId: string,
+    branchId?: string
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -54,17 +98,14 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: async () => {},
   refreshSession: async () => {},
+  switchBusiness: async () => ({ ok: false, error: 'Auth not ready' }),
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [activeBusiness, setActiveBusiness] = useState<ActiveBusiness | null>(null);
-  const [memberships, setMemberships] = useState<{
-    businessId: string;
-    businessName: string;
-    role: string;
-  }[]>([]);
+  const [memberships, setMemberships] = useState<AuthMembershipItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSession = useCallback(async () => {
@@ -135,6 +176,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const switchBusiness = useCallback(
+    async (businessId: string, branchId?: string) => {
+      try {
+        const res = await fetch('/api/accountant/switch-business', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessId, branchId }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.success) {
+          return { ok: false, error: data?.error || 'Failed to switch workspace' };
+        }
+        await fetchSession();
+        router.refresh();
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : 'Failed to switch workspace',
+        };
+      }
+    },
+    [fetchSession, router]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -144,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         logout,
         refreshSession: fetchSession,
+        switchBusiness,
       }}
     >
       {children}

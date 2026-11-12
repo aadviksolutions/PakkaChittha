@@ -64,6 +64,7 @@ export interface OfficialPlan {
     canUploadProductImages: boolean;
     canScanPurchaseBills: boolean;
     canImportScannedPurchases: boolean;
+    canAccountantErp: boolean;
   };
 }
 
@@ -155,6 +156,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canUploadProductImages: false,
       canScanPurchaseBills: false,
       canImportScannedPurchases: false,
+      canAccountantErp: false,
     },
   },
 
@@ -230,6 +232,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canUploadProductImages: false,
       canScanPurchaseBills: false,
       canImportScannedPurchases: false,
+      canAccountantErp: false,
     },
   },
 
@@ -307,6 +310,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canUploadProductImages: false,
       canScanPurchaseBills: false,
       canImportScannedPurchases: false,
+      canAccountantErp: false,
     },
   },
 
@@ -378,6 +382,7 @@ export const OFFICIAL_PLANS: Record<PlanKey, OfficialPlan> = {
       canUploadProductImages: true,
       canScanPurchaseBills: true,
       canImportScannedPurchases: true,
+      canAccountantErp: true,
     },
   },
 };

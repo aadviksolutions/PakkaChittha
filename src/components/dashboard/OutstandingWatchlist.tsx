@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { SAMPLE_UDHAAR_CUSTOMERS } from '@/data/mockData';
-import { MessageSquare, CreditCard, ChevronRight, Users, Phone } from 'lucide-react';
+import { MessageSquare, CreditCard, ChevronRight, Users } from 'lucide-react';
 
-interface OutstandingWatchlistProps {
-  onSendReminder: (customer: any) => void;
-  onRecordCredit: (customer: any) => void;
+interface ApiCustomerRow {
+  id: string;
+  name: string;
+  mobile: string;
+  totalOutstanding: number | string;
 }
 
 interface CustomerWatchItem {
@@ -17,6 +18,11 @@ interface CustomerWatchItem {
   totalOutstanding: number;
   creditLimit: number;
   overdueDays: number;
+}
+
+interface OutstandingWatchlistProps {
+  onSendReminder: (customer: CustomerWatchItem) => void;
+  onRecordCredit: (customer: CustomerWatchItem) => void;
 }
 
 export function OutstandingWatchlist({
@@ -32,10 +38,11 @@ export function OutstandingWatchlist({
       .then((data) => {
         if (!active) return;
         if (data?.success && Array.isArray(data.customers) && data.customers.length > 0) {
-          const withBalance = data.customers
-            .filter((c: any) => Number(c.totalOutstanding) > 0)
-            .sort((a: any, b: any) => Number(b.totalOutstanding) - Number(a.totalOutstanding))
-            .map((c: any) => ({
+          const rows = data.customers as ApiCustomerRow[];
+          const withBalance = rows
+            .filter((c) => Number(c.totalOutstanding) > 0)
+            .sort((a, b) => Number(b.totalOutstanding) - Number(a.totalOutstanding))
+            .map((c) => ({
               id: c.id,
               name: c.name,
               phone: c.mobile,
@@ -50,30 +57,11 @@ export function OutstandingWatchlist({
           }
         }
 
-        // Fallback to sample watchlist
-        setCustomers(
-          SAMPLE_UDHAAR_CUSTOMERS.map((c) => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            totalOutstanding: c.totalOutstanding,
-            creditLimit: c.creditLimit,
-            overdueDays: c.overdueDays,
-          }))
-        );
+        setCustomers([]);
       })
       .catch(() => {
         if (!active) return;
-        setCustomers(
-          SAMPLE_UDHAAR_CUSTOMERS.map((c) => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            totalOutstanding: c.totalOutstanding,
-            creditLimit: c.creditLimit,
-            overdueDays: c.overdueDays,
-          }))
-        );
+        setCustomers([]);
       });
 
     return () => {
@@ -108,7 +96,15 @@ export function OutstandingWatchlist({
       </div>
 
       <div className="space-y-2.5">
-        {customers.map((cust) => (
+        {customers.length === 0 ? (
+          <div className="p-5 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70">
+            <p className="text-xs font-semibold text-slate-600">No outstanding customer dues</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Unpaid customer udhaar balances will appear here once invoices are issued on credit.
+            </p>
+          </div>
+        ) : (
+        customers.map((cust) => (
           <div
             key={cust.id}
             className="p-3 rounded-xl border border-slate-200/80 bg-[#F8FAFC] hover:bg-white hover:border-[#00B887]/50 hover:shadow-2xs transition-all"
@@ -175,7 +171,8 @@ export function OutstandingWatchlist({
               </button>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </div>
   );

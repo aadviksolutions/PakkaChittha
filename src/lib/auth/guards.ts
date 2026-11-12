@@ -1,5 +1,19 @@
-import { getCurrentSession, CurrentAuthSession, ActiveBusinessWorkspace } from './session';
-import { BusinessRole, PlatformRole } from '@prisma/client';
+import {
+  getCurrentSession,
+  CurrentAuthSession,
+  ActiveBusinessWorkspace,
+  resolveBusinessWorkspaceForUser,
+  buildActiveWorkspacePayload,
+} from './session';
+import { AccessScopeType, BusinessRole, PlatformRole } from '@prisma/client';
+import prisma from '@/lib/prisma';
+import {
+  ErpRole,
+  PermissionCode,
+  hasPermission,
+  hasAnyPermission,
+  normalizeErpRole,
+} from '@/lib/rbac/roles';
 
 export class AuthError extends Error {
   statusCode: number;
@@ -41,50 +55,88 @@ export async function requireSuperAdmin(): Promise<CurrentAuthSession> {
   return session;
 }
 
+export const NON_VIEWER_ROLES: Array<BusinessRole | ErpRole | string> = [
+  'BUSINESS_OWNER',
+  'OWNER',
+  'MANAGER',
+  'OPERATOR',
+  'BILLING_STAFF',
+  'INVENTORY_MANAGER',
+  'ACCOUNTANT',
+];
+
+export function matchesAllowedRoles(
+  userRole: BusinessRole | string,
+  allowedRoles: Array<BusinessRole | ErpRole | string>
+): boolean {
+  const normalizedUserRole = normalizeErpRole(userRole);
+  return allowedRoles.some(
+    (allowed) => allowed === userRole || normalizeErpRole(allowed) === normalizedUserRole
+  );
+}
+
 /**
  * Server-side tenant isolation guard.
- * Strictly verifies on the server that the authenticated user is a verified member
- * of the requested business tenant. Never trusts unverified client parameters.
+ * Strictly verifies on the server that the authenticated user is an active member
+ * of the requested business tenant and checks allowedRoles against THAT target business.
  */
 export async function requireTenantAccess(
   requestedBusinessId?: string,
-  allowedRoles?: BusinessRole[]
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
 ): Promise<{
   session: CurrentAuthSession;
   business: ActiveBusinessWorkspace;
   userRole: BusinessRole;
 }> {
   const session = await requireAuth();
+  const isSuperAdmin = session.user.platformRole === PlatformRole.SUPER_ADMIN;
 
-  // Super admins have global platform visibility, but when operating within a tenant context,
-  // we ensure tenant exists
-  const activeBusiness = session.activeBusiness;
+  let targetBusiness: ActiveBusinessWorkspace | null = session.activeBusiness;
 
-  if (!activeBusiness) {
-    throw new TenantIsolationError('No active business workspace found for user');
-  }
-
-  // If a specific businessId was requested (e.g. from an API route or action parameter),
-  // strictly verify that the user's membership belongs to THAT businessId.
-  if (requestedBusinessId && requestedBusinessId !== activeBusiness.id) {
-    const isMemberOfRequested = session.memberships.some(
-      (m) => m.businessId === requestedBusinessId
+  if (requestedBusinessId && requestedBusinessId !== session.activeBusiness?.id) {
+    const resolved = await resolveBusinessWorkspaceForUser(
+      session.user.id,
+      requestedBusinessId
     );
 
-    // If user is not a member of the requested tenant and not SUPER_ADMIN, reject!
-    if (!isMemberOfRequested && session.user.platformRole !== PlatformRole.SUPER_ADMIN) {
+    if (resolved) {
+      targetBusiness = resolved;
+    } else if (isSuperAdmin) {
+      const biz = await prisma.business.findUnique({
+        where: { id: requestedBusinessId },
+        include: {
+          subscriptions: { orderBy: { createdAt: 'desc' }, take: 1 },
+          branches: {
+            where: { isActive: true },
+            orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+          },
+          financialYears: {
+            where: { isActive: true },
+            orderBy: { startDate: 'desc' },
+          },
+        },
+      });
+      if (!biz) {
+        throw new TenantIsolationError('Requested business workspace was not found.');
+      }
+      targetBusiness = buildActiveWorkspacePayload({
+        business: biz,
+        membership: { role: BusinessRole.BUSINESS_OWNER },
+      });
+    } else {
       throw new TenantIsolationError(
-        'Cross-tenant access prohibited. You do not belong to this business workspace.'
+        'Cross-tenant access prohibited. You do not hold active access to this business workspace.'
       );
     }
   }
 
-  // Role check if specific roles are required (e.g., only BUSINESS_OWNER)
-  if (allowedRoles && allowedRoles.length > 0) {
-    if (
-      !allowedRoles.includes(activeBusiness.role) &&
-      session.user.platformRole !== PlatformRole.SUPER_ADMIN
-    ) {
+  if (!targetBusiness) {
+    throw new TenantIsolationError('No active business workspace found for user');
+  }
+
+  // Role check strictly evaluated against targetBusiness.role
+  if (allowedRoles && allowedRoles.length > 0 && !isSuperAdmin) {
+    if (!matchesAllowedRoles(targetBusiness.role, allowedRoles)) {
       throw new AuthError(
         `Insufficient role privileges. Required: ${allowedRoles.join(', ')}`,
         403
@@ -94,8 +146,8 @@ export async function requireTenantAccess(
 
   return {
     session,
-    business: activeBusiness,
-    userRole: activeBusiness.role,
+    business: targetBusiness,
+    userRole: targetBusiness.role,
   };
 }
 
@@ -105,9 +157,9 @@ export async function requireTenantAccess(
  * enabled in its subscription plan. Blocks lower-tier plans from unauthorized APIs.
  */
 export async function requireEntitlement(
-  feature: import('@/lib/subscription/plans').OfficialPlan['entitlements'] extends Record<infer K, any> ? K : never,
+  feature: keyof import('@/lib/subscription/plans').OfficialPlan['entitlements'],
   requestedBusinessId?: string,
-  allowedRoles?: BusinessRole[]
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
 ): Promise<{
   session: CurrentAuthSession;
   business: ActiveBusinessWorkspace;
@@ -127,7 +179,10 @@ export async function requireEntitlement(
   const allowed = Boolean(entitlements.entitlements[feature as keyof typeof entitlements.entitlements]);
 
   if (!allowed) {
-    const check = await checkFeatureEntitlement(result.business.id, feature as any);
+    const check = await checkFeatureEntitlement(
+      result.business.id,
+      feature as Parameters<typeof checkFeatureEntitlement>[1]
+    );
     throw new AuthError(
       check.message ||
         `Feature not available. Your current ${entitlements.planName} plan does not include '${String(feature)}'.`,
@@ -145,7 +200,7 @@ export async function requireEntitlement(
  */
 export async function requireCommercialAccess(
   requestedBusinessId?: string,
-  allowedRoles?: BusinessRole[]
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
 ): Promise<{
   session: CurrentAuthSession;
   business: ActiveBusinessWorkspace;
@@ -165,7 +220,7 @@ export async function requireCommercialAccess(
  */
 export async function requireGrowthAccess(
   requestedBusinessId?: string,
-  allowedRoles?: BusinessRole[]
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
 ): Promise<{
   session: CurrentAuthSession;
   business: ActiveBusinessWorkspace;
@@ -185,7 +240,7 @@ export async function requireGrowthAccess(
  */
 export async function requireScaleAccess(
   requestedBusinessId?: string,
-  allowedRoles?: BusinessRole[]
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
 ): Promise<{
   session: CurrentAuthSession;
   business: ActiveBusinessWorkspace;
@@ -197,5 +252,128 @@ export async function requireScaleAccess(
     business: result.business,
     userRole: result.userRole,
   };
+}
+
+/**
+ * Verifies a granular RBAC permission against the resolved user permissions in a tenant.
+ */
+export async function requirePermission(
+  requiredPermission: PermissionCode,
+  requestedBusinessId?: string
+): Promise<{
+  session: CurrentAuthSession;
+  business: ActiveBusinessWorkspace;
+  userRole: BusinessRole;
+}> {
+  const result = await requireTenantAccess(requestedBusinessId);
+  const isSuperAdmin = result.session.user.platformRole === PlatformRole.SUPER_ADMIN;
+
+  if (!isSuperAdmin && !hasPermission(result.business.permissions, requiredPermission)) {
+    throw new AuthError(
+      `Permission denied: '${requiredPermission}' is required for this operation.`,
+      403
+    );
+  }
+  return result;
+}
+
+/**
+ * Verifies at least one of the specified RBAC permissions is granted.
+ */
+export async function requireAnyPermission(
+  requiredPermissions: readonly PermissionCode[],
+  requestedBusinessId?: string
+): Promise<{
+  session: CurrentAuthSession;
+  business: ActiveBusinessWorkspace;
+  userRole: BusinessRole;
+}> {
+  const result = await requireTenantAccess(requestedBusinessId);
+  const isSuperAdmin = result.session.user.platformRole === PlatformRole.SUPER_ADMIN;
+
+  if (!isSuperAdmin && !hasAnyPermission(result.business.permissions, requiredPermissions)) {
+    throw new AuthError(
+      `Permission denied: requires one of [${requiredPermissions.join(', ')}].`,
+      403
+    );
+  }
+  return result;
+}
+
+/**
+ * Strictly requires Business Owner (OWNER / BUSINESS_OWNER) role.
+ */
+export async function requireOwnerRole(requestedBusinessId?: string) {
+  return requireTenantAccess(requestedBusinessId, ['BUSINESS_OWNER', 'OWNER']);
+}
+
+/**
+ * Scale-only ERP Workspace guard: verifies Scale plan entitlement (`canAccountantErp`)
+ * AND optional granular RBAC permission on the target business.
+ * Strictly returns 403 for FREE_KHATA, STARTER, and GROWTH plans.
+ */
+export async function requireScaleErpAccess(
+  requestedBusinessId?: string,
+  requiredPermission?: PermissionCode,
+  allowedRoles?: Array<BusinessRole | ErpRole | string>
+): Promise<{
+  session: CurrentAuthSession;
+  business: ActiveBusinessWorkspace;
+  userRole: BusinessRole;
+  entitlements: import('@/lib/subscription/entitlements').BusinessEntitlementsResult;
+}> {
+  const result = await requireEntitlement('canAccountantErp', requestedBusinessId, allowedRoles);
+  const isSuperAdmin = result.session.user.platformRole === PlatformRole.SUPER_ADMIN;
+
+  if (
+    requiredPermission &&
+    !isSuperAdmin &&
+    !hasPermission(result.business.permissions, requiredPermission)
+  ) {
+    throw new AuthError(
+      `Permission denied: '${requiredPermission}' is required for this ERP action.`,
+      403
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Enforces Owner-configured Branch and Financial Year scopes for Accountants.
+ */
+export function requireBranchAndFyScope(
+  business: ActiveBusinessWorkspace,
+  branchId?: string | null,
+  fyCode?: string | null
+): void {
+  if (business.erpRole !== 'ACCOUNTANT' || !business.accountantAccess) {
+    return;
+  }
+
+  const acc = business.accountantAccess;
+  if (
+    branchId &&
+    branchId !== 'ALL' &&
+    acc.branchScope === AccessScopeType.SELECTED &&
+    !acc.branchIds.includes(branchId)
+  ) {
+    throw new AuthError(
+      'Access denied: you are not authorized for the selected branch.',
+      403
+    );
+  }
+
+  if (
+    fyCode &&
+    fyCode !== 'ALL' &&
+    acc.fyScope === AccessScopeType.SELECTED &&
+    !acc.financialYears.includes(fyCode)
+  ) {
+    throw new AuthError(
+      `Access denied: you are not authorized for financial year ${fyCode}.`,
+      403
+    );
+  }
 }
 

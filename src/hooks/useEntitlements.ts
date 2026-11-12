@@ -69,7 +69,8 @@ export function useEntitlements(): UseEntitlementsResult {
         feature === 'canCreateInvoices' ||
         feature === 'canManagePurchases' ||
         feature === 'canManageStaff' ||
-        feature === 'canManageInventoryBasic'
+        feature === 'canManageInventoryBasic' ||
+        feature === 'canAccountantErp'
       ) {
         return false;
       }

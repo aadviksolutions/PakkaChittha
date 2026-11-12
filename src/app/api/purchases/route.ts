@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireGrowthAccess } from '@/lib/auth/guards';
+import { requireGrowthAccess, NON_VIEWER_ROLES } from '@/lib/auth/guards';
 import { getPurchases, createPurchase } from '@/lib/services/purchaseService';
 import { checkFeatureEntitlement } from '@/lib/subscription/entitlements';
 import { PurchaseStatus } from '@prisma/client';
+import prisma from '@/lib/prisma';
+import { autoPostPurchaseVoucher, autoPostSupplierPaymentVoucher } from '@/lib/accounting';
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { business, session } = await requireGrowthAccess();
+    const { business, session } = await requireGrowthAccess(undefined, NON_VIEWER_ROLES);
 
     const entitlement = await checkFeatureEntitlement(business.id, 'canManagePurchases');
     if (!entitlement.allowed) {
@@ -71,6 +73,23 @@ export async function POST(req: NextRequest) {
       },
       session.user.name || 'Staff'
     );
+
+    if (purchase.status === PurchaseStatus.RECEIVED) {
+      try {
+        await autoPostPurchaseVoucher(purchase.id, business.id, undefined, session.user.id);
+        if (purchase.paidAmount > 0) {
+          const initSupplierPayments = await prisma.supplierPayment.findMany({
+            where: { purchaseId: purchase.id },
+            select: { id: true },
+          });
+          for (const sp of initSupplierPayments) {
+            await autoPostSupplierPaymentVoucher(sp.id, business.id, undefined, session.user.id);
+          }
+        }
+      } catch (autoErr) {
+        console.error('[autoPostPurchaseVoucher] Non-blocking hook error:', autoErr);
+      }
+    }
 
     return NextResponse.json(
       {

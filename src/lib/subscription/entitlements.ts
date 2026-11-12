@@ -68,6 +68,7 @@ export async function getBusinessEntitlements(
     effectiveEntitlements.canUploadProductImages = false;
     effectiveEntitlements.canScanPurchaseBills = false;
     effectiveEntitlements.canImportScannedPurchases = false;
+    effectiveEntitlements.canAccountantErp = false;
   }
 
   return {

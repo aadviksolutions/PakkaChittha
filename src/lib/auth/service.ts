@@ -391,6 +391,7 @@ export async function loginUser(input: LoginInput) {
     where: { email: normalizedEmail },
     include: {
       memberships: {
+        where: { isActive: true },
         include: {
           business: {
             include: {

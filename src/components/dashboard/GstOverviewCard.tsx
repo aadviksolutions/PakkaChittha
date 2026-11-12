@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { SAMPLE_BUSINESS } from '@/data/mockData';
 import { ShieldCheck, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -35,8 +34,8 @@ export function GstOverviewCard() {
     };
   }, []);
 
-  const gstin = activeBusiness?.gstin || SAMPLE_BUSINESS.gstin;
-  const state = activeBusiness?.state || SAMPLE_BUSINESS.state;
+  const gstin = activeBusiness?.gstin || 'Not Registered';
+  const state = activeBusiness?.state || 'India';
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4 sm:p-5">
@@ -71,9 +70,9 @@ export function GstOverviewCard() {
             Taxable Value
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-900 tabular-nums block">
-            ₹{(gstSummary?.taxableSalesValue ?? 294800).toLocaleString('en-IN')}
+            ₹{(gstSummary?.taxableSalesValue ?? 0).toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-slate-500 block mt-0.5">Estimated Sales</span>
+          <span className="text-[10px] text-slate-500 block mt-0.5">Taxable Sales</span>
         </div>
 
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
@@ -81,7 +80,7 @@ export function GstOverviewCard() {
             CGST (Intra-state)
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-900 tabular-nums block">
-            ₹{(gstSummary?.totalCgst ?? 26532).toLocaleString('en-IN')}
+            ₹{(gstSummary?.totalCgst ?? 0).toLocaleString('en-IN')}
           </span>
           <span className="text-[10px] text-slate-500 block mt-0.5">Central Tax</span>
         </div>
@@ -91,7 +90,7 @@ export function GstOverviewCard() {
             SGST (Intra-state)
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-900 tabular-nums block">
-            ₹{(gstSummary?.totalSgst ?? 26532).toLocaleString('en-IN')}
+            ₹{(gstSummary?.totalSgst ?? 0).toLocaleString('en-IN')}
           </span>
           <span className="text-[10px] text-slate-500 block mt-0.5">State Tax</span>
         </div>
@@ -101,7 +100,7 @@ export function GstOverviewCard() {
             IGST (Inter-state)
           </span>
           <span className="text-sm sm:text-base font-extrabold text-slate-900 tabular-nums block">
-            ₹{(gstSummary?.totalIgst ?? 14220).toLocaleString('en-IN')}
+            ₹{(gstSummary?.totalIgst ?? 0).toLocaleString('en-IN')}
           </span>
           <span className="text-[10px] text-slate-500 block mt-0.5">Integrated Tax</span>
         </div>

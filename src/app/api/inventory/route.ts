@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommercialAccess } from '@/lib/auth/guards';
+import { requireCommercialAccess, NON_VIEWER_ROLES } from '@/lib/auth/guards';
 import {
   getProducts,
   createProduct,
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { business, session } = await requireCommercialAccess();
+    const { business, session } = await requireCommercialAccess(undefined, NON_VIEWER_ROLES);
     const body = await req.json();
 
     const product = await createProduct(

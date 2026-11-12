@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireEntitlement, AuthError } from '@/lib/auth/guards';
+import { requireEntitlement, NON_VIEWER_ROLES, AuthError } from '@/lib/auth/guards';
 import { getQuotations, createQuotation } from '@/lib/services/quotationService';
 import { QuotationStatus } from '@prisma/client';
 
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { business } = await requireEntitlement('canCreateQuotations');
+    const { business } = await requireEntitlement('canCreateQuotations', undefined, NON_VIEWER_ROLES);
     const body = await req.json();
 
     const quotation = await createQuotation(business.id, body);
