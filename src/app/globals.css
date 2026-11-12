@@ -96,15 +96,14 @@
     user-select: text;
   }
 
-  /* Ensure modal overlays always stay above headers and sticky elements */
-  [role="dialog"],
-  .modal-overlay,
-  div[class*="fixed inset-0"][class*="z-50"] {
-    z-index: 100 !important;
+  /* Ensure modal overlays stay above headers/bottom navigation without inverting drawer <aside> stacking */
+  .modal-overlay {
+    z-index: 60 !important;
   }
 
   /* Ensure modal dialog contents stay within the viewport and allow vertical touch scroll */
-  div[class*="fixed inset-0"][class*="z-50"] > div,
+  div[class*="fixed inset-0"][class*="z-50"]:not([data-drawer-backdrop]) > div,
+  div[class*="fixed inset-0"][class*="z-[60]"] > div,
   div[class*="fixed inset-0"][class*="z-[100]"] > div {
     max-height: calc(100dvh - 2rem);
     overflow-y: auto;

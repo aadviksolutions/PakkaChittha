@@ -449,7 +449,7 @@ export default function PlatformAdminBusinessesPage() {
 
       {/* STATUS TOGGLE MODAL */}
       {modalType === 'STATUS' && selectedTenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -512,7 +512,7 @@ export default function PlatformAdminBusinessesPage() {
 
       {/* PLAN CORRECTION MODAL */}
       {modalType === 'PLAN' && selectedTenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -581,7 +581,7 @@ export default function PlatformAdminBusinessesPage() {
 
       {/* EXTEND TRIAL MODAL */}
       {modalType === 'EXTEND' && selectedTenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
@@ -650,7 +650,7 @@ export default function PlatformAdminBusinessesPage() {
 
       {/* VIEW DETAILS MODAL */}
       {modalType === 'VIEW' && selectedTenant && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">

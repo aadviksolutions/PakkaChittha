@@ -265,19 +265,19 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile Backdrop - clicking or touching outside closes the side menu */}
+      {/* Mobile Backdrop - clicking outside closes the side menu without blurring screen */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs lg:hidden transition-opacity cursor-pointer"
+          data-drawer-backdrop="true"
+          className="fixed inset-0 z-[55] bg-slate-900/50 lg:hidden transition-opacity cursor-pointer"
           onClick={onCloseMobile}
-          onTouchStart={onCloseMobile}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container (strictly above mobile backdrop z-[55] and bottom nav z-40) */}
       <aside
-        className={`print:hidden fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`print:hidden fixed top-0 bottom-0 left-0 z-[60] bg-white border-r border-slate-200/90 flex flex-col transition-all duration-200 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
           } ${isCollapsed ? 'lg:w-20' : 'lg:w-64 w-[85vw] max-w-[300px]'}`}
       >
         {/* Brand Header */}

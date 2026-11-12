@@ -1592,7 +1592,7 @@ function InvoiceCreationForm() {
 
       {/* Quick Add Customer Modal */}
       {addCustomerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 animate-in fade-in">
           <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-emerald-50/70">
               <div className="flex items-center gap-2">
@@ -1702,7 +1702,7 @@ function InvoiceCreationForm() {
 
       {/* Quick Add Item Modal (Add to Bill vs Add & Save Item) */}
       {addItemModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 animate-in fade-in">
           <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-2">
@@ -1900,7 +1900,7 @@ function InvoiceCreationForm() {
       )}
 
       {/* Mobile Sticky Bottom Summary & Action Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 z-40 shadow-lg flex items-center justify-between gap-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-3 py-2 z-40 shadow-lg flex items-center justify-between gap-2">
         <div>
           <span className="text-[10px] uppercase font-bold text-slate-500 block">Payable</span>
           <div className="flex items-baseline gap-1.5">

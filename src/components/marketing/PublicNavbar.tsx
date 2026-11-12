@@ -30,7 +30,7 @@ export function PublicNavbar() {
   const isFeatureRoute = PUBLIC_FEATURE_PAGES.some((f) => f.href === pathname);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/90 shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0" aria-label="Pakka Chittha Home">

@@ -166,7 +166,7 @@ export function DemoBanner() {
 
       {/* Reset Confirmation Modal */}
       {showResetConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-slate-800">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
               <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">

@@ -111,18 +111,11 @@ export function LanguageSelector({ variant = 'header', className = '' }: Languag
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-[70] bg-black/10 sm:bg-transparent cursor-default"
-            onClick={() => setIsOpen(false)}
-            aria-hidden="true"
-          />
-
-          <div
-            role="dialog"
-            aria-label="Language selection"
-            className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-[80] animate-in fade-in slide-in-from-top-1.5"
-          >
+        <div
+          role="menu"
+          aria-label="Language selection"
+          className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-[80] animate-in fade-in slide-in-from-top-1.5"
+        >
             <div className="px-2 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Choose Language / भाषा चुनें
             </div>
@@ -150,7 +143,6 @@ export function LanguageSelector({ variant = 'header', className = '' }: Languag
               })}
             </div>
           </div>
-        </>
       )}
     </div>
   );

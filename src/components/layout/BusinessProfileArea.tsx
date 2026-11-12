@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
@@ -21,8 +21,29 @@ interface BusinessProfileAreaProps {
 export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { activeBusiness, memberships, user, switchBusiness } = useAuth();
   const { isAllowed } = useEntitlements();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isOpen]);
 
   const isSuperAdmin = user?.platformRole === 'SUPER_ADMIN';
   const canAccountantErp = isAllowed('canAccountantErp');
@@ -48,7 +69,7 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
     .toUpperCase();
 
   return (
-    <div className="relative border-b border-slate-200/80 p-3 bg-slate-50/70">
+    <div ref={containerRef} className="relative border-b border-slate-200/80 p-3 bg-slate-50/70">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between gap-3 text-left p-2 rounded-lg hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200 transition-all group cursor-pointer"
@@ -104,14 +125,6 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
 
       {/* Info Popover / Switcher Drawer with Outside Touch/Click Dismissal */}
       {isOpen && (
-        <>
-          {/* Transparent full-screen touch/click backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-transparent cursor-default"
-            onClick={() => setIsOpen(false)}
-            onTouchStart={() => setIsOpen(false)}
-            aria-hidden="true"
-          />
           <div className="absolute left-2 right-2 top-full mt-1.5 z-50 bg-white rounded-xl shadow-xl border border-slate-200 p-3 animate-in fade-in slide-in-from-top-2 duration-150 text-xs">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
             <span className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -236,7 +249,6 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
             </span>
           </div>
         </div>
-      </>
     )}
     </div>
   );
