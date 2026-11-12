@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { AppShell } from '@/components/layout/AppShell';
 import { SITE_URL } from '@/lib/seo/constants';
+import { GTM_CONTAINER_ID, buildGtmHeadScript } from '@/lib/analytics/gtm';
+import { GtmNavigationTracker } from '@/components/analytics/GtmNavigationTracker';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -49,6 +52,24 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans">
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+            title="Google Tag Manager"
+          />
+        </noscript>
+        <Script
+          id="google-tag-manager"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: buildGtmHeadScript(GTM_CONTAINER_ID),
+          }}
+        />
+        <GtmNavigationTracker />
         <AppShell>{children}</AppShell>
       </body>
     </html>
