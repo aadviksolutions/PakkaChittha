@@ -41,6 +41,7 @@ import {
 import { RepaymentModal, RepaymentTransactionTarget } from '@/components/free-khata/RepaymentModal';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
 import { ContactEditModal, EditableKhataContact } from '@/components/free-khata/ContactEditModal';
+import { AddContactModal } from '@/components/free-khata/AddContactModal';
 import { formatCurrency, formatDate } from '@/lib/services/khataService';
 import { useTranslation } from '@/i18n/context';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
@@ -63,6 +64,7 @@ interface KhataContactSummary {
   statusLabel: string;
   transactionCount: number;
   lastActivityDate: string;
+  createdAt?: string | Date;
   // Aliases
   gaveOutstanding: number;
   receivedOutstanding: number;
@@ -146,6 +148,7 @@ function PersonalKhataDashboardContent() {
   const isHi = locale === 'hi';
   const filterParam = searchParams.get('filter') || 'ALL'; // 'ALL', 'GAVE', 'RECEIVED'
   const viewParam = searchParams.get('view');
+  const actionParam = searchParams.get('action');
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,10 +160,11 @@ function PersonalKhataDashboardContent() {
 
   // Contact list filters & sorting
   const [contactStatusFilter, setContactStatusFilter] = useState<'ALL' | 'TO_RECEIVE' | 'TO_PAY' | 'SETTLED'>('ALL');
-  const [contactSortBy, setContactSortBy] = useState<'NAME' | 'RECEIVE_HIGH' | 'PAY_HIGH' | 'RECENT'>('RECEIVE_HIGH');
+  const [contactSortBy, setContactSortBy] = useState<'NAME' | 'RECEIVE_HIGH' | 'PAY_HIGH' | 'RECENT'>('RECENT');
   const [modeFilter, setModeFilter] = useState<string>('ALL');
 
   // Modals state
+  const [addContactModalOpen, setAddContactModalOpen] = useState(false);
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txPrimaryIntent, setTxPrimaryIntent] = useState<'GAVE' | 'RECEIVED'>('GAVE');
   const [editingTx, setEditingTx] = useState<EditingKhataTransaction | null>(null);
@@ -191,6 +195,22 @@ function PersonalKhataDashboardContent() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Handle action parameter from URL
+  useEffect(() => {
+    if (actionParam === 'new_contact' || actionParam === 'add_contact') {
+      setActiveTab('CONTACTS');
+      setAddContactModalOpen(true);
+    } else if (actionParam === 'gave') {
+      setEditingTx(null);
+      setTxPrimaryIntent('GAVE');
+      setTxModalOpen(true);
+    } else if (actionParam === 'received') {
+      setEditingTx(null);
+      setTxPrimaryIntent('RECEIVED');
+      setTxModalOpen(true);
+    }
+  }, [actionParam]);
 
   // Primary Action Button Handlers
   const handleOpenGave = () => {
@@ -327,11 +347,22 @@ function PersonalKhataDashboardContent() {
       return true;
     });
 
+    const getContactTime = (c: KhataContactSummary) =>
+      new Date(c.lastActivityDate || (c.createdAt ? String(c.createdAt) : 0)).getTime();
+
     list.sort((a, b) => {
-      if (contactSortBy === 'RECEIVE_HIGH') return b.amountToReceive - a.amountToReceive;
-      if (contactSortBy === 'PAY_HIGH') return b.amountToPay - a.amountToPay;
+      if (contactSortBy === 'RECEIVE_HIGH') {
+        const diff = b.amountToReceive - a.amountToReceive;
+        if (diff !== 0) return diff;
+        return getContactTime(b) - getContactTime(a);
+      }
+      if (contactSortBy === 'PAY_HIGH') {
+        const diff = b.amountToPay - a.amountToPay;
+        if (diff !== 0) return diff;
+        return getContactTime(b) - getContactTime(a);
+      }
       if (contactSortBy === 'NAME') return a.name.localeCompare(b.name);
-      return new Date(b.lastActivityDate).getTime() - new Date(a.lastActivityDate).getTime();
+      return getContactTime(b) - getContactTime(a);
     });
 
     return list;
@@ -718,7 +749,17 @@ function PersonalKhataDashboardContent() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Add Contact Button */}
+              <button
+                type="button"
+                onClick={() => setAddContactModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>{isHi ? '+ नया संपर्क जोड़ें' : '+ Add Contact'}</span>
+              </button>
+
               {/* Status Filter */}
               <select
                 value={contactStatusFilter}
@@ -737,10 +778,10 @@ function PersonalKhataDashboardContent() {
                 onChange={(e) => setContactSortBy(e.target.value as any)}
                 className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
               >
+                <option value="RECENT">{isHi ? 'हाल की गतिविधि' : 'Recent Activity'}</option>
                 <option value="RECEIVE_HIGH">{isHi ? 'सबसे अधिक लेने हैं' : 'Highest to Receive'}</option>
                 <option value="PAY_HIGH">{isHi ? 'सबसे अधिक देने हैं' : 'Highest to Pay'}</option>
                 <option value="NAME">{isHi ? 'नाम (A-Z)' : 'Name (A-Z)'}</option>
-                <option value="RECENT">{isHi ? 'हाल की गतिविधि' : 'Recent Activity'}</option>
               </select>
             </div>
           </div>
@@ -751,8 +792,16 @@ function PersonalKhataDashboardContent() {
               <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <p className="font-bold text-slate-700">{t('freeKhata.noContacts')}</p>
               <p className="mt-1 text-slate-400">
-                {isHi ? 'नया लेन-देन दर्ज करने के लिए ऊपर "मैंने रकम दी" या "मुझे रकम मिली" पर क्लिक करें।' : 'Click "I Gave Money" or "I Received Money" above to add your first transaction.'}
+                {isHi ? 'सीधे नया संपर्क जोड़ें या ऊपर "मैंने रकम दी" / "मुझे रकम मिली" पर क्लिक करें।' : 'Directly add a new contact or click "I Gave Money" / "I Received Money" above.'}
               </p>
+              <button
+                type="button"
+                onClick={() => setAddContactModalOpen(true)}
+                className="mt-3.5 inline-flex items-center gap-1.5 px-4 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>{isHi ? '+ नया संपर्क जोड़ें (Add Contact)' : '+ Add New Contact'}</span>
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -760,7 +809,14 @@ function PersonalKhataDashboardContent() {
                 const isToReceive = c.amountToReceive > 0;
                 const isToPay = c.amountToPay > 0;
                 const isSettled = !isToReceive && !isToPay;
-                const badgeLabel = c.status === 'TO_RECEIVE' ? (isHi ? 'मुझे लेने हैं' : 'To Receive') : c.status === 'TO_PAY' ? (isHi ? 'मुझे देने हैं' : 'To Pay') : (isHi ? 'हिसाब पूरा' : 'Settled');
+                const isNewContact = c.transactionCount === 0;
+                const badgeLabel = isNewContact
+                  ? (isHi ? 'नया संपर्क' : 'New Contact')
+                  : c.status === 'TO_RECEIVE'
+                  ? (isHi ? 'मुझे लेने हैं' : 'To Receive')
+                  : c.status === 'TO_PAY'
+                  ? (isHi ? 'मुझे देने हैं' : 'To Pay')
+                  : (isHi ? 'हिसाब पूरा' : 'Settled');
 
                 return (
                   <div
@@ -1117,6 +1173,16 @@ function PersonalKhataDashboardContent() {
             fetchDashboardData();
           }}
           contact={editingContact}
+        />
+      )}
+
+      {addContactModalOpen && (
+        <AddContactModal
+          isOpen={addContactModalOpen}
+          onClose={() => setAddContactModalOpen(false)}
+          onSuccess={() => {
+            fetchDashboardData();
+          }}
         />
       )}
 

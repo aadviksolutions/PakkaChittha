@@ -200,8 +200,8 @@ export function Header({
             placeholder={isSuperAdmin ? t('common.searchTenantsPlaceholder') : t('common.searchPlaceholder')}
             className="w-full pl-8 pr-10 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#071F38] focus:border-[#071F38] transition-all cursor-pointer"
             onClick={() => {
-              if (isFreeKhataRoute) {
-                // Focus in-page search or route
+              if (isFreeKhataRoute || isFreeKhata) {
+                router.push('/free-khata/contacts');
               } else {
                 router.push(isSuperAdmin ? '/platform-admin/users' : '/customers');
               }

@@ -100,6 +100,13 @@ export function TransactionModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasContactsApi, setHasContactsApi] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      setHasContactsApi(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -166,6 +173,10 @@ export function TransactionModal({
         setSelectedContactId(preselectedContact.id);
         setPersonName(preselectedContact.name);
         setPhone(preselectedContact.phone || '');
+      } else if (existingContacts.length === 0) {
+        setSelectedContactId('NEW');
+        setPersonName('');
+        setPhone('');
       } else {
         setSelectedContactId('');
         setPersonName('');
@@ -587,7 +598,7 @@ export function TransactionModal({
                   <label className="block text-xs font-bold text-slate-700">
                     {isHi ? 'व्यक्ति का नाम (Person / Contact)' : 'Person / Contact Name'} <span className="text-rose-500">*</span>
                   </label>
-                  {!preselectedContact && typeof window !== 'undefined' && 'contacts' in navigator && (
+                  {!preselectedContact && hasContactsApi && (
                     <button
                       type="button"
                       onClick={handlePickPhoneContact}
@@ -616,23 +627,25 @@ export function TransactionModal({
                     </span>
                   </div>
                 ) : (
-                  <>
-                    <select
-                      value={selectedContactId}
-                      onChange={(e) => handleContactSelect(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] focus:bg-white font-medium"
-                    >
-                      <option value="">{isHi ? '-- संपर्क चुनें (या नया जोड़ें) --' : '-- Choose contact (or add new) --'}</option>
-                      <option value="NEW">{isHi ? '+ नया संपर्क जोड़ें (Add New Contact)' : '+ Add New Person / Contact'}</option>
-                      {existingContacts.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.phone ? `(${c.phone})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-2">
+                    {existingContacts.length > 0 && (
+                      <select
+                        value={selectedContactId}
+                        onChange={(e) => handleContactSelect(e.target.value)}
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] focus:bg-white font-medium"
+                      >
+                        <option value="">{isHi ? '-- नया व्यक्ति जोड़ें या संपर्क चुनें --' : '-- Add New Person or Choose Contact --'}</option>
+                        <option value="NEW">{isHi ? '+ नया व्यक्ति जोड़ें (Add New Person)' : '+ Add New Person'}</option>
+                        {existingContacts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
 
-                    {/* Show New Contact Fields if 'NEW' or none selected */}
-                    {selectedContactId === 'NEW' && (
+                    {/* Show New Contact Fields if 'NEW' or none selected or no existing contacts */}
+                    {(!selectedContactId || selectedContactId === 'NEW' || existingContacts.length === 0) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                         <input
                           type="text"
@@ -651,7 +664,7 @@ export function TransactionModal({
                         />
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
 

@@ -159,11 +159,23 @@ function DashboardContent() {
           if (type === 'new_invoice') {
             router.push('/invoices/new');
           } else if (type === 'add_customer') {
-            router.push('/customers?action=new');
+            if (isFreeKhata) {
+              router.push('/free-khata?action=new_contact');
+            } else {
+              router.push('/customers?action=new');
+            }
           } else if (type === 'record_udhaar') {
-            router.push('/customers?view=ledger');
+            if (isFreeKhata) {
+              router.push('/free-khata?action=gave');
+            } else {
+              router.push('/customers?view=ledger');
+            }
           } else if (type === 'record_payment') {
-            router.push('/invoices?view=payments');
+            if (isFreeKhata) {
+              router.push('/free-khata?action=received');
+            } else {
+              router.push('/invoices?view=payments');
+            }
           } else if (type === 'switch_ghar_kharcha') {
             router.push('/ghar-kharcha');
           } else if (type === 'switch_free_khata') {
@@ -173,11 +185,11 @@ function DashboardContent() {
           } else if (type === 'new_item') {
             router.push('/inventory?action=new');
           } else if (type === 'whatsapp_reminder') {
-            router.push('/whatsapp');
+            router.push(isFreeKhata ? '/free-khata?view=reminders' : '/whatsapp');
           } else if (type === 'view_reports') {
-            router.push('/reports');
+            router.push(isFreeKhata ? '/free-khata/reports' : '/reports');
           } else {
-            router.push('/customers');
+            router.push(isFreeKhata ? '/free-khata' : '/customers');
           }
         }}
       />

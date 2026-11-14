@@ -855,6 +855,44 @@ export async function createKhataContact(
   }
 
   const rawPhone = input.phone?.trim() || null;
+  const cleanPhoneDigits = rawPhone ? rawPhone.replace(/\D/g, '').slice(-10) : null;
+
+  // Check if a contact with matching name or phone already exists in this business
+  let existing = null;
+  if (rawPhone && cleanPhoneDigits && cleanPhoneDigits.length >= 10) {
+    existing = await prisma.khataContact.findFirst({
+      where: {
+        businessId,
+        OR: [
+          { phone: rawPhone },
+          { phone: cleanPhoneDigits },
+          ...(cleanPhoneDigits.length === 10 ? [{ phone: `+91${cleanPhoneDigits}` }, { phone: `91${cleanPhoneDigits}` }] : []),
+        ],
+      },
+    });
+  }
+
+  if (!existing) {
+    existing = await prisma.khataContact.findFirst({
+      where: {
+        businessId,
+        name: { equals: trimmedName, mode: 'insensitive' },
+      },
+    });
+  }
+
+  if (existing) {
+    // Gracefully update contact details and return existing
+    return prisma.khataContact.update({
+      where: { id: existing.id },
+      data: {
+        name: trimmedName,
+        phone: rawPhone || existing.phone,
+        email: input.email?.trim() || existing.email,
+        notes: input.notes?.trim() || existing.notes,
+      },
+    });
+  }
 
   return prisma.khataContact.create({
     data: {
@@ -896,16 +934,33 @@ export async function createKhataTransaction(
     }
 
     const rawPhone = input.phone?.trim() || null;
+    const cleanPhoneDigits = rawPhone ? rawPhone.replace(/\D/g, '').slice(-10) : null;
 
-    let existingContact = await prisma.khataContact.findFirst({
-      where: {
-        businessId,
-        OR: [
-          { name: { equals: personName, mode: 'insensitive' } },
-          ...(rawPhone ? [{ phone: rawPhone }] : []),
-        ],
-      },
-    });
+    let existingContact = null;
+
+    // 1. If phone was provided, first try matching by phone
+    if (rawPhone && cleanPhoneDigits && cleanPhoneDigits.length >= 10) {
+      existingContact = await prisma.khataContact.findFirst({
+        where: {
+          businessId,
+          OR: [
+            { phone: rawPhone },
+            { phone: cleanPhoneDigits },
+            ...(cleanPhoneDigits.length === 10 ? [{ phone: `+91${cleanPhoneDigits}` }, { phone: `91${cleanPhoneDigits}` }] : []),
+          ],
+        },
+      });
+    }
+
+    // 2. If no phone match, match by exact name
+    if (!existingContact) {
+      existingContact = await prisma.khataContact.findFirst({
+        where: {
+          businessId,
+          name: { equals: personName, mode: 'insensitive' },
+        },
+      });
+    }
 
     if (!existingContact) {
       existingContact = await prisma.khataContact.create({
@@ -915,6 +970,12 @@ export async function createKhataTransaction(
           name: personName,
           phone: rawPhone,
         },
+      });
+    } else if (rawPhone && !existingContact.phone) {
+      // If contact existed without phone, save the phone number
+      await prisma.khataContact.update({
+        where: { id: existingContact.id },
+        data: { phone: rawPhone },
       });
     }
     contactId = existingContact.id;

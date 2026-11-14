@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Users,
@@ -40,12 +40,22 @@ interface ContactItem {
 
 function ContactsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useTranslation();
   const isHi = locale === 'hi';
+  const actionParam = searchParams.get('action');
+
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [hasContactsApi, setHasContactsApi] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      setHasContactsApi(true);
+    }
+  }, []);
 
   // Modals
   const [addPersonModalOpen, setAddPersonModalOpen] = useState(false);
@@ -54,6 +64,37 @@ function ContactsContent() {
   const [newNotes, setNewNotes] = useState('');
   const [savingPerson, setSavingPerson] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (actionParam === 'new' || actionParam === 'add') {
+      setModalError(null);
+      setAddPersonModalOpen(true);
+    }
+  }, [actionParam]);
+
+  const handlePickPhoneContact = async () => {
+    if (typeof window !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in window) {
+      try {
+        const pickedList = await (navigator as any).contacts.select(['name', 'tel'], {
+          multiple: false,
+        });
+        if (pickedList && pickedList[0]) {
+          const picked = pickedList[0];
+          const rawName = picked.name?.[0] || '';
+          const rawPhone = (picked.tel?.[0] || '').replace(/\D/g, '').slice(-10);
+
+          if (rawName && !newName) {
+            setNewName(rawName);
+          }
+          if (rawPhone) {
+            setNewPhone(rawPhone);
+          }
+        }
+      } catch (err) {
+        console.warn('Contact picker dismissed or not permitted:', err);
+      }
+    }
+  };
 
   // WhatsApp Modal
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -376,9 +417,21 @@ function ContactsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  {isHi ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Number (Optional)'}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    {isHi ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Number (Optional)'}
+                  </label>
+                  {hasContactsApi && (
+                    <button
+                      type="button"
+                      onClick={handlePickPhoneContact}
+                      className="text-[11px] font-bold text-[#00B887] hover:text-[#009E74] inline-flex items-center gap-1 cursor-pointer hover:underline"
+                    >
+                      <Phone className="w-3 h-3" />
+                      <span>{isHi ? 'फोन से चुनें' : 'Pick from phone'}</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="tel"
                   value={newPhone}
