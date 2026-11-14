@@ -1158,18 +1158,26 @@ export async function getHouseholdBalances(householdId: string) {
   const [splits, contributions, settlements] = await Promise.all([
     prisma.householdExpenseSplit.findMany({
       where: { transaction: { householdId, type: 'EXPENSE', isShared: true } },
-      include: { transaction: true },
+      select: { memberId: true, allocatedAmount: true },
     }),
     prisma.householdExpenseContribution.findMany({
       where: { transaction: { householdId, type: 'EXPENSE', isShared: true } },
-      include: { transaction: true },
+      select: { memberId: true, amount: true },
     }),
     prisma.householdSettlement.findMany({
       where: { householdId },
       orderBy: { date: 'desc' },
-      include: {
-        payerMember: { include: { user: { select: { name: true } } } },
-        receiverMember: { include: { user: { select: { name: true } } } },
+      select: {
+        id: true,
+        payerMemberId: true,
+        receiverMemberId: true,
+        amount: true,
+        date: true,
+        paymentMethod: true,
+        notes: true,
+        createdAt: true,
+        payerMember: { select: { name: true, user: { select: { name: true } } } },
+        receiverMember: { select: { name: true, user: { select: { name: true } } } },
       },
     }),
   ]);
@@ -1830,6 +1838,7 @@ export async function getHouseholdDashboard(householdId: string, monthYearParam?
     }),
     prisma.householdTransaction.findMany({
       where: { householdId, date: { gte: prevMonthStart, lte: prevMonthEnd } },
+      select: { type: true, amount: true },
     }),
     getHouseholdBalances(householdId),
   ]);

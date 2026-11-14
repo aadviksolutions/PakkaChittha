@@ -1598,7 +1598,7 @@ function InvoiceCreationForm() {
                 type="button"
                 onClick={() => handleFinalizeBill(false, 'save')}
                 disabled={loading}
-                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-2xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full min-h-[44px] py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-2xs transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {loading && activeAction === 'save' ? (
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1615,7 +1615,7 @@ function InvoiceCreationForm() {
                   type="button"
                   onClick={() => handleFinalizeBill(false, 'print')}
                   disabled={loading}
-                  className="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] rounded-lg border border-emerald-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[44px] py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[11px] rounded-lg border border-emerald-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
                 >
                   {loading && activeAction === 'print' ? (
                     <div className="w-3 h-3 border-2 border-emerald-800 border-t-transparent rounded-full animate-spin" />
@@ -1631,7 +1631,7 @@ function InvoiceCreationForm() {
                   type="button"
                   onClick={() => handleFinalizeBill(false, 'share')}
                   disabled={loading}
-                  className="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[44px] py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
                 >
                   {loading && activeAction === 'share' ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1647,7 +1647,7 @@ function InvoiceCreationForm() {
                   type="button"
                   onClick={() => handleFinalizeBill(true, 'draft')}
                   disabled={loading}
-                  className="py-1.5 px-2 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-[11px] rounded-lg border border-slate-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
+                  className="min-h-[44px] py-1.5 px-2 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-[11px] rounded-lg border border-slate-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <FileText className="w-3 h-3 text-slate-400" />
                   <span>Draft</span>

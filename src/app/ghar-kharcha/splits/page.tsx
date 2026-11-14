@@ -514,16 +514,16 @@ export default function HouseholdSplitsPage() {
                 key={s.id}
                 className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-slate-50/50 rounded-xl px-2 transition-all"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/60">
                     <ArrowRightLeft className="w-4 h-4" />
                   </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-slate-900 break-words-safe">
                       <span className="text-rose-600">{s.payerName}</span> repaid{' '}
                       <span className="text-emerald-700">{s.receiverName}</span>
                     </div>
-                    <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                    <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
                       <span>{new Date(s.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       <span>•</span>
                       <span className="font-semibold text-slate-600 uppercase text-[9px] px-1.5 py-0.2 bg-slate-100 rounded">

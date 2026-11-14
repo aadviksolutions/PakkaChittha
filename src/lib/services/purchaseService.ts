@@ -605,7 +605,22 @@ export async function getPurchases(
 
   return prisma.purchase.findMany({
     where,
-    include: {
+    take: 100,
+    select: {
+      id: true,
+      businessId: true,
+      supplierId: true,
+      purchaseNumber: true,
+      supplierInvoiceNumber: true,
+      purchaseDate: true,
+      dueDate: true,
+      status: true,
+      subtotal: true,
+      taxTotal: true,
+      total: true,
+      paidAmount: true,
+      balanceDue: true,
+      createdAt: true,
       supplier: {
         select: {
           id: true,
@@ -614,7 +629,15 @@ export async function getPurchases(
           gstin: true,
         },
       },
-      items: true,
+      items: {
+        select: {
+          id: true,
+          description: true,
+          quantity: true,
+          purchaseRate: true,
+          lineTotal: true,
+        },
+      },
     },
     orderBy: { purchaseDate: 'desc' },
   });

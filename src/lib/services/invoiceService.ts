@@ -340,11 +340,29 @@ export async function getInvoices(businessId: string, filters: InvoiceFilters = 
     ];
   }
 
+  const limit = filters.limit ? Math.min(filters.limit, 100) : 100;
+
   return prisma.invoice.findMany({
     where,
-    take: filters.limit ? Math.min(filters.limit, 100) : undefined,
+    take: limit,
     skip: filters.offset || undefined,
-    include: {
+    select: {
+      id: true,
+      businessId: true,
+      customerId: true,
+      invoiceNumber: true,
+      invoiceDate: true,
+      dueDate: true,
+      status: true,
+      subtotal: true,
+      taxTotal: true,
+      total: true,
+      paidAmount: true,
+      balanceDue: true,
+      customerName: true,
+      customerMobile: true,
+      customerGstin: true,
+      createdAt: true,
       customer: {
         select: {
           id: true,
@@ -352,10 +370,6 @@ export async function getInvoices(businessId: string, filters: InvoiceFilters = 
           mobile: true,
           gstin: true,
         },
-      },
-      items: true,
-      payments: {
-        orderBy: { paymentDate: 'desc' },
       },
     },
     orderBy: { invoiceDate: 'desc' },

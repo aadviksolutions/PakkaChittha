@@ -387,7 +387,7 @@ function InventoryContent() {
       {/* Top Banner & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               <Boxes className="w-3.5 h-3.5" />
               Phase 4 Inventory
@@ -400,7 +400,7 @@ function InventoryContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => {
               setCsvSuccess(null);
@@ -493,7 +493,7 @@ function InventoryContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 select-none">
               <input
                 type="checkbox"
@@ -605,7 +605,7 @@ function InventoryContent() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100/70">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold text-slate-800">
                           {p.currentStock} {p.unit}
                         </span>
@@ -988,7 +988,7 @@ function InventoryContent() {
                   </div>
 
                   {/* Product Image Upload */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <ProductImageUploader
                       value={addForm.imageUrl || null}
                       onChange={(url: string | null) => setAddForm({ ...addForm, imageUrl: url || '' })}

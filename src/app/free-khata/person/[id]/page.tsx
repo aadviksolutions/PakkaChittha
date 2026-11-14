@@ -860,7 +860,7 @@ export default function PersonLedgerPage({
                   key={act.id}
                   className="p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3 text-xs"
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isOut ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
                         }`}
@@ -868,13 +868,13 @@ export default function PersonLedgerPage({
                       {isOut ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <strong className="text-xs text-slate-800">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-xs text-slate-800 break-words-safe">
                           {act.title}
                         </strong>
                         <span
-                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${act.paymentMode === 'UPI'
+                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded shrink-0 ${act.paymentMode === 'UPI'
                             ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                             : act.paymentMode === 'CASH'
                               ? 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -885,7 +885,7 @@ export default function PersonLedgerPage({
                         </span>
                       </div>
 
-                      <div className="text-[11px] text-slate-500 mt-0.5 space-x-1">
+                      <div className="text-[11px] text-slate-500 mt-0.5 space-x-1 break-words-safe">
                         <span>
                           {new Date(act.date).toLocaleString('en-IN', {
                             timeZone: 'Asia/Kolkata',

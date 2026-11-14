@@ -91,10 +91,29 @@ export async function getKhataDashboardSummary(businessId: string) {
   const [contacts, transactions] = await Promise.all([
     prisma.khataContact.findMany({
       where: { businessId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
         transactions: {
-          include: {
+          select: {
+            id: true,
+            type: true,
+            amount: true,
+            balanceAmount: true,
+            paymentMode: true,
+            date: true,
+            dueDate: true,
+            status: true,
             repayments: {
+              select: {
+                amount: true,
+                paymentMode: true,
+              },
               orderBy: { date: 'desc' },
             },
           },
@@ -268,10 +287,20 @@ export async function getKhataDashboardSummary(businessId: string) {
       dueDate: { lt: now },
       balanceAmount: { gt: 0 },
     },
-    include: {
-      contact: true,
-      repayments: {
-        orderBy: { date: 'desc' },
+    select: {
+      id: true,
+      contactId: true,
+      type: true,
+      amount: true,
+      balanceAmount: true,
+      date: true,
+      dueDate: true,
+      description: true,
+      contact: {
+        select: {
+          name: true,
+          phone: true,
+        },
       },
     },
     orderBy: { dueDate: 'asc' },
@@ -367,10 +396,26 @@ export async function getKhataContacts(businessId: string, search?: string) {
 
   const contacts = await prisma.khataContact.findMany({
     where,
-    include: {
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
       transactions: {
-        include: {
-          repayments: true,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          balanceAmount: true,
+          date: true,
+          repayments: {
+            select: {
+              amount: true,
+            },
+          },
         },
         orderBy: { date: 'desc' },
       },

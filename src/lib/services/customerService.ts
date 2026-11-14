@@ -82,9 +82,11 @@ export async function getCustomers(
     }));
   }
 
+  const limit = options?.limit ? Math.min(options.limit, 100) : 100;
+
   const customers = await prisma.customer.findMany({
     where,
-    take: options?.limit ? Math.min(options.limit, 100) : undefined,
+    take: limit,
     skip: options?.offset || 0,
     include: {
       invoices: {

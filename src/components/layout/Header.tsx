@@ -117,7 +117,7 @@ export function Header({
   };
 
   return (
-    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-[#DCE4EF] px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
+    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-[#E1E7EF] px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
       {/* Left: Mobile Toggle & Business Name with Logo */}
       <div className="flex items-center gap-1.5 sm:gap-3 flex-1 min-w-0">
         <button
@@ -149,7 +149,7 @@ export function Header({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-xs sm:text-sm text-[#071F38] truncate block leading-tight">
+              <span className="font-bold text-xs sm:text-sm text-[#173653] truncate block leading-tight max-w-[110px] xs:max-w-[170px] sm:max-w-none">
                 {isSuperAdmin
                   ? 'Platform Control Center'
                   : isGharKharcha
