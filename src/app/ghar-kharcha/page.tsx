@@ -295,20 +295,20 @@ export default function GharKharchaDashboardPage() {
   return (
     <div className="space-y-6">
       {/* 1. Header Banner & Controls */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E1E7EF] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-[#006B2B] bg-[#E8F7ED] px-2.5 py-0.5 rounded-full border border-[#B8E6C7]">
               PakkaChittha {t('gharKharcha.title')}
             </span>
-            <span className="text-xs font-bold text-slate-400">• 100% Free Family Ledger</span>
+            <span className="text-xs font-bold text-[#64748B]">• 100% Free Family Ledger</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-black text-[#173653] tracking-tight mt-1 flex items-center gap-2">
             <span>{data?.authContext.householdName || 'My Household'}</span>
           </h1>
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-[#64748B] font-medium">
             "{t('gharKharcha.tagline')}" • Collaborating as{' '}
-            <strong className="text-slate-700 uppercase">{data?.authContext.role}</strong>
+            <strong className="text-[#172B4D] uppercase">{data?.authContext.role}</strong>
           </p>
         </div>
 
@@ -318,21 +318,21 @@ export default function GharKharchaDashboardPage() {
           <LanguageSelector variant="compact" />
 
           {/* Month selector with prev/next */}
-          <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+          <div className="flex items-center bg-[#F8FAFC] rounded-xl p-1 border border-[#E1E7EF]">
             <button
               onClick={handlePrevMonth}
-              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-[#64748B] hover:text-[#173653] hover:bg-white rounded-lg transition-colors cursor-pointer"
               title="Previous Month"
               aria-label="Previous Month"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="px-3 text-xs font-bold text-slate-800 min-w-[110px] text-center select-none">
+            <div className="px-3 text-xs font-bold text-[#172B4D] min-w-[110px] text-center select-none">
               {displayMonthLabel()}
             </div>
             <button
               onClick={handleNextMonth}
-              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-[#64748B] hover:text-[#173653] hover:bg-white rounded-lg transition-colors cursor-pointer"
               title="Next Month"
               aria-label="Next Month"
             >
@@ -344,9 +344,9 @@ export default function GharKharchaDashboardPage() {
           {data?.authContext.role !== 'VIEWER' && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#173653] hover:bg-[#102A43] text-white font-bold text-xs shadow-xs transition-all cursor-pointer min-h-[44px]"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 text-[#2878CE]" />
               <span>{t('gharKharcha.addExpense')}</span>
             </button>
           )}
@@ -354,29 +354,29 @@ export default function GharKharchaDashboardPage() {
           {/* Splits Button */}
           <Link
             href="/ghar-kharcha/splits"
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#E1E7EF] bg-white hover:bg-[#F8FAFC] text-[#172B4D] font-bold text-xs transition-all shadow-2xs min-h-[44px]"
             title="Family expense splits & settlements"
           >
-            <Scale className="w-4 h-4 text-indigo-600" />
+            <Scale className="w-4 h-4 text-[#2878CE]" />
             <span className="hidden sm:inline">{t('gharKharcha.splitExpense')}</span>
           </Link>
 
           {/* Reports Button */}
           <Link
             href="/ghar-kharcha/reports"
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#E1E7EF] bg-white hover:bg-[#F8FAFC] text-[#172B4D] font-bold text-xs transition-all shadow-2xs min-h-[44px]"
             title="Reports, trends & exports"
           >
-            <BarChart3 className="w-4 h-4 text-emerald-600" />
+            <BarChart3 className="w-4 h-4 text-[#008A36]" />
             <span className="hidden sm:inline">{t('reports.title')}</span>
           </Link>
 
           {/* Invite Family Button */}
           <Link
             href="/ghar-kharcha/members"
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#E1E7EF] bg-white hover:bg-[#F8FAFC] text-[#172B4D] font-bold text-xs transition-all shadow-2xs min-h-[44px]"
           >
-            <Users className="w-4 h-4 text-slate-600" />
+            <Users className="w-4 h-4 text-[#64748B]" />
             <span>{t('gharKharcha.familyMembers')}</span>
           </Link>
         </div>
@@ -385,71 +385,71 @@ export default function GharKharchaDashboardPage() {
       {/* 2. Primary KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Income Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E1E7EF] shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Income</span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="flex items-center justify-between text-[#64748B] mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Income</span>
+              <div className="w-7 h-7 rounded-lg bg-[#E8F7ED] text-[#008A36] flex items-center justify-center">
                 <ArrowDownRight className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-[#008A36] tracking-tight mt-0.5 tabular-nums">
               {formatInr(kpis?.totalIncome || 0)}
             </div>
           </div>
-          <div className="mt-2 text-[10.5px] font-medium text-slate-400 flex items-center gap-1">
+          <div className="mt-2 text-[10.5px] font-medium text-[#64748B] flex items-center gap-1">
             <span>Aamad (Salary, Rent, etc.)</span>
           </div>
         </div>
 
         {/* Expenses Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E1E7EF] shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('gharKharcha.totalExpenses')}</span>
-              <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <div className="flex items-center justify-between text-[#64748B] mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">{t('gharKharcha.totalExpenses')}</span>
+              <div className="w-7 h-7 rounded-lg bg-[#FFF0F0] text-[#E00016] flex items-center justify-center">
                 <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-[#E00016] tracking-tight mt-0.5 tabular-nums">
               {formatInr(kpis?.totalExpenses || 0)}
             </div>
           </div>
-          <div className="mt-2 text-[10.5px] font-medium text-slate-400 flex items-center gap-1">
+          <div className="mt-2 text-[10.5px] font-medium text-[#64748B] flex items-center gap-1">
             <span>Kul Kharcha</span>
           </div>
         </div>
 
         {/* Net Cash Flow Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E1E7EF] shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('freeKhata.netBalance')}</span>
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="flex items-center justify-between text-[#64748B] mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">{t('freeKhata.netBalance')}</span>
+              <div className="w-7 h-7 rounded-lg bg-[#E8F2FC] text-[#2878CE] flex items-center justify-center">
                 <Wallet className="w-4 h-4" />
               </div>
             </div>
-            <div className={`text-lg sm:text-2xl font-black tracking-tight mt-0.5 ${
-              (kpis?.netCashFlow || 0) >= 0 ? 'text-indigo-900' : 'text-rose-600'
+            <div className={`text-lg sm:text-2xl font-black tracking-tight mt-0.5 tabular-nums ${
+              (kpis?.netCashFlow || 0) >= 0 ? 'text-[#008A36]' : 'text-[#E00016]'
             }`}>
               {formatInr(kpis?.netCashFlow || 0)}
             </div>
           </div>
-          <div className="mt-2 text-[10.5px] font-medium text-slate-400">
+          <div className="mt-2 text-[10.5px] font-medium text-[#64748B]">
             <span>Income minus Expenses</span>
           </div>
         </div>
 
         {/* Monthly Budget Card */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E1E7EF] shadow-2xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('gharKharcha.monthlyBudget')}</span>
+            <div className="flex items-center justify-between text-[#64748B] mb-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">{t('gharKharcha.monthlyBudget')}</span>
               <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                 <Landmark className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-[#173653] tracking-tight mt-0.5 tabular-nums">
               {kpis?.monthlyBudget ? formatInr(kpis.monthlyBudget) : 'Not Set'}
             </div>
           </div>
@@ -459,15 +459,15 @@ export default function GharKharchaDashboardPage() {
             {kpis?.monthlyBudget && kpis.monthlyBudget > 0 ? (
               <div>
                 <div className="flex items-center justify-between text-[10.5px] font-bold mb-1">
-                  <span className={kpis.isBudgetExceeded ? 'text-rose-600' : 'text-emerald-700'}>
+                  <span className={kpis.isBudgetExceeded ? 'text-[#E00016]' : 'text-[#008A36]'}>
                     {kpis.isBudgetExceeded ? 'Over Budget!' : `${kpis.budgetUtilization}% used`}
                   </span>
-                  <span className="text-slate-500">Left: {formatInr(kpis.remainingBudget)}</span>
+                  <span className="text-[#64748B]">Left: {formatInr(kpis.remainingBudget)}</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      kpis.isBudgetExceeded ? 'bg-rose-500' : 'bg-emerald-500'
+                      kpis.isBudgetExceeded ? 'bg-[#E00016]' : 'bg-[#008A36]'
                     }`}
                     style={{ width: `${Math.min(100, kpis.budgetUtilization)}%` }}
                   />
@@ -476,7 +476,7 @@ export default function GharKharchaDashboardPage() {
             ) : (
               <Link
                 href="/ghar-kharcha/budget"
-                className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700"
+                className="text-[11px] font-bold text-[#2878CE] hover:underline"
               >
                 + Set Monthly Budget
               </Link>
@@ -595,18 +595,18 @@ export default function GharKharchaDashboardPage() {
       </div>
 
       {/* 4. Recent Transactions Table */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-xs">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E1E7EF] shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-base font-extrabold text-[#173653] tracking-tight">
               Recent Household Transactions
             </h2>
-            <p className="text-xs text-slate-400 font-medium">Latest income and expense entries</p>
+            <p className="text-xs text-[#64748B] font-medium">Latest income and expense entries</p>
           </div>
 
           <Link
             href="/ghar-kharcha/transactions"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 self-start sm:self-center"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2878CE] hover:text-[#173653] self-start sm:self-center transition-colors"
           >
             <span>View Complete Register</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -616,7 +616,7 @@ export default function GharKharchaDashboardPage() {
         {data?.recentTransactions && data.recentTransactions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <thead className="bg-[#F8FAFC] border-b border-[#E1E7EF] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
                 <tr>
                   <th className="py-2.5 px-3">Date</th>
                   <th className="py-2.5 px-3">Category</th>
@@ -627,31 +627,31 @@ export default function GharKharchaDashboardPage() {
                   <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-[#E1E7EF] font-medium">
                 {data.recentTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
+                  <tr key={tx.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <td className="py-2.5 px-3 text-[#64748B] whitespace-nowrap">
                       {new Date(tx.date).toLocaleDateString('en-IN', {
                         day: '2-digit',
                         month: 'short',
                       })}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className="font-bold text-slate-800">{tx.categoryName}</span>
+                      <span className="font-bold text-[#172B4D]">{tx.categoryName}</span>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                    <td className="py-2.5 px-3 text-[#64748B] max-w-xs truncate">
                       {tx.description || tx.payeeMerchant || '—'}
                     </td>
-                    <td className="py-2.5 px-3 text-slate-500">
-                      <span className="text-[10px] uppercase font-bold bg-slate-100 px-1.5 py-0.5 rounded">
+                    <td className="py-2.5 px-3 text-[#64748B]">
+                      <span className="text-[10px] uppercase font-bold bg-[#F8FAFC] border border-[#E1E7EF] px-1.5 py-0.5 rounded text-[#172B4D]">
                         {tx.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-500">{tx.createdByName}</td>
+                    <td className="py-2.5 px-3 text-[#64748B]">{tx.createdByName}</td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap">
                       <span
-                        className={`font-black text-sm ${
-                          tx.type === 'INCOME' ? 'text-emerald-600' : 'text-slate-900'
+                        className={`font-black text-sm tabular-nums ${
+                          tx.type === 'INCOME' ? 'text-[#008A36]' : 'text-[#E00016]'
                         }`}
                       >
                         {tx.type === 'INCOME' ? '+ ' : '- '}
@@ -664,7 +664,7 @@ export default function GharKharchaDashboardPage() {
                           type="button"
                           onClick={() => handleOpenEditTx(tx)}
                           title="Edit Transaction"
-                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-[#64748B] hover:text-[#173653] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -673,7 +673,7 @@ export default function GharKharchaDashboardPage() {
                           disabled={deletingTxId === tx.id}
                           onClick={() => handleDeleteTx(tx.id)}
                           title="Delete Transaction"
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                          className="p-1.5 text-[#E00016] hover:text-[#B80012] hover:bg-[#FFF0F0] rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -685,14 +685,14 @@ export default function GharKharchaDashboardPage() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-12 text-slate-400">
+          <div className="text-center py-12 text-[#64748B]">
             <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-2" />
             <p className="text-xs font-semibold">No transactions recorded for {displayMonthLabel()}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5 mb-4">Start by recording your first grocery, milk, or salary entry.</p>
+            <p className="text-[11px] text-[#64748B] mt-0.5 mb-4">Start by recording your first grocery, milk, or salary entry.</p>
             {data?.authContext.role !== 'VIEWER' && (
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#173653] hover:bg-[#102A43] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
               >
                 + Record Entry
               </button>
@@ -703,15 +703,15 @@ export default function GharKharchaDashboardPage() {
 
       {/* 5. Quick Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <h3 className="text-base font-black text-slate-900 tracking-tight">
+        <div className="fixed inset-0 z-50 bg-[#102A43]/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#E1E7EF] animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E1E7EF]">
+              <h3 className="text-base font-black text-[#173653] tracking-tight">
                 Record Household Entry
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                className="p-1 text-[#64748B] hover:text-[#173653] rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -719,14 +719,14 @@ export default function GharKharchaDashboardPage() {
 
             <form onSubmit={handleQuickAdd} className="space-y-4">
               {/* Type Switcher */}
-              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+              <div className="grid grid-cols-2 p-1 bg-[#F8FAFC] border border-[#E1E7EF] rounded-xl">
                 <button
                   type="button"
                   onClick={() => setTxType('EXPENSE')}
                   className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                     txType === 'EXPENSE'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#E00016] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#172B4D]'
                   }`}
                 >
                   Expense (Kharcha)
@@ -736,8 +736,8 @@ export default function GharKharchaDashboardPage() {
                   onClick={() => setTxType('INCOME')}
                   className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                     txType === 'INCOME'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#008A36] text-white shadow-xs'
+                      : 'text-[#64748B] hover:text-[#172B4D]'
                   }`}
                 >
                   Income (Aamad)
@@ -746,11 +746,11 @@ export default function GharKharchaDashboardPage() {
 
               {/* Amount Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Amount (₹) <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1">
+                  Amount (₹) <span className="text-[#E00016]">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-lg">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] font-black text-lg">
                     ₹
                   </span>
                   <input
@@ -762,20 +762,20 @@ export default function GharKharchaDashboardPage() {
                     placeholder="0.00"
                     required
                     autoFocus
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-lg font-black text-slate-900 placeholder:text-slate-300 bg-white"
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#E1E7EF] focus:outline-none focus:ring-2 focus:ring-[#2878CE]/20 focus:border-[#2878CE] text-lg font-black text-[#172B4D] placeholder:text-slate-300 bg-white tabular-nums"
                   />
                 </div>
               </div>
 
               {/* Category Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1">
                   Category
                 </label>
                 <select
                   value={txCategoryName}
                   onChange={(e) => setTxCategoryName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-xs font-bold text-slate-800 bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E1E7EF] focus:outline-none focus:ring-2 focus:ring-[#2878CE]/20 focus:border-[#2878CE] text-xs font-bold text-[#172B4D] bg-white"
                 >
                   {filteredCategories.map((c) => (
                     <option key={c.id} value={c.name}>
@@ -789,24 +789,24 @@ export default function GharKharchaDashboardPage() {
               {/* Date & Payment Method */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1">
                     Date
                   </label>
                   <input
                     type="date"
                     value={txDate}
                     onChange={(e) => setTxDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-[#E1E7EF] text-xs font-medium text-[#172B4D] bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1">
                     Payment Method
                   </label>
                   <select
                     value={txPaymentMethod}
                     onChange={(e) => setTxPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-[#E1E7EF] text-xs font-medium text-[#172B4D] bg-white"
                   >
                     <option value="CASH">Cash</option>
                     <option value="UPI">UPI / GPay / PhonePe</option>
@@ -819,7 +819,7 @@ export default function GharKharchaDashboardPage() {
 
               {/* Description / Payee */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-[#172B4D] uppercase tracking-wider mb-1">
                   Note / Payee (Optional)
                 </label>
                 <input
@@ -827,7 +827,7 @@ export default function GharKharchaDashboardPage() {
                   value={txDescription}
                   onChange={(e) => setTxDescription(e.target.value)}
                   placeholder="e.g. Milk packet, Electricity bill, Monthly salary"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 placeholder:text-slate-400 bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E1E7EF] text-xs font-medium text-[#172B4D] placeholder:text-slate-400 bg-white"
                 />
               </div>
 
@@ -835,7 +835,7 @@ export default function GharKharchaDashboardPage() {
                 <button
                   type="submit"
                   disabled={submittingTx}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-60"
+                  className="w-full py-2.5 rounded-xl bg-[#173653] hover:bg-[#102A43] text-white font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-60 min-h-[44px]"
                 >
                   {submittingTx ? 'Saving...' : editingTxId ? 'Update Transaction' : 'Save Transaction'}
                 </button>

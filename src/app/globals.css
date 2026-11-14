@@ -2,33 +2,38 @@
 
 @layer base {
   :root {
-    --background: #F3F6FB;
+    --background: #F3F6FA;
     --foreground: #172B4D;
-    --surface: #ffffff;
+    --surface: #FFFFFF;
     --surface-subtle: #F8FAFC;
-    --border-subtle: #DCE4EF;
+    --border-subtle: #E1E7EF;
     --border-strong: #CBD5E1;
-    --primary-navy: #102A43;
-    --dark-navy: #071D35;
-    --secondary-blue: #1761A0;
+    --primary-navy: #173653;
+    --dark-navy: #102A43;
+    --secondary-blue: #2878CE;
     --accent-blue: #2878CE;
-    --brand-navy: #102A43;
-    --brand-navy-secondary: #071D35;
+    --brand-navy: #173653;
+    --brand-navy-secondary: #102A43;
     --primary-text: #172B4D;
     --secondary-text: #64748B;
-    --success-green: #159447;
-    --success-bg: #EAF8EF;
-    --danger-red: #E53935;
+    --success-green: #008A36;
+    --success-green-dark: #006B2B;
+    --success-bg: #E8F7ED;
+    --success-border: #B8E6C7;
+    --danger-red: #E00016;
+    --danger-red-dark: #B80012;
     --danger-bg: #FFF0F0;
-    --brand-orange: #102A43;
-    --brand-orange-hover: #071D35;
-    --brand-orange-subtle: #F3F6FB;
-    --brand-amber: #1761A0;
-    --brand-amber-subtle: #EBF3FA;
-    --brand-emerald: #159447;
-    --brand-emerald-hover: #117638;
-    --brand-emerald-subtle: #EAF8EF;
-    --brand-teal: #102A43;
+    --danger-border: #FFCCD2;
+    --muted-bg: #F8FAFC;
+    --brand-orange: #173653;
+    --brand-orange-hover: #102A43;
+    --brand-orange-subtle: #F3F6FA;
+    --brand-amber: #2878CE;
+    --brand-amber-subtle: #E8F2FC;
+    --brand-emerald: #008A36;
+    --brand-emerald-hover: #006B2B;
+    --brand-emerald-subtle: #E8F7ED;
+    --brand-teal: #173653;
     --brand-teal-subtle: #F1F5F9;
     --slate-muted: #64748B;
     --font-indic-fallback: "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans Telugu", 

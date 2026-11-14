@@ -191,35 +191,35 @@ export default function InvoicesPage() {
     switch (status) {
       case 'PAID':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#006B2B] bg-[#E8F7ED] border border-[#B8E6C7] px-2.5 py-0.5 rounded-full">
+            <CheckCircle2 className="w-3 h-3 text-[#008A36]" />
             Paid
           </span>
         );
       case 'PARTIAL':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
             <Clock className="w-3 h-3 text-amber-600" />
             Partial
           </span>
         );
       case 'OVERDUE':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-            <AlertCircle className="w-3 h-3 text-rose-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B80012] bg-[#FFF0F0] border border-[#FFCCD2] px-2.5 py-0.5 rounded-full">
+            <AlertCircle className="w-3 h-3 text-[#E00016]" />
             Overdue
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+          <span className="text-[11px] font-semibold text-[#64748B] bg-[#F8FAFC] px-2.5 py-0.5 rounded-full border border-[#E1E7EF]">
             Void
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-            <Clock className="w-3 h-3 text-slate-500" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#172B4D] bg-[#F8FAFC] border border-[#E1E7EF] px-2.5 py-0.5 rounded-full">
+            <Clock className="w-3 h-3 text-[#64748B]" />
             Unpaid
           </span>
         );
@@ -239,98 +239,98 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E1E7EF]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-[#173653] tracking-tight">
               Invoices & Billing History
             </h1>
-            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.2 rounded-full">
+            <span className="text-[11px] font-semibold text-[#006B2B] bg-[#E8F7ED] border border-[#B8E6C7] px-2.5 py-0.5 rounded-full">
               {activeBusiness?.name || 'Workspace'}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-[#64748B] mt-0.5">
             GST-compliant invoices, payment recording, and A4 printable bills.
           </p>
         </div>
 
         <Link
           href="/invoices/new"
-          className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 bg-[#173653] hover:bg-[#102A43] text-white text-xs font-semibold px-3.5 py-2.5 rounded-xl shadow-xs transition-all self-start sm:self-auto min-h-[44px]"
         >
-          <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <PlusCircle className="w-3.5 h-3.5 text-[#2878CE]" />
           <span>+ Create Tax Invoice</span>
         </Link>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+        <div className="bg-white p-4 rounded-xl border border-[#E1E7EF] shadow-2xs">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-[#64748B] block mb-1">
             Total Invoiced
           </span>
-          <p className="text-xl font-bold font-mono text-slate-900 tabular-nums">
+          <p className="text-xl font-bold font-mono text-[#173653] tabular-nums">
             ₹{totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">All generated invoices</p>
+          <p className="text-[11px] text-[#64748B] mt-0.5">All generated invoices</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-emerald-700 block mb-1">
+        <div className="bg-white p-4 rounded-xl border border-[#E1E7EF] shadow-2xs">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-[#006B2B] block mb-1">
             Collected Revenue
           </span>
-          <p className="text-xl font-bold font-mono text-emerald-800 tabular-nums">
+          <p className="text-xl font-bold font-mono text-[#008A36] tabular-nums">
             ₹{totalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </p>
-          <p className="text-[11px] text-emerald-600 mt-0.5">Settled via Cash / UPI</p>
+          <p className="text-[11px] text-[#006B2B] mt-0.5">Settled via Cash / UPI</p>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-amber-200/90 shadow-2xs">
           <span className="text-[11px] uppercase font-bold tracking-wider text-amber-800 block mb-1">
             Outstanding Udhaar
           </span>
-          <p className="text-xl font-bold font-mono text-amber-800 tabular-nums">
+          <p className="text-xl font-bold font-mono text-[#E00016] tabular-nums">
             ₹{totalBalanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </p>
           <p className="text-[11px] text-amber-700 mt-0.5">Pending collection</p>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+        <div className="bg-white p-4 rounded-xl border border-[#E1E7EF] shadow-2xs">
+          <span className="text-[11px] uppercase font-bold tracking-wider text-[#64748B] block mb-1">
             Total Bills
           </span>
-          <p className="text-xl font-bold font-mono text-slate-900">{invoices.length}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Records in register</p>
+          <p className="text-xl font-bold font-mono text-[#173653]">{invoices.length}</p>
+          <p className="text-[11px] text-[#64748B] mt-0.5">Records in register</p>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white p-3 rounded-xl border border-[#E1E7EF] shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:max-w-md">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by invoice # or customer name..."
-            className="w-full pl-8 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-slate-900 transition-all"
+            className="w-full pl-8 pr-4 py-2 text-xs bg-[#F8FAFC] border border-[#E1E7EF] rounded-lg text-[#172B4D] placeholder-[#64748B] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#2878CE] transition-all"
           />
         </div>
 
         {/* Status Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap self-start sm:self-auto text-xs">
-          <span className="text-[11px] text-slate-400 font-medium mr-1 flex items-center gap-1">
-            <Filter className="w-3 h-3" /> Status:
+          <span className="text-[11px] text-[#64748B] font-medium mr-1 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-[#2878CE]" /> Status:
           </span>
           {['ALL', 'UNPAID', 'PARTIAL', 'PAID', 'CANCELLED'].map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setStatusFilter(s)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                 statusFilter === s
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[#173653] text-white shadow-2xs'
+                  : 'bg-[#F8FAFC] text-[#64748B] hover:bg-[#E1E7EF] border border-[#E1E7EF]'
               }`}
             >
               {s}
@@ -347,20 +347,20 @@ export default function InvoicesPage() {
       )}
 
       {/* Invoices Table */}
-      <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden">
+      <div className="bg-white border border-[#E1E7EF] rounded-xl shadow-2xs overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="p-8 text-center text-xs text-[#64748B]">
+            <div className="w-5 h-5 border-2 border-[#173653] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
             Loading invoices and billing history...
           </div>
         ) : invoices.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-500 space-y-3">
-            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 mx-auto">
+          <div className="p-12 text-center text-xs text-[#64748B] space-y-3">
+            <div className="w-10 h-10 bg-[#F8FAFC] border border-[#E1E7EF] rounded-xl flex items-center justify-center text-[#64748B] mx-auto">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-semibold text-slate-800 text-sm">No invoices found</p>
-              <p className="text-slate-400 text-xs mt-0.5">
+              <p className="font-semibold text-[#172B4D] text-sm">No invoices found</p>
+              <p className="text-[#64748B] text-xs mt-0.5">
                 {search || statusFilter !== 'ALL'
                   ? 'Try adjusting your search query or filters.'
                   : 'Generate your first bill for this business.'}
@@ -368,9 +368,9 @@ export default function InvoicesPage() {
             </div>
             <Link
               href="/invoices/new"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#173653] text-white rounded-xl text-xs font-semibold hover:bg-[#102A43] transition-colors"
             >
-              <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <PlusCircle className="w-3.5 h-3.5 text-[#2878CE]" />
               <span>Create Invoice</span>
             </Link>
           </div>
@@ -378,7 +378,7 @@ export default function InvoicesPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <tr className="bg-[#F8FAFC] border-b border-[#E1E7EF] text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
                   <th className="py-2.5 px-4">Invoice #</th>
                   <th className="py-2.5 px-4">Party / Customer</th>
                   <th className="py-2.5 px-4">Date & Due</th>
@@ -389,13 +389,13 @@ export default function InvoicesPage() {
                   <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-sans">
+              <tbody className="divide-y divide-[#E1E7EF] font-sans">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50/60 transition-colors group">
+                  <tr key={inv.id} className="hover:bg-[#F8FAFC] transition-colors group">
                     <td className="py-2.5 px-4">
                       <Link
                         href={`/invoices/${inv.id}`}
-                        className="font-mono font-bold text-slate-900 hover:text-emerald-700 hover:underline block"
+                        className="font-mono font-bold text-[#173653] hover:text-[#2878CE] hover:underline block"
                       >
                         {inv.invoiceNumber}
                       </Link>
@@ -404,22 +404,22 @@ export default function InvoicesPage() {
                     <td className="py-2.5 px-4">
                       <Link
                         href={`/customers/${inv.customer.id}`}
-                        className="font-semibold text-slate-800 hover:text-emerald-700 hover:underline block truncate max-w-[180px]"
+                        className="font-semibold text-[#172B4D] hover:text-[#2878CE] hover:underline block truncate max-w-[180px]"
                       >
                         {inv.customerName}
                       </Link>
-                      <span className="font-mono text-[11px] text-slate-400">{inv.customerMobile}</span>
+                      <span className="font-mono text-[11px] text-[#64748B]">{inv.customerMobile}</span>
                     </td>
 
                     <td className="py-2.5 px-4 whitespace-nowrap">
-                      <div className="text-slate-800">
+                      <div className="text-[#172B4D]">
                         {new Date(inv.invoiceDate).toLocaleDateString('en-IN', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',
                         })}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-[#64748B]">
                         Due: {new Date(inv.dueDate).toLocaleDateString('en-IN', {
                           day: '2-digit',
                           month: 'short',
@@ -427,21 +427,21 @@ export default function InvoicesPage() {
                       </div>
                     </td>
 
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 tabular-nums">
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-[#172B4D] tabular-nums">
                       ₹{inv.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
 
-                    <td className="py-2.5 px-4 text-right font-mono font-medium text-emerald-700 tabular-nums">
+                    <td className="py-2.5 px-4 text-right font-mono font-medium text-[#008A36] tabular-nums">
                       ₹{inv.paidAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
 
                     <td className="py-2.5 px-4 text-right font-mono font-bold tabular-nums">
                       {inv.balanceDue > 0 && inv.status !== 'CANCELLED' ? (
-                        <span className="text-amber-800">
+                        <span className="text-[#E00016]">
                           ₹{inv.balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       ) : (
-                        <span className="text-slate-400 font-normal">₹0.00</span>
+                        <span className="text-[#64748B] font-normal">₹0.00</span>
                       )}
                     </td>
 
@@ -453,7 +453,7 @@ export default function InvoicesPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
                           href={`/invoices/${inv.id}/print`}
-                          className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                          className="p-1 text-[#64748B] hover:text-[#173653] hover:bg-slate-100 rounded transition-colors"
                           title="Print A4"
                         >
                           <Printer className="w-3.5 h-3.5" />

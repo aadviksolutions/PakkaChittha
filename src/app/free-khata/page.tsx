@@ -438,18 +438,18 @@ function PersonalKhataDashboardContent() {
   return (
     <div className="space-y-6 pb-24 md:pb-12 max-w-5xl mx-auto">
       {/* 1. Top Header & Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-[#E1E7EF]">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-black text-[#071F38] tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-[#173653] tracking-tight">
               Personal Khata
             </h1>
-            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-              <Sparkles className="w-3 h-3 text-[#00B887]" />
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#006B2B] bg-[#E8F7ED] border border-[#B8E6C7] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+              <Sparkles className="w-3 h-3 text-[#008A36]" />
               <span>100% Free Forever</span>
             </span>
           </div>
-          <p className="text-xs font-medium text-slate-500 mt-1">
+          <p className="text-xs font-medium text-[#64748B] mt-1">
             Har paise ka hisaab, bilkul aasaan.
           </p>
         </div>
@@ -457,7 +457,7 @@ function PersonalKhataDashboardContent() {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/free-khata/reports"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#071F38] hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#173653] hover:bg-[#102A43] text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
           >
             <BarChart3 className="w-4 h-4 text-emerald-400" />
             <span>Reports &amp; PDF/Excel</span>
@@ -467,7 +467,7 @@ function PersonalKhataDashboardContent() {
             type="button"
             onClick={fetchDashboardData}
             title="Refresh Khata"
-            className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 bg-white border border-[#E1E7EF] text-[#64748B] hover:text-[#173653] rounded-xl hover:bg-[#F8FAFC] transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -476,9 +476,9 @@ function PersonalKhataDashboardContent() {
 
       {/* Error Notice */}
       {error && (
-        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-2xl bg-[#FFF0F0] border border-[#FFCCD2] text-[#B80012] text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-[#E00016] shrink-0" />
             <span>{error}</span>
           </div>
           <button
@@ -493,7 +493,7 @@ function PersonalKhataDashboardContent() {
       {/* 2. THE 3 MAIN DASHBOARD SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         {/* Card 1: कुल लेने वाली रकम (Amount to Receive) - GREEN */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#00B887] to-[#009E74] text-white shadow-md shadow-emerald-500/10 flex flex-col justify-between relative overflow-hidden">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#008A36] to-[#006B2B] text-white shadow-md shadow-emerald-900/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">
               {t('freeKhata.amountToReceive')}
@@ -504,7 +504,7 @@ function PersonalKhataDashboardContent() {
           </div>
 
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black tracking-tight block">
+            <span className="text-2xl sm:text-3xl font-black tracking-tight block tabular-nums">
               ₹{kpis.amountToReceive.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-emerald-100 block mt-1 font-medium">
@@ -514,7 +514,7 @@ function PersonalKhataDashboardContent() {
         </div>
 
         {/* Card 2: कुल देने वाली रकम (Amount to Pay) - RED */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md shadow-rose-500/10 flex flex-col justify-between relative overflow-hidden">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#E00016] to-[#B80012] text-white shadow-md shadow-rose-900/10 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-rose-100 uppercase tracking-wider">
               {t('freeKhata.amountToPay')}
@@ -525,7 +525,7 @@ function PersonalKhataDashboardContent() {
           </div>
 
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black tracking-tight block">
+            <span className="text-2xl sm:text-3xl font-black tracking-tight block tabular-nums">
               ₹{kpis.amountToPay.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-rose-100 block mt-1 font-medium">
@@ -535,17 +535,17 @@ function PersonalKhataDashboardContent() {
         </div>
 
         {/* Card 3: मेरी वर्तमान स्थिति (Net Position) */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between">
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E1E7EF] shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-xs font-bold text-[#64748B] uppercase tracking-wider">
               {t('freeKhata.netPosition')}
             </span>
             <span
-              className={`text-[10px] font-black px-2 py-0.5 rounded-full ${kpis.netPosition > 0
-                ? 'bg-emerald-100 text-emerald-800'
+              className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${kpis.netPosition > 0
+                ? 'bg-[#E8F7ED] text-[#006B2B] border border-[#B8E6C7]'
                 : kpis.netPosition < 0
-                  ? 'bg-rose-100 text-rose-800'
-                  : 'bg-slate-100 text-slate-700'
+                  ? 'bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2]'
+                  : 'bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF]'
                 }`}
             >
               {kpis.netPosition > 0 ? `+ ${t('freeKhata.toReceiveStatus')}` : kpis.netPosition < 0 ? `- ${t('freeKhata.toPayStatus')}` : t('freeKhata.settled')}
@@ -554,18 +554,18 @@ function PersonalKhataDashboardContent() {
 
           <div className="mt-3">
             <span
-              className={`text-2xl sm:text-3xl font-black tracking-tight block ${kpis.netPosition > 0
-                ? 'text-emerald-600'
+              className={`text-2xl sm:text-3xl font-black tracking-tight block tabular-nums ${kpis.netPosition > 0
+                ? 'text-[#008A36]'
                 : kpis.netPosition < 0
-                  ? 'text-rose-600'
-                  : 'text-slate-700'
+                  ? 'text-[#E00016]'
+                  : 'text-[#172B4D]'
                 }`}
             >
               {kpis.netPosition > 0 && '+ '}
               {kpis.netPosition < 0 && '- '}₹
               {Math.abs(kpis.netPosition).toLocaleString('en-IN')}
             </span>
-            <span className="text-[11px] text-slate-600 block mt-1 font-medium leading-relaxed">
+            <span className="text-[11px] text-[#64748B] block mt-1 font-medium leading-relaxed">
               {kpis.netPosition > 0
                 ? (isHi ? `आपको कुल ${Math.abs(kpis.netPosition).toLocaleString('en-IN')} रुपये अधिक मिलने बाकी हैं।` : `You have ₹${Math.abs(kpis.netPosition).toLocaleString('en-IN')} more to receive in total.`)
                 : kpis.netPosition < 0
@@ -577,41 +577,41 @@ function PersonalKhataDashboardContent() {
       </div>
 
       {/* 3. HISTORICAL CUMULATIVE TOTALS */}
-      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-        <span className="text-[10.5px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
+      <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E1E7EF]">
+        <span className="text-[10.5px] font-black uppercase tracking-wider text-[#64748B] block mb-2.5">
           {t('freeKhata.totalSummary')}
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountGiven')}</span>
-            <strong className="text-sm font-black text-[#071F38] block mt-0.5">
+          <div className="p-2.5 bg-white rounded-xl border border-[#E1E7EF] shadow-2xs">
+            <span className="text-[10.5px] text-[#64748B] block">{t('freeKhata.totalAmountGiven')}</span>
+            <strong className="text-sm font-black text-[#173653] block mt-0.5 tabular-nums">
               ₹{kpis.totalGiven.toLocaleString('en-IN')}
             </strong>
-            <span className="text-[9.5px] text-slate-400 block mt-0.5">Original Lent</span>
+            <span className="text-[9.5px] text-[#64748B] block mt-0.5">Original Lent</span>
           </div>
 
-          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountTaken')}</span>
-            <strong className="text-sm font-black text-[#071F38] block mt-0.5">
+          <div className="p-2.5 bg-white rounded-xl border border-[#E1E7EF] shadow-2xs">
+            <span className="text-[10.5px] text-[#64748B] block">{t('freeKhata.totalAmountTaken')}</span>
+            <strong className="text-sm font-black text-[#173653] block mt-0.5 tabular-nums">
               ₹{kpis.totalTaken.toLocaleString('en-IN')}
             </strong>
-            <span className="text-[9.5px] text-slate-400 block mt-0.5">Original Borrowed</span>
+            <span className="text-[9.5px] text-[#64748B] block mt-0.5">Original Borrowed</span>
           </div>
 
-          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountReceivedBack')}</span>
-            <strong className="text-sm font-black text-emerald-600 block mt-0.5">
+          <div className="p-2.5 bg-white rounded-xl border border-[#E1E7EF] shadow-2xs">
+            <span className="text-[10.5px] text-[#64748B] block">{t('freeKhata.totalAmountReceivedBack')}</span>
+            <strong className="text-sm font-black text-[#008A36] block mt-0.5 tabular-nums">
               ₹{kpis.totalReceivedBack.toLocaleString('en-IN')}
             </strong>
-            <span className="text-[9.5px] text-slate-400 block mt-0.5">Repayments Received</span>
+            <span className="text-[9.5px] text-[#64748B] block mt-0.5">Repayments Received</span>
           </div>
 
-          <div className="p-2.5 bg-white rounded-xl border border-slate-200/60 shadow-2xs">
-            <span className="text-[10.5px] text-slate-500 block">{t('freeKhata.totalAmountReturned')}</span>
-            <strong className="text-sm font-black text-rose-600 block mt-0.5">
+          <div className="p-2.5 bg-white rounded-xl border border-[#E1E7EF] shadow-2xs">
+            <span className="text-[10.5px] text-[#64748B] block">{t('freeKhata.totalAmountReturned')}</span>
+            <strong className="text-sm font-black text-[#E00016] block mt-0.5 tabular-nums">
               ₹{kpis.totalReturned.toLocaleString('en-IN')}
             </strong>
-            <span className="text-[9.5px] text-slate-400 block mt-0.5">Repayments Returned</span>
+            <span className="text-[9.5px] text-[#64748B] block mt-0.5">Repayments Returned</span>
           </div>
         </div>
       </div>
@@ -622,7 +622,7 @@ function PersonalKhataDashboardContent() {
         <button
           type="button"
           onClick={handleOpenGave}
-          className="p-4 sm:p-5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98"
+          className="p-4 sm:p-5 rounded-2xl bg-[#E00016] hover:bg-[#B80012] text-white shadow-md shadow-red-700/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98 min-h-[56px]"
         >
           <div className="text-left">
             <span className="text-base sm:text-lg font-black block">
@@ -641,7 +641,7 @@ function PersonalKhataDashboardContent() {
         <button
           type="button"
           onClick={handleOpenReceived}
-          className="p-4 sm:p-5 rounded-2xl bg-[#00B887] hover:bg-[#009E74] text-white shadow-md shadow-emerald-600/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98"
+          className="p-4 sm:p-5 rounded-2xl bg-[#008A36] hover:bg-[#006B2B] text-white shadow-md shadow-emerald-700/20 flex items-center justify-between group transition-all cursor-pointer active:scale-98 min-h-[56px]"
         >
           <div className="text-left">
             <span className="text-base sm:text-lg font-black block">
@@ -659,12 +659,12 @@ function PersonalKhataDashboardContent() {
 
       {/* 5. PAYMENT MODE SUMMARY BREAKDOWN (Additional Feature) */}
       {data?.modeSummaries && data.modeSummaries.length > 0 && (
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+        <div className="p-3.5 bg-white rounded-2xl border border-[#E1E7EF] shadow-2xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E1E7EF]">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#64748B]">
               माध्यम अनुसार हिसाब (Payment Mode Breakdown)
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-[#64748B]">
               5 Modes Tracked
             </span>
           </div>
@@ -673,20 +673,20 @@ function PersonalKhataDashboardContent() {
             {data.modeSummaries.map((m) => (
               <div
                 key={m.mode}
-                className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between"
+                className="p-2.5 rounded-xl bg-[#F8FAFC] border border-[#E1E7EF] flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 text-[11px]">{m.label.split(' ')[0]}</span>
-                  <span className="text-[10px] text-slate-400">{m.count} tx</span>
+                  <span className="font-bold text-[#172B4D] text-[11px]">{m.label.split(' ')[0]}</span>
+                  <span className="text-[10px] text-[#64748B]">{m.count} tx</span>
                 </div>
                 <div className="mt-2 space-y-0.5">
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-slate-400">दी:</span>
-                    <strong className="text-rose-600">₹{m.totalGiven.toLocaleString('en-IN')}</strong>
+                    <span className="text-[#64748B]">दी:</span>
+                    <strong className="text-[#E00016] tabular-nums">₹{m.totalGiven.toLocaleString('en-IN')}</strong>
                   </div>
                   <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-slate-400">मिली:</span>
-                    <strong className="text-emerald-600">₹{m.totalReceived.toLocaleString('en-IN')}</strong>
+                    <span className="text-[#64748B]">मिली:</span>
+                    <strong className="text-[#008A36] tabular-nums">₹{m.totalReceived.toLocaleString('en-IN')}</strong>
                   </div>
                 </div>
               </div>
@@ -696,13 +696,13 @@ function PersonalKhataDashboardContent() {
       )}
 
       {/* 6. NAVIGATION TABS */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center gap-2 border-b border-[#E1E7EF] pb-2">
         <button
           type="button"
           onClick={() => setActiveTab('CONTACTS')}
           className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'CONTACTS'
-            ? 'bg-[#071F38] text-white shadow-xs'
-            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            ? 'bg-[#173653] text-white shadow-xs'
+            : 'bg-white text-[#64748B] hover:bg-[#F8FAFC] border border-[#E1E7EF]'
             }`}
         >
           {t('freeKhata.contacts')} ({data?.contacts?.length || 0})
@@ -712,8 +712,8 @@ function PersonalKhataDashboardContent() {
           type="button"
           onClick={() => setActiveTab('TRANSACTIONS')}
           className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'TRANSACTIONS'
-            ? 'bg-[#071F38] text-white shadow-xs'
-            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            ? 'bg-[#173653] text-white shadow-xs'
+            : 'bg-white text-[#64748B] hover:bg-[#F8FAFC] border border-[#E1E7EF]'
             }`}
         >
           {t('freeKhata.transactions')} ({data?.recentTransactions?.length || 0})
@@ -724,8 +724,8 @@ function PersonalKhataDashboardContent() {
             type="button"
             onClick={() => setActiveTab('OVERDUE')}
             className={`py-2 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'OVERDUE'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+              ? 'bg-[#E00016] text-white shadow-xs'
+              : 'bg-[#FFF0F0] text-[#B80012] hover:bg-rose-100 border border-[#FFCCD2]'
               }`}
           >
             {t('freeKhata.overdue')} ({kpis.overdueCount})
@@ -739,13 +739,13 @@ function PersonalKhataDashboardContent() {
           {/* Controls: Search, Filter, Sort */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('freeKhata.searchPlaceholder')}
-                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0]"
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#E1E7EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE]"
               />
             </div>
 
@@ -754,7 +754,7 @@ function PersonalKhataDashboardContent() {
               <button
                 type="button"
                 onClick={() => setAddContactModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#008A36] hover:bg-[#006B2B] text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>{isHi ? '+ नया संपर्क जोड़ें' : '+ Add Contact'}</span>
@@ -764,7 +764,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={contactStatusFilter}
                 onChange={(e) => setContactStatusFilter(e.target.value as any)}
-                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
+                className="text-xs p-2 bg-white border border-[#E1E7EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE] font-medium text-[#172B4D]"
               >
                 <option value="ALL">{isHi ? 'सभी संपर्क (All)' : 'All Contacts'}</option>
                 <option value="TO_RECEIVE">{isHi ? 'मुझे लेने हैं (Receivable)' : 'To Receive'}</option>
@@ -776,7 +776,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={contactSortBy}
                 onChange={(e) => setContactSortBy(e.target.value as any)}
-                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
+                className="text-xs p-2 bg-white border border-[#E1E7EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE] font-medium text-[#172B4D]"
               >
                 <option value="RECENT">{isHi ? 'हाल की गतिविधि' : 'Recent Activity'}</option>
                 <option value="RECEIVE_HIGH">{isHi ? 'सबसे अधिक लेने हैं' : 'Highest to Receive'}</option>
@@ -788,16 +788,16 @@ function PersonalKhataDashboardContent() {
 
           {/* Contact Cards List */}
           {filteredContacts.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
+            <div className="p-8 text-center bg-white rounded-2xl border border-[#E1E7EF] text-xs text-[#64748B]">
               <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="font-bold text-slate-700">{t('freeKhata.noContacts')}</p>
-              <p className="mt-1 text-slate-400">
+              <p className="font-bold text-[#172B4D]">{t('freeKhata.noContacts')}</p>
+              <p className="mt-1 text-[#64748B]">
                 {isHi ? 'सीधे नया संपर्क जोड़ें या ऊपर "मैंने रकम दी" / "मुझे रकम मिली" पर क्लिक करें।' : 'Directly add a new contact or click "I Gave Money" / "I Received Money" above.'}
               </p>
               <button
                 type="button"
                 onClick={() => setAddContactModalOpen(true)}
-                className="mt-3.5 inline-flex items-center gap-1.5 px-4 py-2 bg-[#00B887] hover:bg-[#009E74] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                className="mt-3.5 inline-flex items-center gap-1.5 px-4 py-2 bg-[#008A36] hover:bg-[#006B2B] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>{isHi ? '+ नया संपर्क जोड़ें (Add Contact)' : '+ Add New Contact'}</span>
@@ -821,7 +821,7 @@ function PersonalKhataDashboardContent() {
                 return (
                   <div
                     key={c.id}
-                    className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-slate-300 transition-all shadow-xs flex flex-col justify-between"
+                    className="p-4 bg-white rounded-2xl border border-[#E1E7EF] hover:border-[#2878CE]/40 transition-all shadow-xs flex flex-col justify-between"
                   >
                     <div>
                       {/* Top Row: Name, Phone & Status Badge */}
@@ -829,13 +829,13 @@ function PersonalKhataDashboardContent() {
                         <div>
                           <Link
                             href={`/free-khata/person/${c.id}`}
-                            className="font-bold text-sm text-[#102A43] hover:text-[#1761A0] transition-colors"
+                            className="font-bold text-sm text-[#173653] hover:text-[#2878CE] transition-colors"
                           >
                             {c.name}
                           </Link>
                           {c.phone && (
-                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                              <Phone className="w-3 h-3 text-slate-400" />
+                            <span className="text-[11px] text-[#64748B] flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-[#64748B]" />
                               <span>{c.phone}</span>
                             </span>
                           )}
@@ -844,10 +844,10 @@ function PersonalKhataDashboardContent() {
                         {/* Status Badge */}
                         <span
                           className={`text-[10px] font-black px-2.5 py-1 rounded-full ${c.status === 'TO_RECEIVE'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-[#E8F7ED] text-[#006B2B] border border-[#B8E6C7]'
                             : c.status === 'TO_PAY'
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2]'
+                              : 'bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF]'
                             }`}
                         >
                           {badgeLabel}
@@ -855,16 +855,16 @@ function PersonalKhataDashboardContent() {
                       </div>
 
                       {/* Balances Display */}
-                      <div className="mt-3.5 p-3 rounded-xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                      <div className="mt-3.5 p-3 rounded-xl bg-[#F8FAFC] border border-[#E1E7EF] grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-500 block">{t('freeKhata.amountToReceive')}:</span>
-                          <strong className="text-xs font-black text-emerald-700 block mt-0.5">
+                          <span className="text-[10px] text-[#64748B] block">{t('freeKhata.amountToReceive')}:</span>
+                          <strong className="text-xs font-black text-[#008A36] block mt-0.5 tabular-nums">
                             ₹{c.amountToReceive.toLocaleString('en-IN')}
                           </strong>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-500 block">{t('freeKhata.amountToPay')}:</span>
-                          <strong className="text-xs font-black text-rose-700 block mt-0.5">
+                          <span className="text-[10px] text-[#64748B] block">{t('freeKhata.amountToPay')}:</span>
+                          <strong className="text-xs font-black text-[#E00016] block mt-0.5 tabular-nums">
                             ₹{c.amountToPay.toLocaleString('en-IN')}
                           </strong>
                         </div>
@@ -873,9 +873,9 @@ function PersonalKhataDashboardContent() {
                       {/* Net Position if both exist */}
                       {isToReceive && isToPay && (
                         <div className="mt-1.5 px-1 flex items-center justify-between text-[10.5px]">
-                          <span className="text-slate-500">{t('freeKhata.netPosition')}:</span>
+                          <span className="text-[#64748B]">{t('freeKhata.netPosition')}:</span>
                           <strong
-                            className={`font-black ${c.netPosition >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                            className={`font-black tabular-nums ${c.netPosition >= 0 ? 'text-[#008A36]' : 'text-[#E00016]'
                               }`}
                           >
                             {c.netPosition >= 0 ? '+ ' : '- '}₹
@@ -886,14 +886,14 @@ function PersonalKhataDashboardContent() {
                     </div>
 
                     {/* Bottom Actions */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <div className="mt-4 pt-3 border-t border-[#E1E7EF] flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         {c.phone && (c.amountToReceive > 0 || c.amountToPay > 0) && (
                           <button
                             type="button"
                             onClick={() => handleOpenContactWhatsApp(c)}
                             title={isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}
-                            className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                            className="p-1.5 bg-[#E8F7ED] text-[#006B2B] border border-[#B8E6C7] hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                           >
                             <MessageSquare className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline text-[10.5px]">Reminder</span>
@@ -903,7 +903,7 @@ function PersonalKhataDashboardContent() {
                           type="button"
                           onClick={() => setEditingContact(c)}
                           title={isHi ? 'संपर्क संपादित करें' : 'Edit Contact'}
-                          className="p-1.5 bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -912,18 +912,18 @@ function PersonalKhataDashboardContent() {
                           disabled={deletingId === c.id}
                           onClick={() => handleDeleteContact(c)}
                           title={isHi ? 'संपर्क हटाएं' : 'Delete Contact'}
-                          className="p-1.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                          className="p-1.5 bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2] hover:bg-rose-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-[#64748B]">
                           {c.transactionCount} {isHi ? 'लेन-देन' : 'entries'}
                         </span>
                       </div>
 
                       <Link
                         href={`/free-khata/person/${c.id}`}
-                        className="px-3 py-1.5 bg-[#071F38] hover:bg-slate-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
+                        className="px-3 py-1.5 bg-[#173653] hover:bg-[#102A43] text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors"
                       >
                         <span>{isHi ? 'खाता देखें' : 'View Ledger'}</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -942,13 +942,13 @@ function PersonalKhataDashboardContent() {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-[#64748B] absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="खोजें (व्यक्ति, विवरण, आदि)..."
-                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0]"
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#E1E7EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE]"
               />
             </div>
 
@@ -956,7 +956,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={modeFilter}
                 onChange={(e) => setModeFilter(e.target.value)}
-                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
+                className="text-xs p-2 bg-white border border-[#E1E7EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE] font-medium text-[#172B4D]"
               >
                 <option value="ALL">सभी माध्यम (All Modes)</option>
                 <option value="CASH">Cash (नकद)</option>
@@ -968,15 +968,15 @@ function PersonalKhataDashboardContent() {
 
               <a
                 href="/api/free-khata/reports/export?format=xlsx"
-                className="p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                className="p-2 bg-[#E8F7ED] border border-[#B8E6C7] text-[#006B2B] hover:bg-emerald-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
                 title="Download Professional Excel (.xlsx) Workbook"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                <FileSpreadsheet className="w-4 h-4 text-[#008A36]" />
                 <span className="hidden sm:inline">Excel (.xlsx)</span>
               </a>
               <Link
                 href="/free-khata/reports"
-                className="p-2 bg-[#071F38] text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+                className="p-2 bg-[#173653] text-white hover:bg-[#102A43] rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
                 title="Open Consolidated Reports, PDF & Share"
               >
                 <BarChart3 className="w-4 h-4 text-emerald-400" />
@@ -985,32 +985,32 @@ function PersonalKhataDashboardContent() {
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="p-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="p-2 bg-white border border-[#E1E7EF] text-[#172B4D] hover:bg-[#F8FAFC] rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Quick CSV Export"
               >
-                <FileSpreadsheet className="w-4 h-4 text-slate-600" />
+                <FileSpreadsheet className="w-4 h-4 text-[#64748B]" />
                 <span className="hidden sm:inline">CSV</span>
               </button>
             </div>
           </div>
 
           {filteredTransactions.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-xs text-slate-500">
+            <div className="p-8 text-center bg-white rounded-2xl border border-[#E1E7EF] text-xs text-[#64748B]">
               {t('freeKhata.noTransactions')}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
+            <div className="bg-white rounded-2xl border border-[#E1E7EF] overflow-hidden shadow-xs divide-y divide-[#E1E7EF]">
               {filteredTransactions.map((tx) => {
                 const isGave = tx.type === 'GAVE';
 
                 return (
                   <div
                     key={tx.id}
-                    className="p-3.5 sm:p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3 text-xs"
+                    className="p-3.5 sm:p-4 hover:bg-[#F8FAFC] transition-colors flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGave ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGave ? 'bg-[#FFF0F0] text-[#B80012]' : 'bg-[#E8F7ED] text-[#006B2B]'
                           }`}
                       >
                         {isGave ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
@@ -1020,7 +1020,7 @@ function PersonalKhataDashboardContent() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/free-khata/person/${tx.contactId}`}
-                            className="font-bold text-sm text-[#102A43] hover:text-[#1761A0]"
+                            className="font-bold text-sm text-[#173653] hover:text-[#2878CE]"
                           >
                             {tx.contactName}
                           </Link>
@@ -1036,7 +1036,7 @@ function PersonalKhataDashboardContent() {
                           </span>
                         </div>
 
-                        <span className="text-[11px] text-slate-500 block mt-0.5">
+                        <span className="text-[11px] text-[#64748B] block mt-0.5">
                           {formatDate(tx.date)}
                           {tx.description ? ` • ${tx.description}` : ''}
                           {tx.paymentRef ? ` • Ref: ${tx.paymentRef}` : ''}
@@ -1046,7 +1046,7 @@ function PersonalKhataDashboardContent() {
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`font-black text-sm block ${isGave ? 'text-rose-600' : 'text-emerald-600'
+                        className={`font-black text-sm block tabular-nums ${isGave ? 'text-[#E00016]' : 'text-[#008A36]'
                           }`}
                       >
                         {isGave ? '- ' : '+ '}₹{tx.amount.toLocaleString('en-IN')}
@@ -1055,10 +1055,10 @@ function PersonalKhataDashboardContent() {
                       <div className="flex items-center justify-end gap-1.5 mt-0.5">
                         <span
                           className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${tx.status === 'SETTLED'
-                            ? 'bg-slate-100 text-slate-600'
+                            ? 'bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF]'
                             : tx.status === 'PARTIAL'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                              : 'bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2]'
                             }`}
                         >
                           {tx.status === 'SETTLED' ? (isHi ? 'हिसाब पूरा' : 'Settled') : tx.status === 'PARTIAL' ? (isHi ? 'आंशिक' : 'Partial') : (isHi ? 'बाकी' : 'Pending')}
@@ -1068,7 +1068,7 @@ function PersonalKhataDashboardContent() {
                           <button
                             type="button"
                             onClick={() => handleOpenRepay(tx)}
-                            className="text-[10px] font-bold text-[#1761A0] hover:underline cursor-pointer ml-1"
+                            className="text-[10px] font-bold text-[#2878CE] hover:underline cursor-pointer ml-1"
                           >
                             {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
                           </button>
@@ -1077,7 +1077,7 @@ function PersonalKhataDashboardContent() {
                           type="button"
                           onClick={() => handleOpenEditTx(tx)}
                           title={isHi ? 'संपादित करें' : 'Edit Entry'}
-                          className="p-1 text-slate-500 hover:text-[#071F38] hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
+                          className="p-1 text-[#64748B] hover:text-[#173653] hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -1086,7 +1086,7 @@ function PersonalKhataDashboardContent() {
                           disabled={deletingId === tx.id}
                           onClick={() => handleDeleteTx(tx)}
                           title={isHi ? 'हटाएं' : 'Delete Entry'}
-                          className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md cursor-pointer transition-colors disabled:opacity-50"
+                          className="p-1 text-[#E00016] hover:text-[#B80012] hover:bg-[#FFF0F0] rounded-md cursor-pointer transition-colors disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1103,8 +1103,8 @@ function PersonalKhataDashboardContent() {
       {/* 9. TAB CONTENT: OVERDUE (समय से बाकी) */}
       {activeTab === 'OVERDUE' && (
         <div className="space-y-3">
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-rose-600 shrink-0" />
+          <div className="p-3 bg-[#FFF0F0] border border-[#FFCCD2] rounded-xl text-xs text-[#B80012] flex items-center gap-2">
+            <Clock className="w-4 h-4 text-[#E00016] shrink-0" />
             <span>
               {isHi
                 ? 'नीचे दी गई प्रविष्टियों की देय तिथि (Due Date) समाप्त हो चुकी है और रकम अभी बाकी है।'
@@ -1112,29 +1112,29 @@ function PersonalKhataDashboardContent() {
             </span>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#E1E7EF] divide-y divide-[#E1E7EF] overflow-hidden">
             {(data?.overdueEntries || []).map((o) => (
               <div key={o.id} className="p-4 flex items-center justify-between gap-3 text-xs">
                 <div>
                   <Link
                     href={`/free-khata/person/${o.contactId}`}
-                    className="font-bold text-sm text-[#102A43] hover:text-[#1761A0]"
+                    className="font-bold text-sm text-[#173653] hover:text-[#2878CE]"
                   >
                     {o.contactName}
                   </Link>
-                  <span className="text-rose-600 text-[11px] block mt-0.5 font-semibold">
+                  <span className="text-[#E00016] text-[11px] block mt-0.5 font-semibold">
                     {o.daysOverdue} {isHi ? 'दिन पहले देय थी' : 'days overdue'} (Due: {formatDate(o.dueDate)})
                   </span>
                 </div>
 
                 <div className="text-right">
-                  <span className="font-black text-sm text-rose-600 block">
+                  <span className="font-black text-sm text-[#E00016] block tabular-nums">
                     ₹{o.balanceAmount.toLocaleString('en-IN')}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleOpenWhatsApp(o)}
-                    className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                    className="mt-1 px-2.5 py-1 bg-[#008A36] hover:bg-[#006B2B] text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
                   >
                     <MessageSquare className="w-3 h-3" />
                     <span>{isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}</span>
