@@ -186,6 +186,9 @@ export function LendenFrameIntro({ onComplete, forcePlay = false }: LendenFrameI
   }, []);
 
   useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
     // 1. Accessibility: Skip intro immediately if user prefers reduced motion
     if (typeof window !== 'undefined') {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -209,11 +212,6 @@ export function LendenFrameIntro({ onComplete, forcePlay = false }: LendenFrameI
       } catch {
         // Continue if storage is restricted
       }
-    }
-
-    // 3. Lock background scrolling while intro is visible
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'hidden';
     }
 
     // 4. Pre-fill canvas with white immediately

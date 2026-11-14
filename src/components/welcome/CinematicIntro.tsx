@@ -26,6 +26,9 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
   // Determine whether the intro should play on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
 
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -104,11 +107,6 @@ export function CinematicIntro({ onComplete, forcePlay = false }: CinematicIntro
 
   useEffect(() => {
     if (!shouldRender || isDismissed) return;
-
-    // Lock background scrolling while intro is active
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = 'hidden';
-    }
 
     const video = videoRef.current;
     if (!video) return;
