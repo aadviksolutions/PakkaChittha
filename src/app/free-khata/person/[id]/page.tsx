@@ -904,9 +904,9 @@ export default function PersonLedgerPage({
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 pl-2">
                     <span
-                      className={`font-black text-sm block ${isOut ? 'text-rose-600' : 'text-emerald-600'
+                      className={`font-black text-sm sm:text-base block tabular-nums whitespace-nowrap ${isOut ? 'text-rose-600' : 'text-emerald-600'
                         }`}
                     >
                       {isOut ? '- ' : '+ '}₹{act.amount.toLocaleString('en-IN')}

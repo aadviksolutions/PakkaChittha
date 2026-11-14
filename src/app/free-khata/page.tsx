@@ -1006,9 +1006,9 @@ function PersonalKhataDashboardContent() {
                 return (
                   <div
                     key={tx.id}
-                    className="p-3.5 sm:p-4 hover:bg-[#F8FAFC] transition-colors flex items-center justify-between gap-3 text-xs"
+                    className="p-3.5 sm:p-4 hover:bg-[#F8FAFC] transition-colors flex items-start justify-between gap-3 text-xs"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isGave ? 'bg-[#FFF0F0] text-[#B80012]' : 'bg-[#E8F7ED] text-[#006B2B]'
                           }`}
@@ -1016,16 +1016,16 @@ function PersonalKhataDashboardContent() {
                         {isGave ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
                       </div>
 
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <Link
                             href={`/free-khata/person/${tx.contactId}`}
-                            className="font-bold text-sm text-[#173653] hover:text-[#2878CE]"
+                            className="font-bold text-sm text-[#173653] hover:text-[#2878CE] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none"
                           >
                             {tx.contactName}
                           </Link>
                           <span
-                            className={`text-[9.5px] font-bold px-2 py-0.5 rounded ${tx.paymentMode === 'UPI'
+                            className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0 ${tx.paymentMode === 'UPI'
                               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                               : tx.paymentMode === 'CASH'
                                 ? 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -1036,61 +1036,63 @@ function PersonalKhataDashboardContent() {
                           </span>
                         </div>
 
-                        <span className="text-[11px] text-[#64748B] block mt-0.5">
+                        <span className="text-[11px] text-[#64748B] block mt-0.5 break-words-safe">
                           {formatDate(tx.date)}
                           {tx.description ? ` • ${tx.description}` : ''}
                           {tx.paymentRef ? ` • Ref: ${tx.paymentRef}` : ''}
                         </span>
+
+                        {/* Status Chip & Action Buttons placed neatly in flex-wrap under details */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          <span
+                            className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded shrink-0 ${tx.status === 'SETTLED'
+                              ? 'bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF]'
+                              : tx.status === 'PARTIAL'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2]'
+                              }`}
+                          >
+                            {tx.status === 'SETTLED' ? (isHi ? 'हिसाब पूरा' : 'Settled') : tx.status === 'PARTIAL' ? (isHi ? 'आंशिक' : 'Partial') : (isHi ? 'बाकी' : 'Pending')}
+                          </span>
+
+                          {tx.balanceAmount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRepay(tx)}
+                              className="text-[10px] sm:text-[10.5px] font-bold text-[#2878CE] hover:underline cursor-pointer"
+                            >
+                              {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTx(tx)}
+                            title={isHi ? 'संपादित करें' : 'Edit Entry'}
+                            className="p-1 text-[#64748B] hover:text-[#173653] hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deletingId === tx.id}
+                            onClick={() => handleDeleteTx(tx)}
+                            title={isHi ? 'हटाएं' : 'Delete Entry'}
+                            className="p-1 text-[#E00016] hover:text-[#B80012] hover:bg-[#FFF0F0] rounded-md cursor-pointer transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
+                    {/* Transaction Amount - strictly isolated, right-aligned, whitespace-nowrap, never clipped */}
+                    <div className="text-right shrink-0 pl-2">
                       <span
-                        className={`font-black text-sm block tabular-nums ${isGave ? 'text-[#E00016]' : 'text-[#008A36]'
+                        className={`font-black text-sm sm:text-base block tabular-nums whitespace-nowrap ${isGave ? 'text-[#E00016]' : 'text-[#008A36]'
                           }`}
                       >
                         {isGave ? '- ' : '+ '}₹{tx.amount.toLocaleString('en-IN')}
                       </span>
-
-                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                        <span
-                          className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${tx.status === 'SETTLED'
-                            ? 'bg-[#F8FAFC] text-[#64748B] border border-[#E1E7EF]'
-                            : tx.status === 'PARTIAL'
-                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                              : 'bg-[#FFF0F0] text-[#B80012] border border-[#FFCCD2]'
-                            }`}
-                        >
-                          {tx.status === 'SETTLED' ? (isHi ? 'हिसाब पूरा' : 'Settled') : tx.status === 'PARTIAL' ? (isHi ? 'आंशिक' : 'Partial') : (isHi ? 'बाकी' : 'Pending')}
-                        </span>
-
-                        {tx.balanceAmount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRepay(tx)}
-                            className="text-[10px] font-bold text-[#2878CE] hover:underline cursor-pointer ml-1"
-                          >
-                            {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditTx(tx)}
-                          title={isHi ? 'संपादित करें' : 'Edit Entry'}
-                          className="p-1 text-[#64748B] hover:text-[#173653] hover:bg-slate-100 rounded-md cursor-pointer transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={deletingId === tx.id}
-                          onClick={() => handleDeleteTx(tx)}
-                          title={isHi ? 'हटाएं' : 'Delete Entry'}
-                          className="p-1 text-[#E00016] hover:text-[#B80012] hover:bg-[#FFF0F0] rounded-md cursor-pointer transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
                     </div>
                   </div>
                 );
@@ -1114,31 +1116,31 @@ function PersonalKhataDashboardContent() {
 
           <div className="bg-white rounded-2xl border border-[#E1E7EF] divide-y divide-[#E1E7EF] overflow-hidden">
             {(data?.overdueEntries || []).map((o) => (
-              <div key={o.id} className="p-4 flex items-center justify-between gap-3 text-xs">
-                <div>
+              <div key={o.id} className="p-3.5 sm:p-4 flex items-start justify-between gap-3 text-xs">
+                <div className="min-w-0 flex-1">
                   <Link
                     href={`/free-khata/person/${o.contactId}`}
-                    className="font-bold text-sm text-[#173653] hover:text-[#2878CE]"
+                    className="font-bold text-sm text-[#173653] hover:text-[#2878CE] truncate block"
                   >
                     {o.contactName}
                   </Link>
-                  <span className="text-[#E00016] text-[11px] block mt-0.5 font-semibold">
+                  <span className="text-[#E00016] text-[11px] block mt-0.5 font-semibold break-words-safe">
                     {o.daysOverdue} {isHi ? 'दिन पहले देय थी' : 'days overdue'} (Due: {formatDate(o.dueDate)})
-                  </span>
-                </div>
-
-                <div className="text-right">
-                  <span className="font-black text-sm text-[#E00016] block tabular-nums">
-                    ₹{o.balanceAmount.toLocaleString('en-IN')}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleOpenWhatsApp(o)}
-                    className="mt-1 px-2.5 py-1 bg-[#008A36] hover:bg-[#006B2B] text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                    className="mt-2 px-2.5 py-1 bg-[#008A36] hover:bg-[#006B2B] text-white rounded-lg text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
                   >
                     <MessageSquare className="w-3 h-3" />
                     <span>{isHi ? 'WhatsApp तकादा' : 'WhatsApp Reminder'}</span>
                   </button>
+                </div>
+
+                <div className="text-right shrink-0 pl-2">
+                  <span className="font-black text-sm sm:text-base text-[#E00016] block tabular-nums whitespace-nowrap">
+                    ₹{o.balanceAmount.toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
             ))}
