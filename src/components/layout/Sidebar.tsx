@@ -50,6 +50,7 @@ import {
   ClipboardList,
   Wallet,
   Percent,
+  Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -90,6 +91,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ClipboardList,
   Wallet,
   Percent,
+  Sparkles,
 };
 
 import { useEntitlements } from '@/hooks/useEntitlements';
@@ -209,7 +211,22 @@ export function Sidebar({
 
   // Construct visible navigation groups based on current path, plan and role
   const isGharKharcha = pathname.startsWith('/ghar-kharcha');
+  const isFreeKhataMode = pathname.startsWith('/free-khata') || isFreeKhata;
   const isAccountantWorkspace = pathname.startsWith('/accountant') && canAccountantErp;
+
+  const filteredHouseholdItems = HOUSEHOLD_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
+    if (item.id === 'business-workspace-switch') {
+      return !isFreeKhata && Boolean(activeBusiness);
+    }
+    return true;
+  });
+
+  const filteredFreeKhataItems = FREE_KHATA_NAVIGATION_ITEMS.filter((item: NavigationItem) => {
+    if (item.id === 'business-workspace-switch') {
+      return !isFreeKhata && Boolean(activeBusiness);
+    }
+    return true;
+  });
 
   let visibleGroups;
   if (isSuperAdmin) {
@@ -223,10 +240,10 @@ export function Sidebar({
         scope: 'BUSINESS_WORKSPACE' as const,
         description: 'Household budget and expense tracking',
         badge: '100% Free',
-        items: HOUSEHOLD_NAVIGATION_ITEMS,
+        items: filteredHouseholdItems,
       },
     ];
-  } else if (isFreeKhata) {
+  } else if (isFreeKhataMode) {
     visibleGroups = [
       {
         id: 'free_khata_group',
@@ -234,7 +251,7 @@ export function Sidebar({
         scope: 'BUSINESS_WORKSPACE' as const,
         description: 'Personal ledger and WhatsApp reminders',
         badge: '100% Free',
-        items: FREE_KHATA_NAVIGATION_ITEMS,
+        items: filteredFreeKhataItems,
       },
     ];
   } else if (isAccountantWorkspace) {
@@ -447,56 +464,106 @@ export function Sidebar({
         {!isCollapsed && (
           <div className="p-3 border-t border-[#102A43] bg-[#071D35] shrink-0">
             <div className="p-2.5 rounded-xl bg-[#102A43] border border-[#1761A0]/40 shadow-xs">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                  {isSuperAdmin ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-                  ) : (
-                    <Crown className="w-3.5 h-3.5 text-amber-400" />
-                  )}
-                  {isSuperAdmin ? 'Super Admin' : planName}
-                </span>
-                <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${isSuperAdmin
-                    ? 'text-purple-300 bg-purple-900/60 border-purple-700'
-                    : isExpired
-                      ? 'text-rose-300 bg-rose-900/60 border-rose-700'
-                      : isTrial
-                        ? 'text-blue-300 bg-blue-900/60 border-blue-700'
-                        : 'text-emerald-300 bg-emerald-900/60 border-emerald-700'
-                  }`}>
-                  {isSuperAdmin ? 'ROOT ACCESS' : isExpired ? 'EXPIRED' : planStatus}
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-300 font-medium leading-tight mb-2">
-                {isSuperAdmin ? 'Platform Management & System Controls' : displayText}
-              </p>
-              {isSuperAdmin ? (
-                <Link
-                  href="/platform-admin"
-                  onClick={onCloseMobile}
-                  className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
-                >
-                  Open Control Center
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              ) : erpRole === 'ACCOUNTANT' ? (
-                <Link
-                  href="/accountant/businesses"
-                  onClick={onCloseMobile}
-                  className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
-                >
-                  Owner-Managed Plan · Switch Client
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
+              {isFreeKhataMode ? (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      Personal Khata
+                    </span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase text-emerald-300 bg-emerald-900/60 border-emerald-700">
+                      100% FREE
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-medium leading-tight mb-2">
+                    हर पैसे का हिसाब, बिल्कुल आसान। Lifetime free ledger.
+                  </p>
+                  <Link
+                    href="/free-khata/reports"
+                    onClick={onCloseMobile}
+                    className="text-[10px] font-semibold text-emerald-300 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    Reports &amp; PDF/Excel
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </>
+              ) : isGharKharcha ? (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                      <Home className="w-3.5 h-3.5 text-emerald-400" />
+                      Ghar Kharcha
+                    </span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase text-emerald-300 bg-emerald-900/60 border-emerald-700">
+                      100% FREE
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-medium leading-tight mb-2">
+                    Household budget, expenses and member splits.
+                  </p>
+                  <Link
+                    href="/ghar-kharcha/reports"
+                    onClick={onCloseMobile}
+                    className="text-[10px] font-semibold text-emerald-300 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    View Household Reports
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </>
               ) : (
-                <Link
-                  href="/subscription"
-                  onClick={onCloseMobile}
-                  className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
-                >
-                  {isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                      {isSuperAdmin ? (
+                        <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                      ) : (
+                        <Crown className="w-3.5 h-3.5 text-amber-400" />
+                      )}
+                      {isSuperAdmin ? 'Super Admin' : planName}
+                    </span>
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase ${isSuperAdmin
+                        ? 'text-purple-300 bg-purple-900/60 border-purple-700'
+                        : isExpired
+                          ? 'text-rose-300 bg-rose-900/60 border-rose-700'
+                          : isTrial
+                            ? 'text-blue-300 bg-blue-900/60 border-blue-700'
+                            : 'text-emerald-300 bg-emerald-900/60 border-emerald-700'
+                      }`}>
+                      {isSuperAdmin ? 'ROOT ACCESS' : isExpired ? 'EXPIRED' : planStatus}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-medium leading-tight mb-2">
+                    {isSuperAdmin ? 'Platform Management & System Controls' : displayText}
+                  </p>
+                  {isSuperAdmin ? (
+                    <Link
+                      href="/platform-admin"
+                      onClick={onCloseMobile}
+                      className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      Open Control Center
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  ) : erpRole === 'ACCOUNTANT' ? (
+                    <Link
+                      href="/accountant/businesses"
+                      onClick={onCloseMobile}
+                      className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      Owner-Managed Plan · Switch Client
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/subscription"
+                      onClick={onCloseMobile}
+                      className="text-[10px] font-semibold text-blue-300 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      {isExpired ? 'Upgrade Subscription' : 'Subscription Details'}
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
+                </>
               )}
 
               <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[9px] text-slate-400">

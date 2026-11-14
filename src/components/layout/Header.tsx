@@ -165,7 +165,7 @@ export function Header({
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : isFreeKhataRoute
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-orange-50 text-[#EA580C] border-orange-200'
+                  : 'bg-[#EBF3FA] text-[#1761A0] border-blue-200'
               }`}>
                 {isSuperAdmin ? 'Super Admin' : isGharKharcha ? 'Free Household' : isFreeKhataRoute ? 'Free Khata' : 'Active'}
               </span>

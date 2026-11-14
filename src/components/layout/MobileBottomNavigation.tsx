@@ -139,7 +139,7 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
   }
 
   // 1. FREE KHATA NAVIGATION (100% Free Ledger Only)
-  if (isFreeKhata) {
+  if (pathname.startsWith('/free-khata') || isFreeKhata) {
     const freeKhataItems = [
       {
         label: t('nav.overview'),
@@ -210,7 +210,79 @@ export function MobileBottomNavigation({ onOpenMobileMenu }: MobileBottomNavigat
     );
   }
 
-  // 2. COMMERCIAL PLANS (STARTER, GROWTH, SCALE)
+  // 2. GHAR KHARCHA NAVIGATION (Household Budget & Expenses)
+  if (pathname.startsWith('/ghar-kharcha')) {
+    const gharKharchaItems = [
+      {
+        label: 'Ghar',
+        href: '/ghar-kharcha',
+        icon: LayoutDashboard,
+        isActive: pathname === '/ghar-kharcha',
+      },
+      {
+        label: 'Register',
+        href: '/ghar-kharcha/transactions',
+        icon: Receipt,
+        isActive: pathname.startsWith('/ghar-kharcha/transactions'),
+      },
+      {
+        label: 'Budget',
+        href: '/ghar-kharcha/budget',
+        icon: CreditCard,
+        isActive: pathname.startsWith('/ghar-kharcha/budget'),
+      },
+      {
+        label: 'Splits',
+        href: '/ghar-kharcha/splits',
+        icon: Users,
+        isActive: pathname.startsWith('/ghar-kharcha/splits'),
+      },
+      {
+        label: 'Reports',
+        href: '/ghar-kharcha/reports',
+        icon: FileText,
+        isActive: pathname.startsWith('/ghar-kharcha/reports'),
+      },
+    ];
+
+    return (
+      <nav
+        aria-label="Ghar Kharcha Mobile Bar"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(7,31,56,0.06)] px-2 pt-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]"
+      >
+        <div className="max-w-md mx-auto grid grid-cols-5 gap-1 items-center">
+          {gharKharchaItems.map((item, idx) => {
+            const Icon = item.icon;
+            const activeClasses = item.isActive
+              ? 'text-[#1761A0] font-bold'
+              : 'text-slate-500 hover:text-slate-900 font-medium';
+
+            return (
+              <Link
+                key={idx}
+                href={item.href}
+                className={`flex flex-col items-center justify-center min-h-[44px] py-1 px-1 rounded-xl transition-all active:scale-95 ${activeClasses}`}
+                aria-label={item.label}
+              >
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                    item.isActive ? 'bg-[#EBF3FA] text-[#1761A0]' : 'text-slate-500'
+                  }`}
+                >
+                  <Icon className="w-4.5 h-4.5" />
+                </div>
+                <span className="text-[10px] tracking-tight mt-0.5 truncate w-full text-center">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  // 3. COMMERCIAL PLANS (STARTER, GROWTH, SCALE)
   const commercialItems = [
     {
       label: t('nav.overview'),

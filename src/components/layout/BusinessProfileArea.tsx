@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import {
@@ -22,8 +23,11 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
   const [isOpen, setIsOpen] = useState(false);
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const { activeBusiness, memberships, user, switchBusiness } = useAuth();
-  const { isAllowed } = useEntitlements();
+  const { isAllowed, isFreeKhata } = useEntitlements();
+  const isFreeKhataMode = pathname.startsWith('/free-khata') || isFreeKhata;
+  const isGharKharchaMode = pathname.startsWith('/ghar-kharcha');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,25 +63,46 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
     }
   };
 
-  // Compute monogram
-  const bizName = activeBusiness?.name || (isSuperAdmin ? 'Platform Admin' : 'Business Workspace');
-  const monogram = bizName
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  // Compute name and monogram dynamically based on active mode
+  const bizName = isFreeKhataMode
+    ? 'Personal Khata'
+    : isGharKharchaMode
+    ? 'Ghar Kharcha'
+    : activeBusiness?.name || (isSuperAdmin ? 'Platform Admin' : 'Business Workspace');
+
+  const bizSubtitle = isFreeKhataMode
+    ? '100% Free Forever'
+    : isGharKharchaMode
+    ? 'Household Budget'
+    : activeBusiness?.gstin
+    ? `GST: ${activeBusiness.gstin}`
+    : isSuperAdmin
+    ? 'System Root'
+    : 'Tenant Active';
+
+  const monogram = isFreeKhataMode
+    ? 'PK'
+    : isGharKharchaMode
+    ? 'GK'
+    : isSuperAdmin && !activeBusiness
+    ? 'SA'
+    : (activeBusiness?.name || 'PC')
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase() || 'PC';
 
   return (
     <div ref={containerRef} className="relative border-b border-[#102A43] p-3 bg-[#071D35]">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between gap-3 text-left p-2 rounded-lg hover:bg-white/5 hover:shadow-xs border border-transparent hover:border-white/10 transition-all group cursor-pointer"
-        title="Business Profile"
+        title="Workspace Profile"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Logo with theme */}
-          {activeBusiness?.logoUrl ? (
+          {activeBusiness?.logoUrl && !isFreeKhataMode && !isGharKharchaMode ? (
             <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-xs group-hover:scale-105 transition-transform">
               <img
                 src={activeBusiness.logoUrl}
@@ -90,10 +115,14 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
               className={`w-10 h-10 rounded-lg text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-xs shrink-0 group-hover:scale-105 transition-transform border ${
                 isSuperAdmin && !activeBusiness
                   ? 'bg-purple-950 border-purple-800 text-purple-200'
+                  : isFreeKhataMode
+                  ? 'bg-emerald-950 border-emerald-700 text-emerald-300'
+                  : isGharKharchaMode
+                  ? 'bg-teal-950 border-teal-700 text-teal-300'
                   : 'bg-[#102A43] border-[#1761A0] text-emerald-400'
               }`}
             >
-              {isSuperAdmin && !activeBusiness ? 'SA' : monogram || 'PC'}
+              {monogram}
             </div>
           )}
 
@@ -107,7 +136,7 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
               <div className="flex items-center gap-1 mt-0.5">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 <span className="text-[10px] text-slate-400 font-mono tracking-tight truncate block">
-                  {activeBusiness?.gstin ? `GST: ${activeBusiness.gstin}` : isSuperAdmin ? 'System Root' : 'Tenant Active'}
+                  {bizSubtitle}
                 </span>
               </div>
             </div>

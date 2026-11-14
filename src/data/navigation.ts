@@ -309,6 +309,13 @@ export const FREE_KHATA_NAVIGATION_ITEMS: NavigationItem[] = [
     badgeColor: 'emerald',
     description: 'हर सवाल का जवाब — GST, उधारी वसूली और सरकारी योजनाएं',
   },
+  {
+    id: 'business-workspace-switch',
+    name: 'व्यापार मोड (Business Mode)',
+    href: '/',
+    iconName: 'Building2',
+    description: 'Open commercial business billing & accounting workspace',
+  },
 ];
 
 /**

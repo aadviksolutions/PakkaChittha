@@ -57,9 +57,8 @@ export function ModulePageShell({
 
       {/* Header Banner */}
       <div
-        className={`bg-white rounded-2xl p-5 border border-[#DCE4EF] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-          hideHeaderInPrint ? 'print:hidden' : 'print:border-slate-300 print:shadow-none print:rounded-none print:p-3'
-        }`}
+        className={`bg-white rounded-2xl p-5 border border-[#DCE4EF] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${hideHeaderInPrint ? 'print:hidden' : 'print:border-slate-300 print:shadow-none print:rounded-none print:p-3'
+          }`}
       >
         <div>
           <div className="flex items-center gap-2">
