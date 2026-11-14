@@ -21,6 +21,10 @@ import {
   ShieldAlert,
   ExternalLink,
   Tag,
+  HelpCircle,
+  FileText,
+  Inbox,
+  GraduationCap,
 } from 'lucide-react';
 
 interface AdminLayoutShellProps {
@@ -45,6 +49,14 @@ const NAV_ITEMS = [
   { href: '/platform-admin/discounts', label: 'Discount Management', icon: Tag },
   { href: '/platform-admin/audit-logs', label: 'Audit Logs', icon: ShieldCheck },
   { href: '/platform-admin/settings', label: 'Platform Settings', icon: Settings },
+];
+
+const KNOWLEDGE_NAV_ITEMS = [
+  { href: '/platform-admin/knowledge', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/platform-admin/knowledge/categories', label: 'Categories', icon: Layers },
+  { href: '/platform-admin/knowledge/questions', label: 'Q & A System', icon: HelpCircle },
+  { href: '/platform-admin/knowledge/articles', label: 'Articles & Guides', icon: FileText },
+  { href: '/platform-admin/knowledge/submissions', label: 'User Questions', icon: Inbox },
 ];
 
 export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
@@ -166,6 +178,47 @@ export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
               </Link>
             );
           })}
+
+          <div className="pt-4 px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center justify-between">
+            <span>Knowledge Hub</span>
+            <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-black">FREE</span>
+          </div>
+
+          {KNOWLEDGE_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-orange-500/20 font-bold'
+                    : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <div className="pt-2">
+            <Link
+              href="/knowledge"
+              target="_blank"
+              className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 hover:bg-emerald-950/30 border border-emerald-500/30 transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                <span>View Public Portal</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Bottom Actions & User Info */}
@@ -240,6 +293,48 @@ export function AdminLayoutShell({ children, user }: AdminLayoutShellProps) {
                   </Link>
                 );
               })}
+
+              <div className="pt-3 pb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                Knowledge Hub
+              </div>
+
+              {KNOWLEDGE_NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold ${
+                      isActive
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              <div className="pt-2">
+                <Link
+                  href="/knowledge"
+                  target="_blank"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-emerald-400 bg-emerald-950/30 border border-emerald-500/30"
+                >
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4" />
+                    <span>View Public Portal</span>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
 
             <div className="pt-4 border-t border-slate-800 space-y-2">

@@ -163,6 +163,15 @@ export const BUSINESS_NAVIGATION_ITEMS: NavigationItem[] = [
     badgeColor: 'emerald',
     description: 'Automated invoice PDFs, payment reminder broadcasts',
   },
+  {
+    id: 'knowledge-hub-link',
+    name: 'Knowledge Hub',
+    href: '/knowledge',
+    iconName: 'BookOpen',
+    badge: 'Free Hub',
+    badgeColor: 'emerald',
+    description: 'हर सवाल का जवाब — GST, उधारी वसूली, सरकारी योजनाएं और व्यापार कानून',
+  },
 ];
 
 /**
@@ -290,6 +299,15 @@ export const FREE_KHATA_NAVIGATION_ITEMS: NavigationItem[] = [
     badge: 'Free',
     badgeColor: 'emerald',
     description: 'Share friendly payment reminders via WhatsApp',
+  },
+  {
+    id: 'free-khata-knowledge',
+    name: 'ज्ञान केंद्र (Knowledge Hub)',
+    href: '/knowledge',
+    iconName: 'BookOpen',
+    badge: '100% Free',
+    badgeColor: 'emerald',
+    description: 'हर सवाल का जवाब — GST, उधारी वसूली और सरकारी योजनाएं',
   },
 ];
 

@@ -37,6 +37,25 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     pathname.endsWith('/print') ||
     pathname.startsWith('/view/invoice/');
 
+  const isKnowledgeHub = pathname.startsWith('/knowledge');
+  const isPlatformAdmin = pathname.startsWith('/platform-admin');
+
+  if (isKnowledgeHub) {
+    return (
+      <div className="min-h-screen bg-white text-slate-900 selection:bg-emerald-100 selection:text-emerald-900 font-sans">
+        {children}
+      </div>
+    );
+  }
+
+  if (isPlatformAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+        {children}
+      </div>
+    );
+  }
+
   if (isPublicMarketingPage) {
     return (
       <>

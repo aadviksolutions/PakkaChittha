@@ -137,6 +137,7 @@ model User {
   requestedApprovals           ApprovalRequest[]          @relation("ApprovalRequestedBy")
   decidedApprovals             ApprovalRequest[]          @relation("ApprovalDecidedBy")
   auditEvents                  AuditEvent[]
+  khBookmarks                  KhBookmark[]
 
   @@index([email])
   @@index([googleId])
@@ -1729,5 +1730,252 @@ model LedgerBalance {
   @@unique([ledgerId, fyCode])
   @@index([businessId])
   @@index([ledgerId])
+}
+
+// ============================================================================
+// PAKKACHITTHA KNOWLEDGE HUB MODULE (ISOLATED PUBLIC & ADMIN ECOSYSTEM)
+// ============================================================================
+
+enum KhStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum KhLanguage {
+  EN
+  HI
+  BOTH
+}
+
+enum KhSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ANSWERED
+}
+
+model KhCategory {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  nameEn        String
+  nameHi        String
+  descriptionEn String?         @db.Text
+  descriptionHi String?         @db.Text
+  icon          String?
+  imageUrl      String?
+  displayOrder  Int             @default(0)
+  isActive      Boolean         @default(true)
+  articleCount  Int             @default(0)
+  questionCount Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  subcategories KhSubcategory[]
+  questions     KhQuestion[]
+  articles      KhArticle[]
+  submissions   KhSubmission[]
+
+  @@index([slug])
+  @@index([isActive])
+  @@index([displayOrder])
+}
+
+model KhSubcategory {
+  id            String       @id @default(cuid())
+  categoryId    String
+  slug          String
+  nameEn        String
+  nameHi        String
+  descriptionEn String?      @db.Text
+  descriptionHi String?      @db.Text
+  displayOrder  Int          @default(0)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  category      KhCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  questions     KhQuestion[]
+  articles      KhArticle[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([displayOrder])
+}
+
+model KhQuestion {
+  id                   String          @id @default(cuid())
+  slug                 String          @unique
+  categoryId           String
+  subcategoryId        String?
+  language             KhLanguage      @default(BOTH)
+  status               KhStatus        @default(DRAFT)
+  titleEn              String
+  titleHi              String
+  shortAnswerEn        String          @db.Text
+  shortAnswerHi        String          @db.Text
+  detailedAnswerEn     String?         @db.Text
+  detailedAnswerHi     String?         @db.Text
+  simpleExplanationEn  String?         @db.Text
+  simpleExplanationHi  String?         @db.Text
+  practicalExampleEn   String?         @db.Text
+  practicalExampleHi   String?         @db.Text
+  importantPointsEn    String?         @db.Text
+  importantPointsHi    String?         @db.Text
+  referencesEn         String?         @db.Text
+  referencesHi         String?         @db.Text
+  viewCount            Int             @default(0)
+  helpfulCount         Int             @default(0)
+  notHelpfulCount      Int             @default(0)
+  displayOrder         Int             @default(0)
+  isFeatured           Boolean         @default(false)
+  publishedAt          DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  category             KhCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory          KhSubcategory?  @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  tags                 KhContentTag[]
+  feedbacks            KhFeedback[]
+  bookmarks            KhBookmark[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([status])
+  @@index([language])
+  @@index([isFeatured])
+  @@index([publishedAt])
+  @@index([viewCount])
+}
+
+model KhArticle {
+  id                 String          @id @default(cuid())
+  slug               String          @unique
+  categoryId         String
+  subcategoryId      String?
+  language           KhLanguage      @default(BOTH)
+  status             KhStatus        @default(DRAFT)
+  titleEn            String
+  titleHi            String
+  summaryEn          String          @db.Text
+  summaryHi          String          @db.Text
+  contentEn          String          @db.Text
+  contentHi          String          @db.Text
+  featuredImage      String?
+  readingTimeMinutes Int             @default(5)
+  authorName         String?         @default("PakkaChittha Editorial Team")
+  reviewerName       String?
+  seoTitleEn         String?
+  seoTitleHi         String?
+  seoDescriptionEn   String?         @db.Text
+  seoDescriptionHi   String?         @db.Text
+  canonicalUrl       String?
+  viewCount          Int             @default(0)
+  helpfulCount       Int             @default(0)
+  notHelpfulCount    Int             @default(0)
+  displayOrder       Int             @default(0)
+  isFeatured         Boolean         @default(false)
+  publishedAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  category           KhCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategory        KhSubcategory?  @relation(fields: [subcategoryId], references: [id], onDelete: SetNull)
+  tags               KhContentTag[]
+  feedbacks          KhFeedback[]
+  bookmarks          KhBookmark[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([subcategoryId])
+  @@index([status])
+  @@index([language])
+  @@index([isFeatured])
+  @@index([publishedAt])
+  @@index([viewCount])
+}
+
+model KhTag {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  createdAt   DateTime       @default(now())
+
+  contentTags KhContentTag[]
+
+  @@index([name])
+}
+
+model KhContentTag {
+  id         String      @id @default(cuid())
+  tagId      String
+  questionId String?
+  articleId  String?
+
+  tag        KhTag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  question   KhQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  article    KhArticle?  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, questionId, articleId])
+  @@index([tagId])
+  @@index([questionId])
+  @@index([articleId])
+}
+
+model KhSubmission {
+  id                  String             @id @default(cuid())
+  name                String?
+  email               String?
+  question            String             @db.Text
+  categoryId          String?
+  preferredLang       String             @default("hi")
+  status              KhSubmissionStatus @default(PENDING)
+  adminNotes          String?            @db.Text
+  convertedQuestionId String?
+  ipHash              String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  category            KhCategory?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([createdAt])
+}
+
+model KhFeedback {
+  id           String      @id @default(cuid())
+  questionId   String?
+  articleId    String?
+  isHelpful    Boolean
+  feedbackText String?     @db.Text
+  ipHash       String?
+  createdAt    DateTime    @default(now())
+
+  question     KhQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  article      KhArticle?  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([articleId])
+  @@index([createdAt])
+}
+
+model KhBookmark {
+  id         String      @id @default(cuid())
+  userId     String
+  questionId String?
+  articleId  String?
+  createdAt  DateTime    @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   KhQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  article    KhArticle?  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId, articleId])
+  @@index([userId])
+  @@index([questionId])
+  @@index([articleId])
 }
 
