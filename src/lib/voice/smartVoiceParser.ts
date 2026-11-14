@@ -1,7 +1,8 @@
 /**
  * PakkaChittha - Smart Voice Entry & Voice Accounting Natural Language Parser
- * Supports: Hindi, English, Hinglish, Devanagari, and Indian numeral expressions.
- * Accurately parses transaction categories, customers, products, multi-item quantities, discounts and partial payments.
+ * Supports: Hindi, English, Hinglish, Devanagari numerals, and Indian spoken terminology.
+ * Accurately interprets transactions, auto-detects customer intents, disambiguates quantities vs amounts vs rates,
+ * and extracts multi-item invoice details without misclassifying amounts as item quantities.
  */
 
 export type VoiceTransactionType =
@@ -21,6 +22,13 @@ export interface ParsedVoiceItem {
   quantity: number;
   unit: string;
   rate?: number;
+  isFromAmount?: boolean;
+}
+
+export interface CustomerCreationIntent {
+  isCreateCustomer: boolean;
+  customerName: string;
+  customerMobile?: string | null;
 }
 
 export interface ParsedVoiceTransaction {
@@ -43,6 +51,10 @@ export interface ParsedVoiceTransaction {
   missingFields: string[];
   isInvoiceIntent: boolean;
   items: ParsedVoiceItem[];
+  // Customer Auto-Detection & Creation Intent
+  isCustomerCreateIntent?: boolean;
+  customerName?: string | null;
+  customerMobile?: string | null;
 }
 
 // Indian Word-to-Number Mappings for Hindi, Hinglish and English
@@ -68,11 +80,113 @@ export const NUMBER_WORDS: Record<string, number> = {
 };
 
 /**
- * Parses Indian numeric strings like "5000", "5 thousand", "1.5 lakh", "das hazaar", "डेढ़ लाख"
+ * Normalizes speech transcript:
+ * - Fixes common speech recognition mis-transcriptions (e.g. bacha/bcha -> becha in commercial context)
+ * - Converts fractional quantities (aadha kilo -> 0.5 kilo, paav -> 0.25, dedh -> 1.5, dhai -> 2.5)
+ * - Converts compound Indian number words (Do hazaar -> 2000, das hazaar -> 10000, ek lakh -> 100000)
+ * - Replaces Devanagari digits with Arabic digits
+ * - Cleans punctuation while preserving words
+ */
+export function normalizeSpeechTranscript(raw: string): string {
+  if (!raw) return '';
+  let s = raw.trim();
+
+  // Strip punctuation cleanly
+  s = s.replace(/[.,!?;:]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Convert Devanagari digits: "१५००" -> "1500"
+  s = s.replace(/[०-९]/g, (ch) => String(NUMBER_WORDS[ch] ?? ch));
+
+  // Normalization of bacha / bcha -> becha in selling / transaction contexts
+  // e.g. "10000 ki website bacha" -> "10000 ki website becha"
+  s = s.replace(/\b(bacha|bcha|baicha|bicha|बचा)\b/gi, 'becha');
+
+  // Fractional units conversion
+  s = s.replace(/\b(aadha|aadhe|adha|half|आधा)\s+(kilo|kg|किलो)\b/gi, '0.5 kilo');
+  s = s.replace(/\b(aadha|aadhe|adha|half|आधा)\s+(litre|liter|लीटर)\b/gi, '0.5 litre');
+  s = s.replace(/\b(paav|pao|pawa|पाव)\s*(kilo|kg|किलो)?\b/gi, '0.25 kilo');
+  s = s.replace(/\b(dedh|dhed|डेढ़)\s+(kilo|kg|किलो)\b/gi, '1.5 kilo');
+  s = s.replace(/\b(dhai|dhayi|ढाई)\s+(kilo|kg|किलो)\b/gi, '2.5 kilo');
+  s = s.replace(/\b(ek|1|एक)\s+(dozen|darjan|दर्जन)\b/gi, '12 piece');
+  s = s.replace(/\b(do|2|दो)\s+(dozen|darjan|दर्जन)\b/gi, '24 piece');
+  s = s.replace(/\b(aadha|half|आधा)\s+(dozen|darjan|दर्जन)\b/gi, '6 piece');
+
+  // Convert Indian compound words to digits: e.g. "Do hazaar" -> "2000", "das hazaar" -> "10000"
+  s = s.replace(
+    /\b(ek|do|teen|chaar|char|paanch|panch|chhe|saat|aath|nau|das|एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\s+(hazaar|hazar|thousand|हजार|हज़ार)\b/gi,
+    (_m, g1) => {
+      const num = NUMBER_WORDS[g1.toLowerCase()] || 1;
+      return String(num * 1000);
+    }
+  );
+  s = s.replace(
+    /\b(ek|do|teen|chaar|char|paanch|panch|chhe|saat|aath|nau|das|एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\s+(lakh|laakh|lac|लाख)\b/gi,
+    (_m, g1) => {
+      const num = NUMBER_WORDS[g1.toLowerCase()] || 1;
+      return String(num * 100000);
+    }
+  );
+  s = s.replace(
+    /\b(ek|do|teen|chaar|char|paanch|panch|chhe|saat|aath|nau|das|एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\s+(sau|hundred|सौ)\b/gi,
+    (_m, g1) => {
+      const num = NUMBER_WORDS[g1.toLowerCase()] || 1;
+      return String(num * 100);
+    }
+  );
+
+  return s;
+}
+
+/**
+ * Detects direct voice-based customer creation command:
+ * Examples:
+ * - "नया ग्राहक Suresh Kumar जोड़ो"
+ * - "Add new customer Rajesh Sharma"
+ * - "Suresh Kumar का मोबाइल नंबर 9876543210 है"
+ */
+export function detectCustomerCreationIntent(text: string): CustomerCreationIntent | null {
+  if (!text) return null;
+  const clean = text.trim();
+
+  // Pattern 1: Direct command e.g. "naya grahak Suresh Kumar jodo", "नया ग्राहक Suresh Kumar जोड़ो"
+  const m1 = clean.match(
+    /(?:naya|new|naye|नया)\s+(?:grahak|customer|party|ग्राहक)\s+([a-zA-Z\u0900-\u097F\s]{2,35}?)(?:\s+(?:jodo|add\s*karo|add|kholiye|banao|जोड़ो|बनाएं|है))?$/i
+  );
+  if (m1) {
+    const rawName = m1[1].replace(/\b(jodo|add|karo|banao|hai|जोड़ो|बनाएं)\b/gi, '').trim();
+    if (rawName.length >= 2) {
+      return { isCreateCustomer: true, customerName: rawName };
+    }
+  }
+
+  // Pattern 2: Customer phone number assignment command:
+  // "Suresh Kumar ka mobile number 9876543210 hai"
+  const m2 =
+    clean.match(
+      /^(.+?)\s+(?:ka|ki|ke|का|की|के)\s+(?:mobile|phone|मोबाइल|फ़ोन)\s*(?:number|no|नंबर)?\s*(?:hai|h|है)?\s*([6-9]\d{9})/i
+    ) ||
+    clean.match(
+      /^(.+?)\s+(?:mobile|phone|मोबाइल|फ़ोन)\s*(?:number|no|नंबर)?\s*(?:hai|h|है)?\s*([6-9]\d{9})/i
+    );
+  if (m2) {
+    const rawName = m2[1]
+      .replace(/\b(ka|ki|ke|का|की|के|mobile|phone|number|मोबाइल|फ़ोन|नंबर|ग्राहक|customer)\b/gi, '')
+      .trim();
+    if (rawName.length >= 2) {
+      return { isCreateCustomer: true, customerName: rawName, customerMobile: m2[2] };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parses Indian numeric amounts like "5000", "5 thousand", "1.5 lakh", "das hazaar", "डेढ़ लाख"
+ * Restricts values to valid financial amounts (< 100,000,000) so phone numbers are not captured.
  */
 export function extractIndianAmount(text: string): number | null {
   if (!text) return null;
-  const clean = text.toLowerCase().replace(/,/g, '');
+  const clean = normalizeSpeechTranscript(text).toLowerCase();
 
   // 1. Direct Regex for numbers followed by unit: e.g. "1.5 lakh", "25 k", "5 thousand", "1.5लाख"
   const multiplierRegex = /(\d+(?:\.\d+)?)\s*(?:\b(thousand|hazar|hazaar|हजार|हज़ार|lakh|laakh|lac|लाख|crore|cr|करोड़)\b|(\bk\b))/i;
@@ -101,43 +215,23 @@ export function extractIndianAmount(text: string): number | null {
   if (/\b(dedh|dhed|डेढ़)\s+(hazar|hazaar|thousand|हजार|हज़ार)\b/i.test(clean)) return 1500;
   if (/\b(dhai|dhayi|ढाई)\s+(hazar|hazaar|thousand|हजार|हज़ार)\b/i.test(clean)) return 2500;
 
-  // 3. Word-based numbers: "das hazaar" -> 10000, "paanch sau" -> 500
-  const words = clean.split(/\s+/);
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    const nextW = words[i + 1];
-
-    if (
-      NUMBER_WORDS[w] !== undefined &&
-      nextW &&
-      (NUMBER_WORDS[nextW] === 100 ||
-        NUMBER_WORDS[nextW] === 1000 ||
-        NUMBER_WORDS[nextW] === 100000 ||
-        NUMBER_WORDS[nextW] === 10000000)
-    ) {
-      return NUMBER_WORDS[w] * NUMBER_WORDS[nextW];
-    }
-  }
-
-  // 4. Standalone direct numeric digits: e.g. "5000", "₹1200", "1500"
-  const digitsRegex = /(?:₹|rs\.?|inr|रुपये|रूपये|रुपया)?\s*(\d+(?:\.\d+)?)/i;
-  const matchDigits = clean.match(digitsRegex);
-  if (matchDigits && matchDigits[1]) {
-    const val = parseFloat(matchDigits[1]);
-    if (!isNaN(val) && val > 0) {
+  // 3. Digits with explicit monetary markers: "5000 rupaye", "₹1200", "rs 1500", "10000 ki"
+  const monetaryRegex = /(?:₹|rs\.?|inr|रुपये|रूपये|रुपया)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:rupaye|rupee|rs|inr|रुपये|रूपये|रुपया|ki|ka|की|का)/i;
+  const matchMonetary = clean.match(monetaryRegex);
+  if (matchMonetary) {
+    const val = parseFloat(matchMonetary[1] || matchMonetary[2]);
+    if (!isNaN(val) && val > 0 && val < 100000000) {
       return val;
     }
   }
 
-  // 5. Devanagari digit string conversion: "१५००" -> 1500
-  const devanagariDigits = clean.match(/[०-९]+/);
-  if (devanagariDigits) {
-    const conv = devanagariDigits[0]
-      .split('')
-      .map((ch) => NUMBER_WORDS[ch] ?? ch)
-      .join('');
-    const val = parseFloat(conv);
-    if (!isNaN(val) && val > 0) return val;
+  // 4. Standalone direct numeric digits: e.g. "5000", "1500" (filter out 10-digit phone numbers!)
+  const standaloneDigits = clean.match(/\b(\d{1,8}(?:\.\d+)?)\b/);
+  if (standaloneDigits && standaloneDigits[1]) {
+    const val = parseFloat(standaloneDigits[1]);
+    if (!isNaN(val) && val > 0 && val < 100000000) {
+      return val;
+    }
   }
 
   return null;
@@ -190,50 +284,110 @@ function cleanPartyName(raw: string): string {
 }
 
 /**
+ * Strips trailing action verbs and clutter from product line item names
+ */
+function cleanProductSpokenName(raw: string): string {
+  return raw
+    .replace(
+      /\b(?:ka\s+maal\s+diya|maal\s+diya|diya|diye|becha|bechi|de\s+do|bill\s+banao|दिए|दिया|बेचा|बेची|बेचा\s+गया)\b/gi,
+      ''
+    )
+    .replace(/^[,\s]+|[,\s]+$/g, '')
+    .trim();
+}
+
+/**
  * Parses multi-product line items from spoken sentence.
- * Examples:
- * - "2 chhoti advance aur 3 badi advance" -> [{ spokenName: 'chhoti advance', quantity: 2, unit: 'Pcs' }, { spokenName: 'badi advance', quantity: 3, unit: 'Pcs' }]
- * - "5 packet chai patti aur 2 kilo cheeni" -> [{ spokenName: 'chai patti', quantity: 5, unit: 'packet' }, { spokenName: 'cheeni', quantity: 2, unit: 'kilo' }]
- * - "10 cement bori" -> [{ spokenName: 'cement bori', quantity: 10, unit: 'Pcs' }]
+ *
+ * CRITICAL DISAMBIGUATION RULES:
+ * 1. Numbers followed by monetary terms ('ki', 'ka', 'rupaye', 'rs', 'रुपये') are NEVER parsed as quantities!
+ * 2. In amount-based sales like "10000 ki website becha", item is 'website', qty is 1, rate is 10000, and isFromAmount is true.
+ * 3. Rate clauses like "rate 10 rupaye", "rate 5", "भाव 10" are parsed and attached to items.
+ * 4. Recognizes Hindi units: packet, kilo, kg, bori, bottle, piece, pcs, box, nag, etc.
  */
 export function extractVoiceLineItems(text: string): ParsedVoiceItem[] {
   if (!text) return [];
 
-  // Punctuation-clean text
-  let clean = text.replace(/[.,!?;]/g, ' ').replace(/\s+/g, ' ').trim();
+  const norm = normalizeSpeechTranscript(text);
 
   // If text is a pure payment or loan without product names, skip item extraction
   if (
-    /\b(?:rupaye|rupee|rs|cash|रुपये|रूपये|रुपया)\s*(?:diye|diya|liye|liya|lene|dene|prapt|mile|bheje)\b/i.test(clean) ||
-    /\b(?:lene|dene)\s+(?:hain|hai|h)\b/i.test(clean) && !/\b(aur|and|tatha|\+)\b/i.test(clean)
+    /\b(?:rupaye|rupee|rs|cash|रुपये|रूपये|रुपया)\s*(?:diye|diya|liye|liya|lene|dene|prapt|mile|bheje)\b/i.test(norm) ||
+    (/\b(?:lene|dene)\s+(?:hain|hai|h)\b/i.test(norm) && !/\b(aur|and|tatha|\+)\b/i.test(norm))
   ) {
     return [];
   }
 
-  // Remove common prefix up to customer "X ko":
-  // e.g. "Mohan ko 2 chhoti advance aur 3 badi advance diya" -> "2 chhoti advance aur 3 badi advance diya"
-  clean = clean.replace(/^[a-zA-Z\u0900-\u097F\s]{2,25}\s+(?:ko|to|को)\s+/i, '');
+  // 1. Check for Rate clause: e.g. "rate 10 rupaye", "rate 5 rupaye", "रेट 10"
+  let rateSpoken: number | undefined;
+  const rateMatch = norm.match(
+    /\b(?:rate|रेट|भाव|ke hisaab se)\s*(?:hai|h)?\s*(?:₹|rs\.?)?\s*(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रूपये)?/i
+  );
+  if (rateMatch && rateMatch[1]) {
+    const rVal = parseFloat(rateMatch[1]);
+    if (!isNaN(rVal) && rVal > 0) {
+      rateSpoken = rVal;
+    }
+  }
 
-  // Strip discount or payment clauses at tail:
-  // e.g. ", 2000 cash le liya aur baaki udhar" or ", 50 rupaye discount"
+  // 2. Check for Amount-Based Sale:
+  // e.g. "10000 ki website becha", "2000 ka saman becha", "Do hazaar ka saman becha"
+  const amountForSaleMatch = norm.match(
+    /(?:₹|rs\.?)?\s*(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रुपये|रूपये)?\s*(?:ki|ka|की|का)\s+([a-zA-Z\u0900-\u097F\s]{2,25})\s*(?:becha|bechi|diya|diye|बेचा|बेची|दिया|दिए)/i
+  );
+
+  if (amountForSaleMatch) {
+    const saleAmt = parseFloat(amountForSaleMatch[1]);
+    const prodSpoken = cleanProductSpokenName(amountForSaleMatch[2]);
+
+    // If item is not generic "saman" or "maal", return it as a structured 1-unit item with the specified rate
+    if (
+      prodSpoken &&
+      !/^(saman|maal|mal|goods|items|सामान|माल)$/i.test(prodSpoken)
+    ) {
+      return [
+        {
+          spokenName: prodSpoken,
+          quantity: 1,
+          unit: 'Pcs',
+          rate: saleAmt,
+          isFromAmount: true,
+        },
+      ];
+    }
+    // If it is generic "saman" or "maal", it's a general monetary sale without specific catalogue items
+    return [];
+  }
+
+  // 3. Standard Multi-item Sale parsing
+  // Remove customer prefix: "Mohan ko 2 kilo chini diya" -> "2 kilo chini diya"
+  let clean = norm.replace(/^[a-zA-Z\u0900-\u097F\s]{2,25}\s+(?:ko|to|को)\s+/i, '');
+
+  // Strip rate clause from item text
+  clean = clean.replace(/\b(?:rate|भाव|रेट)\b.*/i, '');
+  // Strip discount or payment clauses at tail
   clean = clean.replace(/(?:aur|\+)?\s*\d+\s*(?:rupaye|rs|cash|का)?\s*(?:cash|discount|chhoot|udhar|उधार|कैश|डिस्काउंट|छूट).*/i, '');
-  // Strip trailing verbs: "diya", "diye", "becha", "bechi", "ka maal diya", etc.
-  clean = clean.replace(/\s+(?:ka\s+maal\s+diya|maal\s+diya|diya|diye|becha|bechi|de\s+do|bill\s+banao|दिए|दिया|बेचा|बेची)\s*$/i, '');
+  // Strip trailing verbs
+  clean = cleanProductSpokenName(clean);
 
   // Split into multiple items using "aur", "and", ",", "+"
   const parts = clean.split(/\s*(?:aur|and|tatha|\+)\s*/i).map((p) => p.trim()).filter(Boolean);
-
   const items: ParsedVoiceItem[] = [];
 
-  const unitRegex = /\b(packet|packets|pkt|kilo|kg|kgs|gm|grams|quintal|bori|bag|bags|piece|pieces|pcs|box|boxes|peti|nag|लीटर|किलो|बोरी|पीस|पैकेट|बंडल)\b/i;
+  const unitRegex = /\b(packet|packets|pkt|kilo|kg|kgs|gm|grams|quintal|bori|bag|bags|bottle|bottles|piece|pieces|pcs|box|boxes|peti|nag|लीटर|किलो|बोरी|पीस|पैकेट|बंडल|बोतल)\b/i;
 
   for (const part of parts) {
     if (!part || part.length < 2) continue;
 
-    // Pattern A: [Quantity (digits or words)] [Unit?] [Product Name]
-    // e.g. "2 chhoti advance", "5 packet chai patti", "teen kilo cheeni"
+    // RULE: If part contains monetary prepositions right after a number ("10000 ki", "5000 ka"), NEVER treat as quantity!
+    if (/^\d+\s*(?:ki|ka|ke|rupaye|rs|रुपये|रूपये)\b/i.test(part)) {
+      continue;
+    }
+
+    // Pattern A: [Quantity] [Unit?] [Product Name]
+    // e.g. "2 kilo chini", "do packet biscuit", "5 pen", "10 bottle oil"
     const match = part.match(
-      /^(\d+(?:\.\d+)?|ek|do|teen|chaar|char|paanch|panch|chhe|saat|aath|nau|das|ग्यारह|बारह|एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\s*(?:(packet|packets|pkt|kilo|kg|kgs|gm|grams|quintal|bori|bag|bags|piece|pieces|pcs|box|boxes|peti|nag|लीटर|किलो|बोरी|पीस|पैकेट|बंडल)\s+)?(.+)$/i
+      /^(\d+(?:\.\d+)?|ek|do|teen|chaar|char|paanch|panch|chhe|saat|aath|nau|das|ग्यारह|बारह|एक|दो|तीन|चार|पांच|छह|सात|आठ|नौ|दस)\s*(?:(packet|packets|pkt|kilo|kg|kgs|gm|grams|quintal|bori|bag|bags|bottle|bottles|piece|pieces|pcs|box|boxes|peti|nag|लीटर|किलो|बोरी|पीस|पैकेट|बंडल|बोतल)\s+)?(.+)$/i
     );
 
     if (match) {
@@ -251,11 +405,12 @@ export function extractVoiceLineItems(text: string): ParsedVoiceItem[] {
       // Normalize unit
       if (unit.match(/^(kilo|kg|kgs|किलो)$/i)) unit = 'Kg';
       else if (unit.match(/^(packet|packets|pkt|पैकेट)$/i)) unit = 'Packet';
+      else if (unit.match(/^(bottle|bottles|बोतल)$/i)) unit = 'Bottle';
       else if (unit.match(/^(bori|bag|bags|बोरी)$/i)) unit = 'Bori';
       else if (unit.match(/^(piece|pieces|pcs|पीस)$/i)) unit = 'Pcs';
       else if (unit.match(/^(box|boxes|peti)$/i)) unit = 'Box';
 
-      // Check if product name itself ends with a unit: e.g. "cement bori"
+      // Check if product name itself contains a trailing unit: e.g. "cement bori"
       if (!match[2]) {
         const trailingUnitMatch = prodName.match(unitRegex);
         if (trailingUnitMatch) {
@@ -263,19 +418,23 @@ export function extractVoiceLineItems(text: string): ParsedVoiceItem[] {
           if (found === 'bori' || found === 'बोरी') unit = 'Bori';
           else if (found === 'kilo' || found === 'kg') unit = 'Kg';
           else if (found === 'packet' || found === 'pkt') unit = 'Packet';
+          else if (found === 'bottle' || found === 'bottles' || found === 'बोतल') unit = 'Bottle';
         }
       }
 
-      const cleanedProd = prodName.replace(/[.,!?;]/g, '').trim();
+      const cleanedProd = cleanProductSpokenName(prodName);
 
       if (
         cleanedProd.length >= 2 &&
-        !/^(maal|mal|goods|items|rupaye|rupay|rupee|rupees|rs|inr|cash|rokad|nagad|aaj|today|रुपये|रूपये|रुपया|पैसे|कैश|रोकड़|lene|dene|diye|diya|liye|liya|hain|hai|h)$/i.test(cleanedProd)
+        !/^(maal|mal|goods|items|saman|rupaye|rupay|rupee|rupees|rs|inr|cash|rokad|nagad|aaj|today|रुपये|रूपये|रुपया|पैसे|कैश|रोकड़|lene|dene|diye|diya|liye|liya|hain|hai|h)$/i.test(
+          cleanedProd
+        )
       ) {
         items.push({
           spokenName: cleanedProd,
           quantity: qty,
           unit,
+          rate: rateSpoken,
         });
       }
     }
@@ -289,10 +448,13 @@ export function extractVoiceLineItems(text: string): ParsedVoiceItem[] {
  * e.g. "2000 cash le liya", "2000 cash mila", "2000 jama hua"
  */
 export function extractCashReceived(text: string): number | null {
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रूपये)?\s*(?:cash\s*)?(?:le\s*liya|jama|mile|prapt|aaye|mila|cash\s*mila|cash\s*aaya|le\s*liye|नकद|कैश)/i);
+  const norm = normalizeSpeechTranscript(text);
+  const match = norm.match(
+    /(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रूपये)?\s*(?:cash\s*)?(?:le\s*liya|jama|mile|prapt|aaye|mila|cash\s*mila|cash\s*aaya|le\s*liye|नकद|कैश)/i
+  );
   if (match && match[1]) {
     const val = parseFloat(match[1]);
-    if (!isNaN(val) && val > 0) return val;
+    if (!isNaN(val) && val > 0 && val < 100000000) return val;
   }
   return null;
 }
@@ -302,10 +464,13 @@ export function extractCashReceived(text: string): number | null {
  * e.g. "500 rupaye discount diya", "50 discount", "10% discount"
  */
 export function extractDiscount(text: string): number | null {
-  const match = text.match(/(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रूपये|%|percent)?\s*(?:ka\s+)?(?:discount|chhoot|choot|डिस्काउंट|छूट)/i);
+  const norm = normalizeSpeechTranscript(text);
+  const match = norm.match(
+    /(\d+(?:\.\d+)?)\s*(?:rupaye|rs|रूपये|%|percent)?\s*(?:ka\s+)?(?:discount|chhoot|choot|डिस्काउंट|छूट)/i
+  );
   if (match && match[1]) {
     const val = parseFloat(match[1]);
-    if (!isNaN(val) && val > 0) return val;
+    if (!isNaN(val) && val > 0 && val < 100000000) return val;
   }
   return null;
 }
@@ -315,7 +480,37 @@ export function extractDiscount(text: string): number | null {
  */
 export function parseVoiceTransaction(transcript: string): ParsedVoiceTransaction {
   const rawText = transcript.trim();
-  const lower = rawText.toLowerCase();
+  const norm = normalizeSpeechTranscript(rawText);
+  const lower = norm.toLowerCase();
+
+  // 0. Check for Direct Customer Creation Intent
+  const custIntent = detectCustomerCreationIntent(norm);
+  if (custIntent) {
+    return {
+      rawText,
+      type: 'PAYMENT_RECEIVED',
+      typeLabelHi: 'नया ग्राहक जोड़ें (Add Customer)',
+      typeLabelEn: 'Add Customer',
+      partyName: custIntent.customerName,
+      amount: null,
+      cashReceived: null,
+      balanceDue: null,
+      discount: null,
+      paymentMode: 'CASH',
+      date: new Date(),
+      dateLabel: 'Today (आज)',
+      category: null,
+      description: `Voice Customer Creation: "${rawText}"`,
+      confidence: 0.95,
+      requiresClarification: false,
+      missingFields: [],
+      isInvoiceIntent: false,
+      items: [],
+      isCustomerCreateIntent: true,
+      customerName: custIntent.customerName,
+      customerMobile: custIntent.customerMobile || null,
+    };
+  }
 
   let type: VoiceTransactionType = 'PAYMENT_RECEIVED';
   let typeLabelHi = 'भुगतान प्राप्त हुआ (Payment Received)';
@@ -332,7 +527,6 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
   // 1. Transaction Type Semantic Understanding
 
   // Rule 1: TO_RECEIVE (Receivable / Udhaar)
-  // "Mohan se 5000 lene hain.", "se lene hain", "se lena hai", "udhar baki hai", "udhari di"
   if (
     /\b(lene hain|lene h|lena hai|lena h|se lene|se lena|to receive|udhari di|baaki hai|baki hai)\b/i.test(lower) ||
     /(लेने हैं|लेना है|बाकी हैं|उधार दिया|लेना बाकी)/.test(rawText)
@@ -342,7 +536,6 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     typeLabelEn = 'Money to Receive';
   }
   // Rule 2: TO_PAY (Payable)
-  // "Suresh ko 2000 dene hain.", "ko dene hain", "ko dena hai", "to pay"
   else if (
     /\b(dene hain|dene h|dena hai|dena h|ko dene|ko dena|to pay|udhar liya|chukane hain)\b/i.test(lower) ||
     /(देने हैं|देना है|उधार लिया|देना बाकी)/.test(rawText)
@@ -352,7 +545,6 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     typeLabelEn = 'Money to Pay';
   }
   // Rule 3: EXPENSE
-  // "Aaj 1500 ka petrol kharcha hua.", "petrol kharcha", "spent", "kiraya"
   else if (
     (/\b(kharch|kharcha|spent|expense|bill bhara|petrol|chai|kiraya)\b/i.test(lower) ||
       /(खर्च|खर्चा|व्यय|पेट्रोल|डीजल|किराया)/.test(rawText)) &&
@@ -364,7 +556,6 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     typeLabelEn = 'Expense';
   }
   // Rule 4: PURCHASE
-  // "Aaj 25000 ka maal kharida.", "bought", "purchase", "kharidi"
   else if (
     /\b(kharida|kharidi|bought|purchase|maal kharida|mal kharida)\b/i.test(lower) ||
     /(खरीदा|खरीदी|क्रय|माल खरीदा)/.test(rawText)
@@ -375,7 +566,9 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
   }
   // Rule 5: EXPLICIT PAYMENT GIVEN (e.g. "Ramesh ko 500 rupaye diye", "500 diye")
   else if (
-    /\b(?:ko|to|को)\s+(?:\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|हजार|लाख)\s*(?:rupaye|rupee|rs|रुपये|रूपये)?\s*(?:diye|diya|de diye|paid|gave|दिए|दिया)\b/i.test(lower) ||
+    /\b(?:ko|to|को)\s+(?:\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|हजार|लाख)\s*(?:rupaye|rupee|rs|रुपये|रूपये)?\s*(?:diye|diya|de diye|paid|gave|दिए|दिया)\b/i.test(
+      lower
+    ) ||
     /\b(paid|transferred)\s+\d+\s+to\b/i.test(lower)
   ) {
     type = 'PAYMENT_GIVEN';
@@ -384,27 +577,31 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
   }
   // Rule 6: EXPLICIT PAYMENT RECEIVED (e.g. "Ramesh se 500 rupaye liye", "500 mile")
   else if (
-    /\b(?:se|from|से)\s+(?:\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|हजार|लाख)\s*(?:rupaye|rupee|rs|रुपये|रूपये)?\s*(?:liye|liya|mile|mila|prapt|received|credited|लिए|लिया|मिले|प्राप्त)\b/i.test(lower)
+    /\b(?:se|from|से)\s+(?:\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|हजार|लाख)\s*(?:rupaye|rupee|rs|रुपये|रूपये)?\s*(?:liye|liya|mile|mila|prapt|received|credited|लिए|लिया|मिले|प्राप्त)\b/i.test(
+      lower
+    )
   ) {
     type = 'PAYMENT_RECEIVED';
     typeLabelHi = 'भुगतान प्राप्त हुआ (Payment Received)';
     typeLabelEn = 'Payment Received';
   }
   // Rule 7: SALE / VOICE INVOICE
-  // "Mohan ko 5000 ka maal diya, 2000 cash le liya aur baaki udhaar rakho"
-  // "Prathamesh ko 2 chhoti advance aur 3 badi advance diya"
-  // "Aaj 10000 ki sale hui.", "maal becha", "becha", "bill banao"
+  // "Mohan ko 5000 ka maal diya"
+  // "Mohan ko 5 pen diye, rate 10 rupaye"
+  // "10000 ki website bacha"
+  // "Do hazaar ka saman becha"
   else if (
     lineItems.length > 0 ||
-    /\b(maal diya|mal diya|maal becha|mal becha|becha|bechi|sold|sale|sale hui|sales|bill banao|chalan banao)\b/i.test(lower) ||
-    /(माल दिया|माल बेचा|बेचा|बेची|बिक्री|बिल बनाओ)/.test(rawText)
+    /\b(maal diya|mal diya|maal becha|mal becha|saman becha|becha|bechi|sold|sale|sale hui|sales|bill banao|chalan banao)\b/i.test(
+      lower
+    ) ||
+    /(माल दिया|माल बेचा|सामान बेचा|बेचा|बेची|बिक्री|बिल बनाओ)/.test(rawText)
   ) {
     type = 'SALE';
     typeLabelHi = 'बिक्री / बिल (Sale Invoice)';
     typeLabelEn = 'Sale Invoice';
   }
   // Rule 8: GENERIC PAYMENT GIVEN
-  // "diye", "paid", "bhugtan kiya", "bheje"
   else if (
     /\b(ko diye|ko diya|diye|diya|de diye|paid|gave|payment kiya|bhugtan kiya|transfer kiye|bheje)\b/i.test(lower) ||
     /(दिए|दिया|भुगतान किया|को दिए)/.test(rawText)
@@ -414,9 +611,10 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     typeLabelEn = 'Payment Given';
   }
   // Rule 9: GENERIC PAYMENT RECEIVED
-  // "mile", "prapt hue", "aaye", "jama kiye"
   else if (
-    /\b(se liye|se liya|liye|liya|mile|mila|aaye|aaya|prapt|received|credited|jama hue|jama kiya|jama karo|got)\b/i.test(lower) ||
+    /\b(se liye|se liya|liye|liya|mile|mila|aaye|aaya|prapt|received|credited|jama hue|jama kiya|jama karo|got)\b/i.test(
+      lower
+    ) ||
     /(से लिए|लिए|लिया|मिले|मिला|प्राप्त हुए|आए|आया|जमा किए|जमा)/.test(rawText)
   ) {
     type = 'PAYMENT_RECEIVED';
@@ -430,13 +628,15 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
   if (type !== 'EXPENSE') {
     const STOP_PARTY_WORDS = new Set([
       'bank', 'cash', 'upi', 'transfer', 'kiya', 'diya', 'mila', 'aaj', 'today', 'kal',
-      'parso', 'yesterday', 'rupaye', 'rupee', 'rs', 'inr', 'maal', 'mal', 'kharcha',
+      'parso', 'yesterday', 'rupaye', 'rupee', 'rs', 'inr', 'maal', 'mal', 'saman', 'kharcha',
       'petrol', 'diesel', 'chai', 'rent', 'kiraya', 'payment', 'bill', 'online', 'cheque',
       'check', 'gpay', 'phonepe', 'paytm', 'bhim', 'neft', 'rtgs', 'imps'
     ]);
 
     // A. "Paid 5000 to supplier Rajesh"
-    const paidToMatch = rawText.match(/(?:paid|given|to)\s+(?:supplier|customer|party)?\s*([a-zA-Z\u0900-\u097F\s]{2,25})\s*$/i);
+    const paidToMatch = rawText.match(
+      /(?:paid|given|to)\s+(?:supplier|customer|party)?\s*([a-zA-Z\u0900-\u097F\s]{2,25})\s*$/i
+    );
     if (paidToMatch && paidToMatch[1]) {
       const candidate = cleanPartyName(paidToMatch[1]);
       if (candidate.length >= 2 && !STOP_PARTY_WORDS.has(candidate.toLowerCase())) {
@@ -469,7 +669,10 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     }
 
     // Filter invalid party names
-    if (partyName && /^(aaj|today|kal|cash|upi|bank|maal|mal|kharcha|rupaye|rs|petrol|आज|कल|कैश|रुपये)$/i.test(partyName)) {
+    if (
+      partyName &&
+      /^(aaj|today|kal|cash|upi|bank|maal|mal|saman|kharcha|rupaye|rs|petrol|आज|कल|कैश|रुपये)$/i.test(partyName)
+    ) {
       partyName = null;
     }
   }
@@ -486,15 +689,29 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
   }
 
   // 4. Calculate Balance Due for Sales
-  const isInvoiceIntent = type === 'SALE' && (lineItems.length > 0 || cashReceived !== null || /maal diya|udhaar|bill/i.test(lower));
+  const isInvoiceIntent =
+    type === 'SALE' &&
+    (lineItems.length > 0 ||
+      cashReceived !== null ||
+      /maal diya|udhaar|bill|saman becha/i.test(lower));
+
+  let finalAmount = totalAmount;
+  // If line items have computed rates and totalAmount wasn't explicitly set
+  if (lineItems.length > 0) {
+    const itemsTotal = lineItems.reduce((acc, it) => acc + (it.rate ? it.quantity * it.rate : 0), 0);
+    if (itemsTotal > 0 && (!finalAmount || finalAmount < itemsTotal)) {
+      finalAmount = itemsTotal;
+    }
+  }
+
   let balanceDue: number | null = null;
-  if (totalAmount !== null && cashReceived !== null) {
-    balanceDue = Math.max(0, totalAmount - cashReceived);
+  if (finalAmount !== null && cashReceived !== null) {
+    balanceDue = Math.max(0, finalAmount - cashReceived);
   }
 
   // 5. Missing fields analysis
   const missingFields: string[] = [];
-  if (!totalAmount && lineItems.length === 0) missingFields.push('amount');
+  if (!finalAmount && lineItems.length === 0) missingFields.push('amount');
   if (type !== 'EXPENSE' && !partyName) missingFields.push('partyName');
 
   const requiresClarification = missingFields.length > 0;
@@ -511,7 +728,7 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     typeLabelHi,
     typeLabelEn,
     partyName,
-    amount: totalAmount,
+    amount: finalAmount,
     cashReceived,
     balanceDue,
     discount,
@@ -525,5 +742,6 @@ export function parseVoiceTransaction(transcript: string): ParsedVoiceTransactio
     missingFields,
     isInvoiceIntent,
     items: lineItems,
+    isCustomerCreateIntent: false,
   };
 }

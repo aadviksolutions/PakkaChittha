@@ -12,20 +12,17 @@ import {
   AlertCircle, 
   ArrowRight, 
   Edit3, 
-  Building2, 
   Users, 
-  Wallet, 
-  Calendar, 
   ShieldAlert,
   Loader2,
-  Tag,
   Check,
   FileText,
   UserPlus,
   Receipt,
   Plus,
-  Trash2,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  MapPin
 } from 'lucide-react';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { 
@@ -55,6 +52,15 @@ interface PartyMatch {
   score: number;
 }
 
+interface ProductSuggestion {
+  id: string;
+  name: string;
+  unit: string;
+  sellingPrice: number;
+  currentStock: number;
+  matchScore: number;
+}
+
 interface MatchedLineItem {
   matched: boolean;
   productId: string | null;
@@ -68,6 +74,7 @@ interface MatchedLineItem {
   currentStock: number;
   lineTotal: number;
   needsRateInput?: boolean;
+  suggestions?: ProductSuggestion[];
 }
 
 export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalProps) {
@@ -106,6 +113,16 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
   const [selectedParty, setSelectedParty] = useState<PartyMatch | null>(null);
   const [isSearchingParty, setIsSearchingParty] = useState(false);
 
+  // Inline New Customer Creation State
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustMobile, setNewCustMobile] = useState('');
+  const [newCustEmail, setNewCustEmail] = useState('');
+  const [newCustAddress, setNewCustAddress] = useState('');
+  const [newCustGstin, setNewCustGstin] = useState('');
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [newCustomerError, setNewCustomerError] = useState<string | null>(null);
+
   // Voice Invoice & Product Matching State
   const [invoiceMode, setInvoiceMode] = useState(false);
   const [matchedItems, setMatchedItems] = useState<MatchedLineItem[]>([]);
@@ -118,6 +135,17 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
     if (transcript && transcript.trim().length > 3) {
       const res = parseVoiceTransaction(transcript);
       setParsed(res);
+
+      // Handle Direct Voice Customer Creation Intent
+      if (res.isCustomerCreateIntent && res.customerName) {
+        setShowNewCustomerForm(true);
+        setNewCustName(res.customerName);
+        if (res.customerMobile) {
+          setNewCustMobile(res.customerMobile);
+        }
+        return;
+      }
+
       setEditType(res.type);
       setEditAmount(res.amount ? res.amount.toString() : '');
       setEditPartyName(res.partyName || '');
@@ -165,8 +193,8 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
       const data = await res.json();
       if (data.success && data.matches) {
         setPartyMatches(data.matches);
-        
-        // Strict requirement: Do NOT auto-select the first result when multiple customers match
+
+        // Strict requirement: Only auto-select when there is an exact single match
         if (data.matches.length === 1 && data.matches[0].isExactMatch) {
           setSelectedParty(data.matches[0]);
         } else {
@@ -209,6 +237,28 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
     }
   };
 
+  // Select a suggested product for a line item
+  const handleSelectSuggestion = (index: number, sug: ProductSuggestion) => {
+    setMatchedItems((prev) => {
+      const copy = [...prev];
+      const item = copy[index];
+      const newRate = sug.sellingPrice;
+      const newLineTotal = Math.round((Number(item.quantity || 1) * newRate + Number.EPSILON) * 100) / 100;
+      copy[index] = {
+        ...item,
+        matched: true,
+        productId: sug.id,
+        name: sug.name,
+        unit: sug.unit,
+        rate: newRate,
+        lineTotal: newLineTotal,
+        currentStock: sug.currentStock,
+        needsRateInput: false,
+      };
+      return copy;
+    });
+  };
+
   // Update item rate or qty manually in invoice preview
   const handleUpdateItem = (index: number, field: keyof MatchedLineItem, value: any) => {
     setMatchedItems((prev) => {
@@ -223,6 +273,61 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
     });
   };
 
+  // Save Inline New Customer without losing transaction continuity
+  const handleSaveNewCustomer = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmedName = newCustName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      setNewCustomerError('कृपया ग्राहक का नाम कम से कम 2 अक्षर का दर्ज करें।');
+      return;
+    }
+
+    try {
+      setIsCreatingCustomer(true);
+      setNewCustomerError(null);
+
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: trimmedName,
+          mobile: newCustMobile.trim() || undefined,
+          email: newCustEmail.trim() || undefined,
+          billingAddress: newCustAddress.trim() || undefined,
+          gstin: newCustGstin.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'ग्राहक जोड़ने में समस्या आई।');
+      }
+
+      const created = data.customer;
+      const newParty: PartyMatch = {
+        id: created.id,
+        name: created.name,
+        phone: created.mobile || null,
+        partyType: 'CUSTOMER',
+        partyTypeLabel: 'Customer (ग्राहक)',
+        currentBalance: 0,
+        balanceLabel: '₹0',
+        isExactMatch: true,
+        score: 100,
+      };
+
+      setSelectedParty(newParty);
+      setEditPartyName(created.name);
+      setShowNewCustomerForm(false);
+      setNewCustomerError(null);
+      toast.success(`नया ग्राहक "${created.name}" सफलतापूर्वक जोड़ा गया!`);
+    } catch (err: any) {
+      setNewCustomerError(err.message || 'ग्राहक जोड़ने में त्रुटि हुई।');
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
   // Calculate invoice subtotal, grand total, balance due
   const itemsSubtotal = matchedItems.reduce((acc, it) => acc + (it.lineTotal || 0), 0);
   const activeAmount = invoiceMode && matchedItems.length > 0 ? itemsSubtotal : parseFloat(editAmount) || 0;
@@ -230,6 +335,9 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
   const grandTotal = Math.max(0, activeAmount - currentDiscount);
   const paidVal = parseFloat(cashReceivedInput) || 0;
   const balanceDue = Math.max(0, grandTotal - paidVal);
+
+  // Check if any item lacks rate
+  const missingRateItem = matchedItems.find((it) => !it.rate || it.rate <= 0);
 
   // Confirm & Save standard financial transaction
   const handleConfirmAndSave = async () => {
@@ -290,10 +398,8 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
       return;
     }
 
-    // Check if any item lacks rate
-    const missingRate = matchedItems.find((it) => !it.rate || it.rate <= 0);
-    if (missingRate) {
-      setSaveError(`Please enter a selling rate for "${missingRate.name}". Rates are never guessed.`);
+    if (missingRateItem) {
+      setSaveError(`Please enter a selling rate for "${missingRateItem.name}". Rates are never guessed.`);
       return;
     }
 
@@ -363,6 +469,8 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
     setSelectedParty(null);
     setMatchedItems([]);
     setInvoiceMode(false);
+    setShowNewCustomerForm(false);
+    setNewCustomerError(null);
     onClose();
   };
 
@@ -473,7 +581,7 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
               <span className="text-[11px] text-slate-400">
                 {isListening
                   ? 'बोलना समाप्त होने पर दोबारा टैप करें'
-                  : 'जैसे: "Ramesh se 500 liye" या "Prathamesh ko 2 chhoti advance aur 3 badi advance diya"'}
+                  : 'जैसे: "Ramesh se 500 liye" या "Mohan ko 5 pen diye, rate 10 rupaye"'}
               </span>
             </div>
           </div>
@@ -513,14 +621,14 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  'Ramesh se 500 rupaye liye.',
-                  'Ramesh ko 500 rupaye diye.',
-                  'Mohan se 5000 lene hain.',
-                  'Suresh ko 2000 dene hain.',
-                  'Aaj 1500 ka petrol kharcha hua.',
-                  'Mohan ko 5000 ka maal diya, 2000 cash le liya aur baaki udhaar rakho',
-                  'Prathamesh ko 2 chhoti advance aur 3 badi advance diya',
-                  'Aaj 25000 ka maal kharida.',
+                  'Ramesh ko 2 kilo chini diya.',
+                  'Mohan ko 5 pen diye, rate 10 rupaye.',
+                  '500 rupaye cash mila.',
+                  'Ramesh se 1000 rupaye liya.',
+                  'Suresh ko 10 bottle oil diya.',
+                  'Do hazaar ka saman becha.',
+                  '10000 ki website bacha.',
+                  'नया ग्राहक Suresh Kumar जोड़ो',
                 ].map((s) => (
                   <button
                     key={s}
@@ -535,8 +643,133 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
             </div>
           )}
 
-          {/* Module 2: Intelligent Customer Name Matching Suggestions */}
-          {partyMatches.length > 0 && !selectedParty && (
+          {/* Module 4: Inline New Customer Creation Form */}
+          {showNewCustomerForm && (
+            <div className="p-4 bg-orange-50/80 rounded-2xl border border-orange-200 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between pb-2 border-b border-orange-200/60">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-orange-700" />
+                  <span className="text-xs font-bold text-orange-950">
+                    नया ग्राहक जोड़ें (Create New Customer)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCustomerForm(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {newCustomerError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{newCustomerError}</span>
+                </div>
+              )}
+
+              <div className="space-y-2 text-xs">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-0.5">
+                    ग्राहक का नाम (Customer Name) *
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustName}
+                    onChange={(e) => setNewCustName(e.target.value)}
+                    placeholder="e.g. Suresh Kumar"
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium text-xs focus:border-orange-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-0.5">
+                      मोबाइल नंबर (Mobile)
+                    </label>
+                    <input
+                      type="tel"
+                      value={newCustMobile}
+                      onChange={(e) => setNewCustMobile(e.target.value)}
+                      placeholder="9876543210"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-mono text-xs focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-0.5">
+                      ईमेल (Email)
+                    </label>
+                    <input
+                      type="email"
+                      value={newCustEmail}
+                      onChange={(e) => setNewCustEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 text-xs focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-0.5">
+                      पता (Billing Address)
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustAddress}
+                      onChange={(e) => setNewCustAddress(e.target.value)}
+                      placeholder="City / Market"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 text-xs focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-semibold text-slate-700 block mb-0.5">
+                      GSTIN (वैकल्पिक)
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustGstin}
+                      onChange={(e) => setNewCustGstin(e.target.value.toUpperCase())}
+                      placeholder="22AAAAA0000A1Z5"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 uppercase font-mono text-xs focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCustomerForm(false)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
+                  >
+                    रद्द करें
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isCreatingCustomer}
+                    onClick={() => handleSaveNewCustomer()}
+                    className="px-4 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  >
+                    {isCreatingCustomer ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>ग्राहक बन रहा है...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>ग्राहक सुरक्षित करें (Save Customer)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Module 2: Multiple Matching Customers Selector */}
+          {partyMatches.length > 0 && !selectedParty && !showNewCustomerForm && (
             <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -588,27 +821,51 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
               </div>
 
               <div className="pt-1 flex items-center justify-between text-[11px] border-t border-amber-200/60 text-amber-800">
-                <span>नया ग्राहक बनाना चाहते हैं?</span>
+                <span>इनमें से कोई नहीं?</span>
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedParty({
-                      id: '',
-                      name: editPartyName || 'New Party',
-                      phone: null,
-                      partyType: 'CUSTOMER',
-                      partyTypeLabel: 'New Customer',
-                      currentBalance: 0,
-                      balanceLabel: 'New',
-                      isExactMatch: false,
-                      score: 0,
-                    });
+                    setNewCustName(editPartyName || '');
+                    setShowNewCustomerForm(true);
                   }}
-                  className="font-bold underline text-amber-900 hover:text-black cursor-pointer"
+                  className="font-bold underline text-amber-900 hover:text-black cursor-pointer flex items-center gap-1"
                 >
-                  "{editPartyName}" को नया ग्राहक बनाएं
+                  <Plus className="w-3 h-3" />
+                  <span>"{editPartyName}" को नया ग्राहक बनाएं</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Customer Not Found Indicator + Quick Add Button */}
+          {partyMatches.length === 0 && !selectedParty && editPartyName && editType !== 'EXPENSE' && !showNewCustomerForm && (
+            <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+                  {editPartyName.charAt(0)}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>{editPartyName}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">
+                      New Customer (नया ग्राहक)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">कैटलॉग या संपर्क सूची में नहीं मिला</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setNewCustName(editPartyName);
+                  setShowNewCustomerForm(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>नया ग्राहक जोड़ें</span>
+              </button>
             </div>
           )}
 
@@ -635,13 +892,28 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
                     {selectedParty?.name || editPartyName || 'Walk-in Customer'}
                   </span>
                 </div>
-                {selectedParty?.phone && (
-                  <span className="text-slate-500 font-mono text-[11px]">{selectedParty.phone}</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedParty?.phone ? (
+                    <span className="text-slate-500 font-mono text-[11px]">{selectedParty.phone}</span>
+                  ) : (
+                    !selectedParty && editPartyName && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCustName(editPartyName);
+                          setShowNewCustomerForm(true);
+                        }}
+                        className="text-[10px] text-orange-600 hover:text-orange-700 font-bold underline"
+                      >
+                        + नया ग्राहक जोड़ें
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
 
               {/* Line Items Table */}
-              <div className="p-3 space-y-2 text-xs">
+              <div className="p-3 space-y-3 text-xs">
                 <div className="grid grid-cols-12 text-[10px] font-bold text-slate-400 uppercase pb-1 border-b border-slate-100">
                   <div className="col-span-5">उत्पाद (Product)</div>
                   <div className="col-span-2 text-center">मात्रा (Qty)</div>
@@ -650,39 +922,61 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
                 </div>
 
                 {matchedItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 items-center gap-1 text-xs py-1">
-                    <div className="col-span-5 truncate">
-                      <div className="font-semibold text-slate-800 truncate">{item.name}</div>
-                      {item.matched ? (
-                        <span className="text-[10px] text-emerald-600 font-medium">✓ कैटलॉग रेट</span>
-                      ) : (
-                        <span className="text-[10px] text-amber-600 font-medium">कैटलॉग में नहीं (Enter Rate)</span>
-                      )}
+                  <div key={idx} className="space-y-1.5 py-1.5 border-b border-slate-100/60 last:border-b-0">
+                    <div className="grid grid-cols-12 items-center gap-1 text-xs">
+                      <div className="col-span-5 truncate">
+                        <div className="font-semibold text-slate-800 truncate">{item.name}</div>
+                        {item.matched ? (
+                          <span className="text-[10px] text-emerald-600 font-medium">✓ कैटलॉग दर</span>
+                        ) : (
+                          <span className="text-[10px] text-amber-600 font-medium">
+                            कैटलॉग में नहीं (दर दर्ज करें)
+                          </span>
+                        )}
+                      </div>
+                      <div className="col-span-2 text-center">
+                        <input
+                          type="number"
+                          min="0.1"
+                          step="any"
+                          value={item.quantity}
+                          onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 1)}
+                          className="w-12 px-1 py-0.5 text-center font-bold border border-slate-200 rounded text-xs"
+                        />
+                      </div>
+                      <div className="col-span-2 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          value={item.rate || ''}
+                          onChange={(e) => handleUpdateItem(idx, 'rate', parseFloat(e.target.value) || 0)}
+                          placeholder="₹ Rate"
+                          className={`w-16 px-1 py-0.5 text-right font-mono font-bold border rounded text-xs ${
+                            item.needsRateInput ? 'border-amber-400 bg-amber-50 text-amber-900 ring-2 ring-amber-300/40' : 'border-slate-200'
+                          }`}
+                        />
+                      </div>
+                      <div className="col-span-3 text-right font-black font-mono text-slate-900">
+                        ₹{item.lineTotal.toLocaleString('en-IN')}
+                      </div>
                     </div>
-                    <div className="col-span-2 text-center">
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 1)}
-                        className="w-12 px-1 py-0.5 text-center font-bold border border-slate-200 rounded text-xs"
-                      />
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.rate}
-                        onChange={(e) => handleUpdateItem(idx, 'rate', parseFloat(e.target.value) || 0)}
-                        placeholder="₹ Rate"
-                        className={`w-16 px-1 py-0.5 text-right font-mono font-bold border rounded text-xs ${
-                          item.needsRateInput ? 'border-amber-400 bg-amber-50 text-amber-900' : 'border-slate-200'
-                        }`}
-                      />
-                    </div>
-                    <div className="col-span-3 text-right font-black font-mono text-slate-900">
-                      ₹{item.lineTotal.toLocaleString('en-IN')}
-                    </div>
+
+                    {/* Suggestions Chips if available */}
+                    {item.suggestions && item.suggestions.length > 0 && !item.matched && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] text-slate-400">सुझाव (Suggested):</span>
+                        {item.suggestions.slice(0, 3).map((sug) => (
+                          <button
+                            key={sug.id}
+                            type="button"
+                            onClick={() => handleSelectSuggestion(idx, sug)}
+                            className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 rounded-md font-medium text-slate-700 transition-colors"
+                          >
+                            + {sug.name} (₹{sug.sellingPrice})
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -925,8 +1219,9 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
 
                 <button
                   type="button"
-                  disabled={isSaving || grandTotal <= 0}
+                  disabled={isSaving || grandTotal <= 0 || Boolean(missingRateItem)}
                   onClick={handleCreateVoiceInvoice}
+                  title={missingRateItem ? `Please enter rate for ${missingRateItem.name}` : undefined}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {isSaving ? (
