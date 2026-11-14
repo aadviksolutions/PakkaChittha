@@ -57,20 +57,20 @@ export function ModulePageShell({
 
       {/* Header Banner */}
       <div
-        className={`bg-white rounded-2xl p-5 border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        className={`bg-white rounded-2xl p-5 border border-[#DCE4EF] shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
           hideHeaderInPrint ? 'print:hidden' : 'print:border-slate-300 print:shadow-none print:rounded-none print:p-3'
         }`}
       >
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-extrabold text-[#102A43] tracking-tight">
               {title}
             </h1>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3F6FB] text-[#1761A0] border border-[#DCE4EF]">
               {badgeText}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+          <p className="text-xs text-[#64748B] mt-1 max-w-2xl leading-relaxed">
             {description}
           </p>
         </div>
@@ -78,7 +78,7 @@ export function ModulePageShell({
         {actionButtonText && actionButtonType && (
           <button
             onClick={() => openAction(actionButtonType)}
-            className="self-start md:self-center px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors shrink-0"
+            className="self-start md:self-center px-4 py-2 bg-[#102A43] hover:bg-[#071D35] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
           >
             {actionButtonText}
           </button>

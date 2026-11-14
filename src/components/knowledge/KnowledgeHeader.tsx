@@ -17,6 +17,7 @@ import {
   Info
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/context';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
 
 export function KnowledgeHeader() {
   const pathname = usePathname();
@@ -121,16 +122,9 @@ export function KnowledgeHeader() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-3">
-            {/* Language Toggle */}
-            <button
-              onClick={toggleLanguage}
-              title={isHi ? 'Switch to English' : 'हिंदी में बदलें'}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors"
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isHi ? 'EN' : 'हिं'}</span>
-            </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Global Language Selector */}
+            <LanguageSelector variant="header" />
 
             {/* Search Quick Link */}
             <Link

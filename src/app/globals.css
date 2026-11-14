@@ -2,25 +2,35 @@
 
 @layer base {
   :root {
-    --background: #F6F9FC;
-    --foreground: #071F38;
+    --background: #F3F6FB;
+    --foreground: #172B4D;
     --surface: #ffffff;
-    --surface-subtle: #f8fafc;
-    --border-subtle: #e2e8f0;
-    --border-strong: #cbd5e1;
-    --brand-navy: #071F38;
-    --brand-navy-secondary: #0D2C4D;
-    --brand-orange: #EA580C;
-    --brand-orange-hover: #D94E00;
-    --brand-orange-subtle: #FFF4E5;
-    --brand-amber: #F58220;
-    --brand-amber-subtle: #FEF3C7;
-    --brand-emerald: #EA580C;
-    --brand-emerald-hover: #D94E00;
-    --brand-emerald-subtle: #FFF4E5;
-    --brand-teal: #071F38;
+    --surface-subtle: #F8FAFC;
+    --border-subtle: #DCE4EF;
+    --border-strong: #CBD5E1;
+    --primary-navy: #102A43;
+    --dark-navy: #071D35;
+    --secondary-blue: #1761A0;
+    --accent-blue: #2878CE;
+    --brand-navy: #102A43;
+    --brand-navy-secondary: #071D35;
+    --primary-text: #172B4D;
+    --secondary-text: #64748B;
+    --success-green: #159447;
+    --success-bg: #EAF8EF;
+    --danger-red: #E53935;
+    --danger-bg: #FFF0F0;
+    --brand-orange: #102A43;
+    --brand-orange-hover: #071D35;
+    --brand-orange-subtle: #F3F6FB;
+    --brand-amber: #1761A0;
+    --brand-amber-subtle: #EBF3FA;
+    --brand-emerald: #159447;
+    --brand-emerald-hover: #117638;
+    --brand-emerald-subtle: #EAF8EF;
+    --brand-teal: #102A43;
     --brand-teal-subtle: #F1F5F9;
-    --slate-muted: #64748b;
+    --slate-muted: #64748B;
     --font-indic-fallback: "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans Telugu", 
                            "Noto Sans Tamil", "Noto Sans Gujarati", "Noto Sans Kannada", 
                            "Noto Sans Malayalam", "Noto Sans Oriya", "Noto Sans Gurmukhi", 

@@ -294,7 +294,7 @@ function ContactsContent() {
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <strong className="text-xs sm:text-sm text-[#071F38] truncate group-hover:text-[#EA580C] transition-colors">
+                        <strong className="text-xs sm:text-sm text-[#102A43] truncate group-hover:text-[#1761A0] transition-colors">
                           {c.name}
                         </strong>
                         {c.phone && (

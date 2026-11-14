@@ -12,7 +12,7 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Sparkles,
-  Languages,
+  Globe,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { UpiQrCode } from '@/components/shared/UpiQrCode';
@@ -693,7 +693,7 @@ export default function SettingsPage() {
           {/* Language & Regional Preferences */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Languages className="w-4 h-4 text-[#EA580C]" />
+              <Globe className="w-4 h-4 text-[#1761A0]" />
               <div>
                 <h3 className="font-bold text-sm text-slate-900">{t('settings.languagePreference')}</h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">{t('settings.languageHelp')}</p>

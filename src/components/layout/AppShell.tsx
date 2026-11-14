@@ -84,7 +84,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const isLocked = !isSuperAdmin && !isFreeKhata && !isGharKharcha && isTrial && isExpired && pathname !== '/subscription';
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC] print:bg-white flex flex-col font-sans text-slate-900 selection:bg-slate-200">
+    <div className="min-h-screen bg-[#F3F6FB] print:bg-white flex flex-col font-sans text-[#172B4D] selection:bg-[#EBF3FA]">
       <div className="print:hidden">
         <CinematicIntro />
       </div>

@@ -117,7 +117,7 @@ export function Header({
   };
 
   return (
-    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-slate-200/90 px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
+    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-[#DCE4EF] px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
       {/* Left: Mobile Toggle & Business Name with Logo */}
       <div className="flex items-center gap-1.5 sm:gap-3 flex-1 min-w-0">
         <button
@@ -239,7 +239,7 @@ export function Header({
         {showNewBill && (
           <Link
             href="/invoices/new"
-            className="hidden sm:inline-flex items-center gap-1 bg-[#EA580C] hover:bg-[#D94E00] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer shrink-0"
+            className="hidden sm:inline-flex items-center gap-1.5 bg-[#102A43] hover:bg-[#071D35] text-white text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
           >
             <PlusCircle className="w-3.5 h-3.5 text-white" />
             <span>{t('dashboard.newBill')}</span>
@@ -251,11 +251,11 @@ export function Header({
           <button
             type="button"
             onClick={() => setVoiceModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100/80 text-[#EA580C] border border-orange-200/80 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EBF3FA] hover:bg-[#DDE9F5] text-[#1761A0] border border-blue-200/80 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95 cursor-pointer shrink-0"
             title="बोलकर एंट्री करें (Smart Voice Entry)"
             aria-label="Smart Voice Entry"
           >
-            <Mic className="w-3.5 h-3.5 text-[#EA580C] animate-pulse" />
+            <Mic className="w-3.5 h-3.5 text-[#1761A0] animate-pulse" />
             <span className="hidden xs:inline sm:inline">बोलकर एंट्री</span>
           </button>
         )}
@@ -275,14 +275,14 @@ export function Header({
             aria-label="View notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-[#EA580C] ring-2 ring-white" />
+            <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-[#E53935] ring-2 ring-white" />
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
+            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-[#DCE4EF] p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                 <span className="font-semibold text-slate-900">{t('common.notifications')}</span>
-                <span className="text-[10px] text-[#EA580C] bg-orange-50 px-1.5 py-0.5 rounded font-bold">
+                <span className="text-[10px] text-[#1761A0] bg-[#EBF3FA] px-1.5 py-0.5 rounded font-bold">
                   2 Pending
                 </span>
               </div>

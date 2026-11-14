@@ -929,7 +929,7 @@ export default function PersonLedgerPage({
                           <button
                             type="button"
                             onClick={() => handleOpenRepayForTx(act.transactionId!)}
-                            className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer"
+                            className="text-[10px] font-bold text-[#1761A0] hover:underline cursor-pointer"
                           >
                             वापसी दर्ज करें
                           </button>

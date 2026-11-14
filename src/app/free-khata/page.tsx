@@ -745,7 +745,7 @@ function PersonalKhataDashboardContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('freeKhata.searchPlaceholder')}
-                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0]"
               />
             </div>
 
@@ -764,7 +764,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={contactStatusFilter}
                 onChange={(e) => setContactStatusFilter(e.target.value as any)}
-                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
               >
                 <option value="ALL">{isHi ? 'सभी संपर्क (All)' : 'All Contacts'}</option>
                 <option value="TO_RECEIVE">{isHi ? 'मुझे लेने हैं (Receivable)' : 'To Receive'}</option>
@@ -776,7 +776,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={contactSortBy}
                 onChange={(e) => setContactSortBy(e.target.value as any)}
-                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
               >
                 <option value="RECENT">{isHi ? 'हाल की गतिविधि' : 'Recent Activity'}</option>
                 <option value="RECEIVE_HIGH">{isHi ? 'सबसे अधिक लेने हैं' : 'Highest to Receive'}</option>
@@ -829,7 +829,7 @@ function PersonalKhataDashboardContent() {
                         <div>
                           <Link
                             href={`/free-khata/person/${c.id}`}
-                            className="font-bold text-sm text-[#071F38] hover:text-[#EA580C] transition-colors"
+                            className="font-bold text-sm text-[#102A43] hover:text-[#1761A0] transition-colors"
                           >
                             {c.name}
                           </Link>
@@ -948,7 +948,7 @@ function PersonalKhataDashboardContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="खोजें (व्यक्ति, विवरण, आदि)..."
-                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+                className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0]"
               />
             </div>
 
@@ -956,7 +956,7 @@ function PersonalKhataDashboardContent() {
               <select
                 value={modeFilter}
                 onChange={(e) => setModeFilter(e.target.value)}
-                className="text-xs p-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EA580C] font-medium"
+                className="text-xs p-2 bg-white border border-[#DCE4EF] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1761A0] font-medium"
               >
                 <option value="ALL">सभी माध्यम (All Modes)</option>
                 <option value="CASH">Cash (नकद)</option>
@@ -1020,7 +1020,7 @@ function PersonalKhataDashboardContent() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/free-khata/person/${tx.contactId}`}
-                            className="font-bold text-sm text-[#071F38] hover:text-[#EA580C]"
+                            className="font-bold text-sm text-[#102A43] hover:text-[#1761A0]"
                           >
                             {tx.contactName}
                           </Link>
@@ -1068,7 +1068,7 @@ function PersonalKhataDashboardContent() {
                           <button
                             type="button"
                             onClick={() => handleOpenRepay(tx)}
-                            className="text-[10px] font-bold text-[#EA580C] hover:underline cursor-pointer ml-1"
+                            className="text-[10px] font-bold text-[#1761A0] hover:underline cursor-pointer ml-1"
                           >
                             {isHi ? 'वापसी दर्ज करें' : 'Record Repayment'}
                           </button>
@@ -1118,7 +1118,7 @@ function PersonalKhataDashboardContent() {
                 <div>
                   <Link
                     href={`/free-khata/person/${o.contactId}`}
-                    className="font-bold text-sm text-[#071F38] hover:text-[#EA580C]"
+                    className="font-bold text-sm text-[#102A43] hover:text-[#1761A0]"
                   >
                     {o.contactName}
                   </Link>

@@ -69,10 +69,10 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
     .toUpperCase();
 
   return (
-    <div ref={containerRef} className="relative border-b border-slate-200/80 p-3 bg-slate-50/70">
+    <div ref={containerRef} className="relative border-b border-[#102A43] p-3 bg-[#071D35]">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-3 text-left p-2 rounded-lg hover:bg-white hover:shadow-xs border border-transparent hover:border-slate-200 transition-all group cursor-pointer"
+        className="w-full flex items-center justify-between gap-3 text-left p-2 rounded-lg hover:bg-white/5 hover:shadow-xs border border-transparent hover:border-white/10 transition-all group cursor-pointer"
         title="Business Profile"
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -90,23 +90,23 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
               className={`w-10 h-10 rounded-lg text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-xs shrink-0 group-hover:scale-105 transition-transform border ${
                 isSuperAdmin && !activeBusiness
                   ? 'bg-purple-950 border-purple-800 text-purple-200'
-                  : 'bg-slate-900 border-slate-700 text-emerald-400'
+                  : 'bg-[#102A43] border-[#1761A0] text-emerald-400'
               }`}
             >
-              {isSuperAdmin && !activeBusiness ? 'PA' : monogram || 'ST'}
+              {isSuperAdmin && !activeBusiness ? 'SA' : monogram || 'PC'}
             </div>
           )}
 
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-xs text-slate-900 truncate block">
+                <span className="font-semibold text-xs text-white truncate block">
                   {bizName}
                 </span>
               </div>
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] text-slate-500 font-mono tracking-tight truncate block">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span className="text-[10px] text-slate-400 font-mono tracking-tight truncate block">
                   {activeBusiness?.gstin ? `GST: ${activeBusiness.gstin}` : isSuperAdmin ? 'System Root' : 'Tenant Active'}
                 </span>
               </div>
@@ -116,7 +116,7 @@ export function BusinessProfileArea({ collapsed = false }: BusinessProfileAreaPr
 
         {!collapsed && (
           <ChevronDown
-            className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 shrink-0 ${
+            className={`w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200 shrink-0 ${
               isOpen ? 'rotate-180' : ''
             }`}
           />
