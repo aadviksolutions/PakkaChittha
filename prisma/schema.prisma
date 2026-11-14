@@ -514,6 +514,9 @@ model Customer {
   @@index([businessId])
   @@index([name])
   @@index([mobile])
+  @@index([businessId, name])
+  @@index([businessId, mobile])
+  @@index([businessId, createdAt(sort: Desc)])
 }
 
 model InvoiceSequence {
@@ -586,6 +589,10 @@ model Invoice {
   @@index([customerId])
   @@index([status])
   @@index([invoiceDate])
+  @@index([businessId, invoiceDate(sort: Desc)])
+  @@index([businessId, customerId])
+  @@index([businessId, status])
+  @@index([businessId, createdAt(sort: Desc)])
 }
 
 model InvoiceItem {
@@ -637,6 +644,8 @@ model Payment {
   @@index([invoiceId])
   @@index([customerId])
   @@index([paymentDate])
+  @@index([businessId, paymentDate(sort: Desc)])
+  @@index([businessId, customerId])
 }
 
 enum StockMovementType {
@@ -687,6 +696,9 @@ model Product {
   @@index([category])
   @@index([barcode])
   @@index([isActive])
+  @@index([businessId, name])
+  @@index([businessId, category])
+  @@index([businessId, isActive])
 }
 
 model StockMovement {
@@ -734,6 +746,9 @@ model Supplier {
   @@index([businessId])
   @@index([name])
   @@index([phone])
+  @@index([businessId, name])
+  @@index([businessId, phone])
+  @@index([businessId, createdAt(sort: Desc)])
 }
 
 model PurchaseSequence {
@@ -794,6 +809,9 @@ model Purchase {
   @@index([supplierId])
   @@index([status])
   @@index([purchaseDate])
+  @@index([businessId, purchaseDate(sort: Desc)])
+  @@index([businessId, supplierId])
+  @@index([businessId, status])
 }
 
 model PurchaseItem {
@@ -845,6 +863,8 @@ model SupplierPayment {
   @@index([purchaseId])
   @@index([supplierId])
   @@index([paymentDate])
+  @@index([businessId, paymentDate(sort: Desc)])
+  @@index([businessId, supplierId])
 }
 
 model WhatsAppConfig {
@@ -919,6 +939,8 @@ model Expense {
   @@index([businessId])
   @@index([category])
   @@index([expenseDate])
+  @@index([businessId, expenseDate(sort: Desc)])
+  @@index([businessId, category])
 }
 
 enum KhataTransactionType {
@@ -987,6 +1009,8 @@ model KhataTransaction {
   @@index([date])
   @@index([dueDate])
   @@index([paymentMode])
+  @@index([businessId, contactId, date(sort: Desc)])
+  @@index([businessId, date(sort: Desc)])
 }
 
 model KhataRepayment {
@@ -1013,6 +1037,7 @@ model KhataRepayment {
   @@index([contactId])
   @@index([transactionId])
   @@index([date])
+  @@index([businessId, transactionId])
 }
 
 model SubscriptionPayment {

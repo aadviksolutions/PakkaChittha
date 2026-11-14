@@ -23,9 +23,14 @@ export interface UpdateSupplierInput {
 }
 
 /**
- * Fetch all suppliers for a business with real-time payable ledger balance calculation
+ * Fetch all suppliers for a business with real-time payable ledger balance calculation.
+ * Supports lightweight projection for high-speed autocomplete/dropdown selectors.
  */
-export async function getSuppliers(businessId: string, query?: string) {
+export async function getSuppliers(
+  businessId: string,
+  query?: string,
+  options?: { limit?: number; offset?: number; lightweight?: boolean }
+) {
   const where: any = { businessId };
 
   if (query?.trim()) {
@@ -38,8 +43,46 @@ export async function getSuppliers(businessId: string, query?: string) {
     ];
   }
 
+  if (options?.lightweight) {
+    const suppliers = await prisma.supplier.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        address: true,
+        gstin: true,
+        openingBalance: true,
+        createdAt: true,
+      },
+      take: options.limit ? Math.min(options.limit, 100) : 50,
+      skip: options.offset || 0,
+      orderBy: { name: 'asc' },
+    });
+
+    return suppliers.map((s) => ({
+      id: s.id,
+      name: s.name,
+      phone: s.phone,
+      email: s.email,
+      address: s.address,
+      gstin: s.gstin,
+      openingBalance: s.openingBalance,
+      notes: null,
+      totalOutstanding: round2(s.openingBalance || 0),
+      totalPurchasesAmount: 0,
+      totalPaidAmount: 0,
+      purchaseCount: 0,
+      lastPurchaseDate: null,
+      createdAt: s.createdAt,
+    }));
+  }
+
   const suppliers = await prisma.supplier.findMany({
     where,
+    take: options?.limit ? Math.min(options.limit, 100) : undefined,
+    skip: options?.offset || 0,
     include: {
       purchases: {
         where: { status: PurchaseStatus.RECEIVED },

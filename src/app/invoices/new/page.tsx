@@ -204,7 +204,7 @@ function InvoiceCreationForm() {
   // Load Customers & Inventory Catalog
   useEffect(() => {
     if (!canAccessCommercial) return;
-    fetch('/api/customers')
+    fetch('/api/customers?lightweight=true')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success && Array.isArray(data.customers)) {

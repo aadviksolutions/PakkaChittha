@@ -18,8 +18,13 @@ export interface CustomerInput {
 /**
  * Retrieves all customers belonging strictly to the specified business tenant.
  * Includes calculated outstanding balances derived from active invoices and opening balance.
+ * Supports lightweight projection for high-speed autocomplete/dropdown selectors.
  */
-export async function getCustomers(businessId: string, search?: string) {
+export async function getCustomers(
+  businessId: string,
+  search?: string,
+  options?: { limit?: number; offset?: number; lightweight?: boolean }
+) {
   const where: {
     businessId: string;
     OR?: {
@@ -38,11 +43,54 @@ export async function getCustomers(businessId: string, search?: string) {
     ];
   }
 
+  if (options?.lightweight) {
+    const customers = await prisma.customer.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        email: true,
+        billingAddress: true,
+        shippingAddress: true,
+        gstin: true,
+        openingBalance: true,
+        optedOutWhatsApp: true,
+        createdAt: true,
+      },
+      take: options.limit ? Math.min(options.limit, 100) : 50,
+      skip: options.offset || 0,
+      orderBy: { name: 'asc' },
+    });
+
+    return customers.map((c) => ({
+      id: c.id,
+      name: c.name,
+      mobile: c.mobile,
+      email: c.email,
+      billingAddress: c.billingAddress,
+      shippingAddress: c.shippingAddress,
+      gstin: c.gstin,
+      openingBalance: c.openingBalance,
+      notes: null,
+      optedOutWhatsApp: c.optedOutWhatsApp,
+      createdAt: c.createdAt,
+      invoiceCount: 0,
+      invoiceTotal: 0,
+      invoicePaid: 0,
+      totalOutstanding: round2(c.openingBalance || 0),
+    }));
+  }
+
   const customers = await prisma.customer.findMany({
     where,
+    take: options?.limit ? Math.min(options.limit, 100) : undefined,
+    skip: options?.offset || 0,
     include: {
       invoices: {
-        where: { status: { not: 'CANCELLED' } },
+        where: {
+          status: { not: 'CANCELLED', in: ['UNPAID', 'PARTIAL', 'OVERDUE'] },
+        },
         select: {
           id: true,
           total: true,

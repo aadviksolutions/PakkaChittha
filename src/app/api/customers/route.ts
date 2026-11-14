@@ -7,8 +7,14 @@ export async function GET(req: NextRequest) {
     const { business } = await requireCommercialAccess();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || undefined;
+    const lightweight = searchParams.get('lightweight') === 'true' || searchParams.get('mode') === 'selector';
+    const limitParam = searchParams.get('limit');
+    const pageParam = searchParams.get('page');
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 100) : undefined;
+    const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+    const offset = limit && page ? (page - 1) * limit : undefined;
 
-    const customers = await getCustomers(business.id, search);
+    const customers = await getCustomers(business.id, search, { lightweight, limit, offset });
 
     return NextResponse.json({
       success: true,

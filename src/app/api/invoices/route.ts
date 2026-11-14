@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
     const status = (searchParams.get('status') as InvoiceStatus) || undefined;
     const startDate = searchParams.get('startDate') || undefined;
     const endDate = searchParams.get('endDate') || undefined;
+    const limitParam = searchParams.get('limit');
+    const pageParam = searchParams.get('page');
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 100) : undefined;
+    const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+    const offset = limit && page ? (page - 1) * limit : undefined;
 
     const invoices = await getInvoices(business.id, {
       search,
@@ -22,6 +27,8 @@ export async function GET(req: NextRequest) {
       status,
       startDate,
       endDate,
+      limit,
+      offset,
     });
 
     return NextResponse.json({

@@ -49,7 +49,7 @@ export function RecentTransactionsTable(props: RecentTransactionsTableProps) {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/invoices')
+    fetch('/api/invoices?limit=15')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!active) return;

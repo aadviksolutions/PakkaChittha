@@ -8,8 +8,14 @@ export async function GET(req: NextRequest) {
     const { business } = await requireGrowthAccess();
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('query') || undefined;
+    const lightweight = searchParams.get('lightweight') === 'true' || searchParams.get('mode') === 'selector';
+    const limitParam = searchParams.get('limit');
+    const pageParam = searchParams.get('page');
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 100) : undefined;
+    const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+    const offset = limit && page ? (page - 1) * limit : undefined;
 
-    const suppliers = await getSuppliers(business.id, query);
+    const suppliers = await getSuppliers(business.id, query, { lightweight, limit, offset });
 
     return NextResponse.json({
       success: true,

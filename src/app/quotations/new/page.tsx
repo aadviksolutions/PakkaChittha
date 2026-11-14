@@ -98,7 +98,7 @@ function NewQuotationContent() {
     async function loadData() {
       try {
         const [cRes, pRes] = await Promise.all([
-          fetch('/api/customers'),
+          fetch('/api/customers?lightweight=true'),
           fetch('/api/inventory'),
         ]);
         const cData = await cRes.json();

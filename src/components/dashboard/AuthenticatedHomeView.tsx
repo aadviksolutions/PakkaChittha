@@ -2,12 +2,10 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { SalesCollectionsChart } from '@/components/dashboard/SalesCollectionsChart';
-import { RecentTransactionsTable } from '@/components/dashboard/RecentTransactionsTable';
-import { OutstandingWatchlist } from '@/components/dashboard/OutstandingWatchlist';
 import { LowStockAlertCard } from '@/components/dashboard/LowStockAlertCard';
 import { SubscriptionUsageCard } from '@/components/dashboard/SubscriptionUsageCard';
 import { GstOverviewCard } from '@/components/dashboard/GstOverviewCard';
@@ -15,6 +13,36 @@ import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/i18n/context';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { Shield, AlertTriangle, PlusCircle } from 'lucide-react';
+
+const SalesCollectionsChart = dynamic(
+  () => import('@/components/dashboard/SalesCollectionsChart').then((m) => m.SalesCollectionsChart),
+  {
+    loading: () => (
+      <div className="h-64 rounded-2xl bg-white/60 p-6 animate-pulse border border-slate-200/60" />
+    ),
+    ssr: false,
+  }
+);
+
+const RecentTransactionsTable = dynamic(
+  () => import('@/components/dashboard/RecentTransactionsTable').then((m) => m.RecentTransactionsTable),
+  {
+    loading: () => (
+      <div className="h-72 rounded-2xl bg-white/60 p-6 animate-pulse border border-slate-200/60" />
+    ),
+    ssr: false,
+  }
+);
+
+const OutstandingWatchlist = dynamic(
+  () => import('@/components/dashboard/OutstandingWatchlist').then((m) => m.OutstandingWatchlist),
+  {
+    loading: () => (
+      <div className="h-48 rounded-2xl bg-white/60 p-6 animate-pulse border border-slate-200/60" />
+    ),
+    ssr: false,
+  }
+);
 
 function DashboardContent() {
   const router = useRouter();

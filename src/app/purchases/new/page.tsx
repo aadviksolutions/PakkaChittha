@@ -112,7 +112,7 @@ function PurchaseCreationForm() {
     if (!canManagePurchases) return;
     // Fetch suppliers and products
     Promise.all([
-      fetch('/api/suppliers')
+      fetch('/api/suppliers?lightweight=true')
         .then((r) => r.json())
         .then((d) => (d.success ? setSuppliers(d.suppliers) : null)),
       fetch('/api/inventory')

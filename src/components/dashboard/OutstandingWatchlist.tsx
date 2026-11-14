@@ -33,7 +33,7 @@ export function OutstandingWatchlist({
 
   useEffect(() => {
     let active = true;
-    fetch('/api/customers')
+    fetch('/api/customers?limit=25')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!active) return;

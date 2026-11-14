@@ -32,6 +32,8 @@ export interface InvoiceFilters {
   status?: InvoiceStatus;
   startDate?: string | Date;
   endDate?: string | Date;
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -133,12 +135,21 @@ export async function createInvoice(
 
   // 4. Execute atomic transaction
   return prisma.$transaction(async (tx) => {
-    // Check inventory stock and enforce allowNegativeStock policy
+    // 1. Batch fetch all referenced products once to eliminate N+1 DB roundtrips
+    const itemProductIds = Array.from(
+      new Set(calc.items.map((it) => it.productId).filter((id): id is string => Boolean(id)))
+    );
+    const products = itemProductIds.length > 0
+      ? await tx.product.findMany({
+          where: { id: { in: itemProductIds }, businessId },
+        })
+      : [];
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    // Check inventory stock and enforce allowNegativeStock policy in-memory
     for (const item of calc.items) {
       if (item.productId) {
-        const product = await tx.product.findFirst({
-          where: { id: item.productId, businessId },
-        });
+        const product = productMap.get(item.productId);
         if (product) {
           if (!business.allowNegativeStock && product.currentStock < item.quantity) {
             throw new Error(
@@ -219,38 +230,57 @@ export async function createInvoice(
       },
     });
 
-    // 5. Update inventory and record SALE_DEDUCTION movements for linked products
+    // 5. Update inventory and record SALE_DEDUCTION movements for linked products in batch
+    const stockMovementData: {
+      businessId: string;
+      productId: string;
+      type: StockMovementType;
+      quantity: number;
+      previousStock: number;
+      newStock: number;
+      sourceDocumentType: string;
+      sourceDocumentId: string;
+      reason: string;
+      actorName: string;
+    }[] = [];
+    const productUpdatePromises: Promise<any>[] = [];
+
     for (const item of invoice.items) {
       if (item.productId) {
-        const product = await tx.product.findFirst({
-          where: { id: item.productId, businessId },
-        });
-
+        const product = productMap.get(item.productId);
         if (product) {
           const previousStock = product.currentStock;
           const newStock = round2(previousStock - item.quantity);
+          product.currentStock = newStock; // Synchronize in-memory if item repeated
 
-          await tx.product.update({
-            where: { id: product.id },
-            data: { currentStock: newStock },
-          });
+          productUpdatePromises.push(
+            tx.product.update({
+              where: { id: product.id },
+              data: { currentStock: newStock },
+            })
+          );
 
-          await tx.stockMovement.create({
-            data: {
-              businessId,
-              productId: product.id,
-              type: StockMovementType.SALE_DEDUCTION,
-              quantity: -item.quantity,
-              previousStock,
-              newStock,
-              sourceDocumentType: 'INVOICE',
-              sourceDocumentId: invoice.id,
-              reason: `Sale on invoice ${invoice.invoiceNumber}`,
-              actorName: _userId || 'Staff',
-            },
+          stockMovementData.push({
+            businessId,
+            productId: product.id,
+            type: StockMovementType.SALE_DEDUCTION,
+            quantity: -item.quantity,
+            previousStock,
+            newStock,
+            sourceDocumentType: 'INVOICE',
+            sourceDocumentId: invoice.id,
+            reason: `Sale on invoice ${invoice.invoiceNumber}`,
+            actorName: _userId || 'Staff',
           });
         }
       }
+    }
+
+    if (productUpdatePromises.length > 0) {
+      await Promise.all(productUpdatePromises);
+    }
+    if (stockMovementData.length > 0) {
+      await tx.stockMovement.createMany({ data: stockMovementData });
     }
 
     // 6. If initial payment recorded, create Payment record
@@ -312,6 +342,8 @@ export async function getInvoices(businessId: string, filters: InvoiceFilters = 
 
   return prisma.invoice.findMany({
     where,
+    take: filters.limit ? Math.min(filters.limit, 100) : undefined,
+    skip: filters.offset || undefined,
     include: {
       customer: {
         select: {
@@ -374,38 +406,67 @@ export async function voidInvoice(
       throw new Error('Invoice is already cancelled.');
     }
 
-    // Reconcile / restore inventory for all invoiced products
+    // Reconcile / restore inventory for all invoiced products in batch
+    const voidProductIds = Array.from(
+      new Set(invoice.items.map((it) => it.productId).filter((id): id is string => Boolean(id)))
+    );
+    const voidProducts = voidProductIds.length > 0
+      ? await tx.product.findMany({
+          where: { id: { in: voidProductIds }, businessId },
+        })
+      : [];
+    const voidProductMap = new Map(voidProducts.map((p) => [p.id, p]));
+
+    const restoreMovements: {
+      businessId: string;
+      productId: string;
+      type: StockMovementType;
+      quantity: number;
+      previousStock: number;
+      newStock: number;
+      sourceDocumentType: string;
+      sourceDocumentId: string;
+      reason: string;
+      actorName: string;
+    }[] = [];
+    const restoreUpdates: Promise<any>[] = [];
+
     for (const item of invoice.items) {
       if (item.productId) {
-        const product = await tx.product.findFirst({
-          where: { id: item.productId, businessId },
-        });
-
+        const product = voidProductMap.get(item.productId);
         if (product) {
           const previousStock = product.currentStock;
           const newStock = round2(previousStock + item.quantity);
+          product.currentStock = newStock;
 
-          await tx.product.update({
-            where: { id: product.id },
-            data: { currentStock: newStock },
-          });
+          restoreUpdates.push(
+            tx.product.update({
+              where: { id: product.id },
+              data: { currentStock: newStock },
+            })
+          );
 
-          await tx.stockMovement.create({
-            data: {
-              businessId,
-              productId: product.id,
-              type: StockMovementType.SALE_RETURN,
-              quantity: item.quantity,
-              previousStock,
-              newStock,
-              sourceDocumentType: 'INVOICE_CANCEL',
-              sourceDocumentId: invoice.id,
-              reason: `Sale restored via invoice cancellation: ${reason?.trim() || 'Cancelled'}`,
-              actorName: cancelledByUserName || 'Staff',
-            },
+          restoreMovements.push({
+            businessId,
+            productId: product.id,
+            type: StockMovementType.SALE_RETURN,
+            quantity: item.quantity,
+            previousStock,
+            newStock,
+            sourceDocumentType: 'INVOICE_CANCEL',
+            sourceDocumentId: invoice.id,
+            reason: `Sale restored via invoice cancellation: ${reason?.trim() || 'Cancelled'}`,
+            actorName: cancelledByUserName || 'Staff',
           });
         }
       }
+    }
+
+    if (restoreUpdates.length > 0) {
+      await Promise.all(restoreUpdates);
+    }
+    if (restoreMovements.length > 0) {
+      await tx.stockMovement.createMany({ data: restoreMovements });
     }
 
     return tx.invoice.update({

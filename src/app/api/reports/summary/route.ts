@@ -8,92 +8,110 @@ export async function GET(request: NextRequest) {
     const authContext = await requireCommercialAccess();
     const businessId = authContext.business.id;
 
-    // Fetch non-cancelled invoices
-    const invoices = await prisma.invoice.findMany({
-      where: {
-        businessId,
-        status: { not: InvoiceStatus.CANCELLED },
-      },
-      orderBy: { invoiceDate: 'desc' },
-      select: {
-        id: true,
-        invoiceNumber: true,
-        invoiceDate: true,
-        customerName: true,
-        customerGstin: true,
-        subtotal: true,
-        taxTotal: true,
-        cgstTotal: true,
-        sgstTotal: true,
-        igstTotal: true,
-        total: true,
-        paidAmount: true,
-        balanceDue: true,
-        status: true,
-      },
-    });
-
-    // Aggregate Invoices
-    const totalSalesTurnover = invoices.reduce((sum, inv) => sum + inv.total, 0);
-    const taxableSalesValue = invoices.reduce((sum, inv) => sum + inv.subtotal, 0);
-    const totalSalesTax = invoices.reduce((sum, inv) => sum + inv.taxTotal, 0);
-    const totalCgst = invoices.reduce((sum, inv) => sum + inv.cgstTotal, 0);
-    const totalSgst = invoices.reduce((sum, inv) => sum + inv.sgstTotal, 0);
-    const totalIgst = invoices.reduce((sum, inv) => sum + inv.igstTotal, 0);
-    const totalPaidCollections = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-    const totalUdhaarDue = invoices.reduce((sum, inv) => sum + inv.balanceDue, 0);
-
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const now = new Date();
 
-    const todaysInvoices = invoices.filter((inv) => new Date(inv.invoiceDate) >= startOfToday);
-    const todaysSales = todaysInvoices.reduce((sum, inv) => sum + inv.total, 0);
-    const todaysBillsCount = todaysInvoices.length;
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
 
-    const overdueInvoices = invoices.filter(
-      (inv) => inv.balanceDue > 0 && new Date(inv.invoiceDate) < now && inv.status === InvoiceStatus.OVERDUE
-    );
-    const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + inv.balanceDue, 0);
-
-    // Fetch received purchases for ITC and procurement
-    const purchases = await prisma.purchase.findMany({
-      where: {
-        businessId,
-        status: { not: PurchaseStatus.CANCELLED },
-      },
-      select: {
-        id: true,
-        purchaseNumber: true,
-        purchaseDate: true,
-        subtotal: true,
-        taxTotal: true,
-        total: true,
-        supplier: {
-          select: {
-            name: true,
-            gstin: true,
-          },
+    // Parallel optimized aggregate queries in native Postgres
+    const [
+      invoiceAgg,
+      todaysInvoiceAgg,
+      overdueAgg,
+      pendingAgg,
+      purchaseAgg,
+      expenseAgg,
+      recentInvoices,
+    ] = await Promise.all([
+      prisma.invoice.aggregate({
+        where: { businessId, status: { not: InvoiceStatus.CANCELLED } },
+        _sum: {
+          total: true,
+          subtotal: true,
+          taxTotal: true,
+          cgstTotal: true,
+          sgstTotal: true,
+          igstTotal: true,
+          paidAmount: true,
+          balanceDue: true,
         },
-      },
-    });
+        _count: { id: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          businessId,
+          status: { not: InvoiceStatus.CANCELLED },
+          invoiceDate: { gte: startOfToday },
+        },
+        _sum: { total: true },
+        _count: { id: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          businessId,
+          balanceDue: { gt: 0 },
+          status: InvoiceStatus.OVERDUE,
+        },
+        _sum: { balanceDue: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          businessId,
+          balanceDue: { gt: 0 },
+          status: { notIn: [InvoiceStatus.PAID, InvoiceStatus.CANCELLED] },
+        },
+        _sum: { balanceDue: true },
+        _count: { id: true },
+      }),
+      prisma.purchase.aggregate({
+        where: { businessId, status: { not: PurchaseStatus.CANCELLED } },
+        _sum: { total: true, subtotal: true, taxTotal: true },
+        _count: { id: true },
+      }),
+      prisma.expense.aggregate({
+        where: { businessId },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      // Only fetch invoices within the 6-month chart window with minimal projection
+      prisma.invoice.findMany({
+        where: {
+          businessId,
+          status: { not: InvoiceStatus.CANCELLED },
+          invoiceDate: { gte: sixMonthsAgo },
+        },
+        select: {
+          invoiceDate: true,
+          total: true,
+          paidAmount: true,
+        },
+      }),
+    ]);
 
-    const totalProcurement = purchases.reduce((sum, p) => sum + p.total, 0);
-    const taxableProcurement = purchases.reduce((sum, p) => sum + p.subtotal, 0);
-    const totalItcTax = purchases.reduce((sum, p) => sum + p.taxTotal, 0);
+    // Aggregate Invoices metrics
+    const totalSalesTurnover = invoiceAgg._sum.total || 0;
+    const taxableSalesValue = invoiceAgg._sum.subtotal || 0;
+    const totalSalesTax = invoiceAgg._sum.taxTotal || 0;
+    const totalCgst = invoiceAgg._sum.cgstTotal || 0;
+    const totalSgst = invoiceAgg._sum.sgstTotal || 0;
+    const totalIgst = invoiceAgg._sum.igstTotal || 0;
+    const totalPaidCollections = invoiceAgg._sum.paidAmount || 0;
+    const totalUdhaarDue = invoiceAgg._sum.balanceDue || 0;
 
-    // Fetch recorded expenses
-    const expenses = await prisma.expense.findMany({
-      where: { businessId },
-      select: {
-        id: true,
-        category: true,
-        amount: true,
-        expenseDate: true,
-      },
-    });
+    const todaysSales = todaysInvoiceAgg._sum.total || 0;
+    const todaysBillsCount = todaysInvoiceAgg._count.id || 0;
+    const overdueAmount = overdueAgg._sum.balanceDue || 0;
 
-    const totalOverheads = expenses.reduce((sum, e) => sum + e.amount, 0);
+    // Purchase procurement metrics
+    const totalProcurement = purchaseAgg._sum.total || 0;
+    const taxableProcurement = purchaseAgg._sum.subtotal || 0;
+    const totalItcTax = purchaseAgg._sum.taxTotal || 0;
+
+    // Expense overheads
+    const totalOverheads = expenseAgg._sum.amount || 0;
 
     // Net GST liability = Output GST - Input Tax Credit
     const netGstPayable = Math.max(0, totalSalesTax - totalItcTax);
@@ -104,11 +122,8 @@ export async function GET(request: NextRequest) {
     const netProfit = grossProfit - totalOverheads;
 
     // Pending Invoices
-    const pendingInvoices = invoices.filter(
-      (inv) => inv.balanceDue > 0 && inv.status !== InvoiceStatus.PAID
-    );
-    const pendingInvoicesCount = pendingInvoices.length;
-    const pendingInvoicesAmount = pendingInvoices.reduce((sum, inv) => sum + inv.balanceDue, 0);
+    const pendingInvoicesCount = pendingAgg._count.id || 0;
+    const pendingInvoicesAmount = pendingAgg._sum.balanceDue || 0;
 
     // 7-Day Live Trend (Daily Sales vs Collections)
     const trendDays: Array<{ date: string; label: string; sales: number; collections: number }> = [];
@@ -130,7 +145,7 @@ export async function GET(request: NextRequest) {
       monthlyTrend.push({ month: monthKey, label: monthLabel, sales: 0, collections: 0 });
     }
 
-    invoices.forEach((inv) => {
+    recentInvoices.forEach((inv) => {
       const invDate = new Date(inv.invoiceDate);
       const dateStr = invDate.toISOString().split('T')[0];
       const monthKey = `${invDate.getFullYear()}-${String(invDate.getMonth() + 1).padStart(2, '0')}`;
@@ -170,13 +185,13 @@ export async function GET(request: NextRequest) {
         overdueAmount,
         pendingInvoicesCount,
         pendingInvoicesAmount,
-        invoiceCount: invoices.length,
-        purchaseCount: purchases.length,
-        expenseCount: expenses.length,
+        invoiceCount: invoiceAgg._count.id || 0,
+        purchaseCount: purchaseAgg._count.id || 0,
+        expenseCount: expenseAgg._count.id || 0,
         trendDays,
         monthlyTrend,
       },
-      salesRegister: invoices,
+      salesRegister: recentInvoices,
     });
   } catch (error: any) {
     const status = error.statusCode || (error.message?.includes('Unauthorized') || error.message?.includes('Authentication') ? 401 : error.message?.includes('Commercial') ? 403 : 500);

@@ -163,15 +163,34 @@ export const DEFAULT_INDIAN_COA: readonly CoaGroupSeed[] = [
 
 type DbClient = Prisma.TransactionClient | typeof prisma;
 
+// Process-lifetime in-memory cache of businesses whose Chart of Accounts has been verified/initialized
+const initializedCoaBusinesses = new Set<string>();
+
+/**
+ * Invalidate COA cache when a business resets accounting or modifies system groups.
+ */
+export function invalidateBusinessCOACache(businessId?: string) {
+  if (businessId) {
+    initializedCoaBusinesses.delete(businessId);
+  } else {
+    initializedCoaBusinesses.clear();
+  }
+}
+
 /**
  * Idempotently seeds the standard Indian Chart of Accounts (groups + system & default ledgers)
- * for a business. Safe to invoke repeatedly.
+ * for a business. Safe to invoke repeatedly. Uses fast in-memory verification cache to eliminate
+ * redundant DB roundtrips on auto-posting voucher triggers.
  */
 export async function ensureBusinessCOA(
   businessId: string,
   fyCode = 'ALL',
   client: DbClient = prisma
 ): Promise<{ groupsCreated: number; ledgersCreated: number }> {
+  // Fast path: if verified already in this runtime, skip queries immediately
+  if (initializedCoaBusinesses.has(businessId)) {
+    return { groupsCreated: 0, ledgersCreated: 0 };
+  }
   const existingGroups = await client.accountingGroup.findMany({
     where: { businessId },
     select: { id: true, name: true, type: true },
@@ -250,6 +269,7 @@ export async function ensureBusinessCOA(
     }
   }
 
+  initializedCoaBusinesses.add(businessId);
   return { groupsCreated, ledgersCreated };
 }
 

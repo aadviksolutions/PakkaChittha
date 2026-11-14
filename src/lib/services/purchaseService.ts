@@ -202,43 +202,71 @@ export async function createPurchase(
       });
     }
 
-    // If marked as RECEIVED upon creation, increase stock and record movements
+    // If marked as RECEIVED upon creation, increase stock and record movements in batch
     if (targetStatus === PurchaseStatus.RECEIVED) {
+      const itemProductIds = Array.from(
+        new Set(purchase.items.map((it) => it.productId).filter((id): id is string => Boolean(id)))
+      );
+      const products = itemProductIds.length > 0
+        ? await tx.product.findMany({
+            where: { id: { in: itemProductIds }, businessId },
+          })
+        : [];
+      const productMap = new Map(products.map((p) => [p.id, p]));
+
+      const movementData: {
+        businessId: string;
+        productId: string;
+        type: StockMovementType;
+        quantity: number;
+        previousStock: number;
+        newStock: number;
+        sourceDocumentType: string;
+        sourceDocumentId: string;
+        reason: string;
+        actorName: string;
+      }[] = [];
+      const productUpdates: Promise<any>[] = [];
+
       for (const item of purchase.items) {
         if (item.productId) {
-          const product = await tx.product.findFirst({
-            where: { id: item.productId, businessId },
-          });
-
+          const product = productMap.get(item.productId);
           if (product) {
             const previousStock = product.currentStock;
             const newStock = round2(previousStock + item.quantity);
+            product.currentStock = newStock;
 
-            await tx.product.update({
-              where: { id: product.id },
-              data: {
-                currentStock: newStock,
-                // Update purchasePrice to latest cost price if higher or present
-                purchasePrice: item.purchaseRate > 0 ? item.purchaseRate : product.purchasePrice,
-              },
-            });
+            productUpdates.push(
+              tx.product.update({
+                where: { id: product.id },
+                data: {
+                  currentStock: newStock,
+                  purchasePrice: item.purchaseRate > 0 ? item.purchaseRate : product.purchasePrice,
+                },
+              })
+            );
 
-            await tx.stockMovement.create({
-              data: {
-                businessId,
-                productId: product.id,
-                type: StockMovementType.PURCHASE_RECEIVED,
-                quantity: item.quantity,
-                previousStock,
-                newStock,
-                sourceDocumentType: 'PURCHASE',
-                sourceDocumentId: purchase.id,
-                reason: `Received under purchase bill ${purchase.purchaseNumber}`,
-                actorName,
-              },
+            movementData.push({
+              businessId,
+              productId: product.id,
+              type: StockMovementType.PURCHASE_RECEIVED,
+              quantity: item.quantity,
+              previousStock,
+              newStock,
+              sourceDocumentType: 'PURCHASE',
+              sourceDocumentId: purchase.id,
+              reason: `Received under purchase bill ${purchase.purchaseNumber}`,
+              actorName,
             });
           }
         }
+      }
+
+      if (productUpdates.length > 0) {
+        await Promise.all(productUpdates);
+      }
+      if (movementData.length > 0) {
+        await tx.stockMovement.createMany({ data: movementData });
       }
     }
 
@@ -291,41 +319,70 @@ export async function receivePurchase(businessId: string, purchaseId: string, ac
       },
     });
 
-    // 2. Increment stock and create movements for each linked product
+    // 2. Increment stock and create movements for each linked product in batch
+    const itemProductIds = Array.from(
+      new Set(purchase.items.map((it) => it.productId).filter((id): id is string => Boolean(id)))
+    );
+    const products = itemProductIds.length > 0
+      ? await tx.product.findMany({
+          where: { id: { in: itemProductIds }, businessId },
+        })
+      : [];
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const movementData: {
+      businessId: string;
+      productId: string;
+      type: StockMovementType;
+      quantity: number;
+      previousStock: number;
+      newStock: number;
+      sourceDocumentType: string;
+      sourceDocumentId: string;
+      reason: string;
+      actorName: string;
+    }[] = [];
+    const productUpdates: Promise<any>[] = [];
+
     for (const item of purchase.items) {
       if (item.productId) {
-        const product = await tx.product.findFirst({
-          where: { id: item.productId, businessId },
-        });
-
+        const product = productMap.get(item.productId);
         if (product) {
           const previousStock = product.currentStock;
           const newStock = round2(previousStock + item.quantity);
+          product.currentStock = newStock;
 
-          await tx.product.update({
-            where: { id: product.id },
-            data: {
-              currentStock: newStock,
-              purchasePrice: item.purchaseRate > 0 ? item.purchaseRate : product.purchasePrice,
-            },
-          });
+          productUpdates.push(
+            tx.product.update({
+              where: { id: product.id },
+              data: {
+                currentStock: newStock,
+                purchasePrice: item.purchaseRate > 0 ? item.purchaseRate : product.purchasePrice,
+              },
+            })
+          );
 
-          await tx.stockMovement.create({
-            data: {
-              businessId,
-              productId: product.id,
-              type: StockMovementType.PURCHASE_RECEIVED,
-              quantity: item.quantity,
-              previousStock,
-              newStock,
-              sourceDocumentType: 'PURCHASE',
-              sourceDocumentId: purchase.id,
-              reason: `Goods received against purchase bill ${purchase.purchaseNumber}`,
-              actorName,
-            },
+          movementData.push({
+            businessId,
+            productId: product.id,
+            type: StockMovementType.PURCHASE_RECEIVED,
+            quantity: item.quantity,
+            previousStock,
+            newStock,
+            sourceDocumentType: 'PURCHASE',
+            sourceDocumentId: purchase.id,
+            reason: `Goods received against purchase bill ${purchase.purchaseNumber}`,
+            actorName,
           });
         }
       }
+    }
+
+    if (productUpdates.length > 0) {
+      await Promise.all(productUpdates);
+    }
+    if (movementData.length > 0) {
+      await tx.stockMovement.createMany({ data: movementData });
     }
 
     return updatedPurchase;
