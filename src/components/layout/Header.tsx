@@ -20,7 +20,9 @@ import {
   Home,
   BookOpen,
   Store,
+  Mic,
 } from 'lucide-react';
+import { VoiceEntryModal } from '@/components/voice/VoiceEntryModal';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from '@/i18n/context';
 import { useEntitlements } from '@/hooks/useEntitlements';
@@ -45,6 +47,7 @@ export function Header({
   const isPlatformAdmin = pathname.startsWith('/platform-admin');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('Today');
 
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -243,6 +246,20 @@ export function Header({
           </Link>
         )}
 
+        {/* Smart Voice Entry Action Button */}
+        {!isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => setVoiceModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100/80 text-[#EA580C] border border-orange-200/80 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95 cursor-pointer shrink-0"
+            title="बोलकर एंट्री करें (Smart Voice Entry)"
+            aria-label="Smart Voice Entry"
+          >
+            <Mic className="w-3.5 h-3.5 text-[#EA580C] animate-pulse" />
+            <span className="hidden xs:inline sm:inline">बोलकर एंट्री</span>
+          </button>
+        )}
+
         {/* Global Multi-Language Selector (Compact on mobile) */}
         <LanguageSelector variant="header" />
 
@@ -427,6 +444,12 @@ export function Header({
           )}
         </div>
       </div>
+
+      {/* Smart Voice Entry Modal */}
+      <VoiceEntryModal
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+      />
     </header>
   );
 }

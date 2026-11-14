@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Info, Sparkles, MessageSquare, Receipt, UserPlus, CreditCard, Search } from 'lucide-react';
 import { ActionMetadata } from '@/context/ActionModalContext';
+import { VoiceEntryModal } from '@/components/voice/VoiceEntryModal';
 
 export interface ActionModalProps {
   isOpen: boolean;
@@ -18,6 +19,10 @@ export function ActionModal({
   metaData,
 }: ActionModalProps) {
   if (!isOpen || !actionType) return null;
+
+  if (actionType === 'voice_entry' || actionType === 'smart_voice') {
+    return <VoiceEntryModal isOpen={isOpen} onClose={onClose} />;
+  }
 
   const metaRecord = metaData as Record<string, unknown> | null | undefined;
   const partyName = typeof metaRecord?.name === 'string' ? metaRecord.name : null;
