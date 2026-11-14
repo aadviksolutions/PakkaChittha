@@ -25,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
 import { GstFetchBox } from '@/components/gst/GstFetchBox';
+import { DuplicateMobileWarningModal, DuplicatePartyItem } from '@/components/shared/DuplicateMobileWarningModal';
 
 interface SupplierItem {
   id: string;
@@ -58,6 +59,9 @@ function SuppliersContent() {
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [deletingSupplierId, setDeletingSupplierId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicatePartyItem[]>([]);
+  const [bypassDuplicatePhone, setBypassDuplicatePhone] = useState<string | null>(null);
   const [addForm, setAddForm] = useState({
     name: '',
     phone: '',
@@ -95,6 +99,8 @@ function SuppliersContent() {
 
   const resetSupplierForm = () => {
     setEditingSupplierId(null);
+    setDuplicateWarningOpen(false);
+    setBypassDuplicatePhone(null);
     setAddForm({
       name: '',
       phone: '',
@@ -146,9 +152,27 @@ function SuppliersContent() {
     }
   };
 
-  const handleCreateSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateSupplier = async (e?: React.FormEvent, forceBypass = false) => {
+    if (e) e.preventDefault();
     if (!addForm.name.trim() || !addForm.phone.trim()) return;
+
+    const phoneToTest = addForm.phone.trim();
+
+    if (!forceBypass && phoneToTest && phoneToTest !== bypassDuplicatePhone && phoneToTest.length >= 7) {
+      try {
+        const checkRes = await fetch(
+          `/api/party/check-duplicate-phone?phone=${encodeURIComponent(phoneToTest)}&excludeId=${editingSupplierId || ''}&excludeType=SUPPLIER`
+        );
+        const checkData = await checkRes.json();
+        if (checkData.hasDuplicate && checkData.matches?.length > 0) {
+          setDuplicateMatches(checkData.matches);
+          setDuplicateWarningOpen(true);
+          return;
+        }
+      } catch (checkErr) {
+        console.warn('Duplicate phone check non-blocking error:', checkErr);
+      }
+    }
 
     setCreating(true);
     try {
@@ -173,6 +197,8 @@ function SuppliersContent() {
       }
 
       setAddModalOpen(false);
+      setDuplicateWarningOpen(false);
+      setBypassDuplicatePhone(null);
       resetSupplierForm();
       toast.success(isEditing ? 'Supplier updated successfully' : 'Supplier created successfully');
       fetchSuppliers();
@@ -550,6 +576,20 @@ function SuppliersContent() {
           </div>
         </div>
       )}
+
+      <DuplicateMobileWarningModal
+        isOpen={duplicateWarningOpen}
+        phone={addForm.phone}
+        matches={duplicateMatches}
+        onConfirm={() => {
+          setBypassDuplicatePhone(addForm.phone);
+          setDuplicateWarningOpen(false);
+          handleCreateSupplier(undefined, true);
+        }}
+        onCancel={() => {
+          setDuplicateWarningOpen(false);
+        }}
+      />
     </div>
   );
 }

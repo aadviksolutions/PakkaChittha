@@ -25,6 +25,7 @@ import { useEntitlements } from '@/hooks/useEntitlements';
 import { FeatureNotAvailable } from '@/components/shared/FeatureNotAvailable';
 import { GstFetchBox } from '@/components/gst/GstFetchBox';
 import { WhatsAppReminderModal, WhatsAppReminderTarget } from '@/components/free-khata/WhatsAppReminderModal';
+import { DuplicateMobileWarningModal, DuplicatePartyItem } from '@/components/shared/DuplicateMobileWarningModal';
 
 interface CustomerSummary {
   id: string;
@@ -57,6 +58,9 @@ export default function CustomersPage() {
   const [waModalOpen, setWaModalOpen] = useState(false);
   const [waTarget, setWaTarget] = useState<WhatsAppReminderTarget | null>(null);
   const [creating, setCreating] = useState(false);
+  const [duplicateWarningOpen, setDuplicateWarningOpen] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<DuplicatePartyItem[]>([]);
+  const [bypassDuplicatePhone, setBypassDuplicatePhone] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
@@ -132,6 +136,8 @@ export default function CustomersPage() {
 
   const resetCustomerForm = () => {
     setEditingCustomerId(null);
+    setDuplicateWarningOpen(false);
+    setBypassDuplicatePhone(null);
     setFormData({
       name: '',
       mobile: '',
@@ -183,10 +189,30 @@ export default function CustomersPage() {
     }
   };
 
-  const handleCreateCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
+  const handleCreateCustomer = async (e?: React.FormEvent, forceBypass = false) => {
+    if (e) e.preventDefault();
     setError(null);
+
+    const phoneToTest = formData.mobile?.trim();
+
+    // Check duplicate phone if not already confirmed/bypassed
+    if (!forceBypass && phoneToTest && phoneToTest !== bypassDuplicatePhone && phoneToTest.length >= 7) {
+      try {
+        const checkRes = await fetch(
+          `/api/party/check-duplicate-phone?phone=${encodeURIComponent(phoneToTest)}&excludeId=${editingCustomerId || ''}&excludeType=CUSTOMER`
+        );
+        const checkData = await checkRes.json();
+        if (checkData.hasDuplicate && checkData.matches?.length > 0) {
+          setDuplicateMatches(checkData.matches);
+          setDuplicateWarningOpen(true);
+          return;
+        }
+      } catch (checkErr) {
+        console.warn('Duplicate phone check non-blocking error:', checkErr);
+      }
+    }
+
+    setCreating(true);
 
     try {
       const isEditing = Boolean(editingCustomerId);
@@ -210,6 +236,8 @@ export default function CustomersPage() {
           : `Customer ${data.customer.name} registered successfully!`
       );
       setModalOpen(false);
+      setDuplicateWarningOpen(false);
+      setBypassDuplicatePhone(null);
       resetCustomerForm();
       fetchCustomers(search);
     } catch (err: unknown) {
@@ -615,6 +643,20 @@ export default function CustomersPage() {
           target={waTarget}
         />
       )}
+
+      <DuplicateMobileWarningModal
+        isOpen={duplicateWarningOpen}
+        phone={formData.mobile}
+        matches={duplicateMatches}
+        onConfirm={() => {
+          setBypassDuplicatePhone(formData.mobile);
+          setDuplicateWarningOpen(false);
+          handleCreateCustomer(undefined, true);
+        }}
+        onCancel={() => {
+          setDuplicateWarningOpen(false);
+        }}
+      />
     </div>
   );
 }

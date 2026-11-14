@@ -149,20 +149,6 @@ export async function createCustomer(businessId: string, input: CustomerInput) {
     const cleanDigits = sanitized.cleanDigits;
     const std10 = cleanDigits.startsWith('91') && cleanDigits.length === 12 ? cleanDigits.slice(2) : cleanDigits;
     finalMobile = std10;
-
-    // Tenant-scoped duplicate check for customer with same mobile
-    const existing = await prisma.customer.findFirst({
-      where: {
-        businessId,
-        mobile: {
-          in: [rawMobile, cleanDigits, std10, `+91${std10}`, `91${std10}`],
-        },
-      },
-    });
-
-    if (existing) {
-      throw new Error(`A customer with mobile "${rawMobile}" already exists in this business (${existing.name}).`);
-    }
   }
 
   // Validate GSTIN if entered

@@ -43,6 +43,7 @@ import CustomerAutocompleteField, {
   draftFromCustomer,
   resolveOrCreateCustomer,
 } from '@/components/shared/CustomerAutocompleteField';
+import { DuplicateMobileWarningModal, DuplicatePartyItem } from '@/components/shared/DuplicateMobileWarningModal';
 
 interface CatalogProductOption {
   id: string;
@@ -91,6 +92,9 @@ function InvoiceCreationForm() {
   const [newCustAddress, setNewCustAddress] = useState('');
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [addCustomerError, setAddCustomerError] = useState<string | null>(null);
+  const [duplicateCustWarningOpen, setDuplicateCustWarningOpen] = useState(false);
+  const [duplicateCustMatches, setDuplicateCustMatches] = useState<DuplicatePartyItem[]>([]);
+  const [bypassCustDuplicatePhone, setBypassCustDuplicatePhone] = useState<string | null>(null);
 
   // 3. Product Catalog & Fast Product Search State
   const [catalogProducts, setCatalogProducts] = useState<CatalogProductOption[]>([]);
@@ -539,10 +543,29 @@ function InvoiceCreationForm() {
   };
 
   // Quick Add Customer Handler (Never resets bill state)
-  const handleQuickAddCustomer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAddingCustomer(true);
+  const handleQuickAddCustomer = async (e?: React.FormEvent, forceBypass = false) => {
+    if (e) e.preventDefault();
     setAddCustomerError(null);
+
+    const phoneToTest = newCustMobile?.trim();
+
+    if (!forceBypass && phoneToTest && phoneToTest !== bypassCustDuplicatePhone && phoneToTest.length >= 7) {
+      try {
+        const checkRes = await fetch(
+          `/api/party/check-duplicate-phone?phone=${encodeURIComponent(phoneToTest)}&excludeType=CUSTOMER`
+        );
+        const checkData = await checkRes.json();
+        if (checkData.hasDuplicate && checkData.matches?.length > 0) {
+          setDuplicateCustMatches(checkData.matches);
+          setDuplicateCustWarningOpen(true);
+          return;
+        }
+      } catch (checkErr) {
+        console.warn('Duplicate phone check non-blocking error:', checkErr);
+      }
+    }
+
+    setAddingCustomer(true);
 
     try {
       const res = await fetch('/api/customers', {
@@ -565,6 +588,8 @@ function InvoiceCreationForm() {
       setSelectedCustomerId(data.customer.id);
       setCustomerDraft(draftFromCustomer(data.customer));
       setAddCustomerOpen(false);
+      setDuplicateCustWarningOpen(false);
+      setBypassCustDuplicatePhone(null);
 
       setNewCustName('');
       setNewCustMobile('');
@@ -1699,6 +1724,20 @@ function InvoiceCreationForm() {
           </div>
         </div>
       )}
+
+      <DuplicateMobileWarningModal
+        isOpen={duplicateCustWarningOpen}
+        phone={newCustMobile}
+        matches={duplicateCustMatches}
+        onConfirm={() => {
+          setBypassCustDuplicatePhone(newCustMobile);
+          setDuplicateCustWarningOpen(false);
+          handleQuickAddCustomer(undefined, true);
+        }}
+        onCancel={() => {
+          setDuplicateCustWarningOpen(false);
+        }}
+      />
 
       {/* Quick Add Item Modal (Add to Bill vs Add & Save Item) */}
       {addItemModalOpen && (
