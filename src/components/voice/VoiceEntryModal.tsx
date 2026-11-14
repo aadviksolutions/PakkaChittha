@@ -506,7 +506,7 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 leading-tight">
-                Smart Voice Entry (बोलकर एंट्री करें)
+                Smart Voice Entry
               </h3>
               <p className="text-[11px] text-slate-500">
                 Hindi • English • Hinglish • Voice Invoices

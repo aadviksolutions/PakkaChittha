@@ -252,11 +252,11 @@ export function Header({
             type="button"
             onClick={() => setVoiceModalOpen(true)}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EBF3FA] hover:bg-[#DDE9F5] text-[#1761A0] border border-blue-200/80 text-xs font-bold transition-all shadow-2xs hover:scale-102 active:scale-95 cursor-pointer shrink-0"
-            title="बोलकर एंट्री करें (Smart Voice Entry)"
+            title="Smart Voice Entry"
             aria-label="Smart Voice Entry"
           >
             <Mic className="w-3.5 h-3.5 text-[#1761A0] animate-pulse" />
-            <span className="hidden xs:inline sm:inline">बोलकर एंट्री</span>
+            <span className="hidden xs:inline sm:inline">Smart Voice Entry</span>
           </button>
         )}
 
