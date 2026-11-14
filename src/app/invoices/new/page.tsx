@@ -65,6 +65,7 @@ function InvoiceCreationForm() {
   const preselectedCustomerId = searchParams.get('customerId') || '';
   const editInvoiceId = searchParams.get('edit') || '';
   const isEditMode = Boolean(editInvoiceId);
+  const isFromVoice = searchParams.get('fromVoice') === 'true';
 
   const { activeBusiness } = useAuth();
   const { toast } = useToast();
@@ -189,6 +190,48 @@ function InvoiceCreationForm() {
     const today = new Date();
     setInvoiceDate(today.toISOString().split('T')[0]);
     setDueDate(new Date(today.getTime() + 15 * 86400000).toISOString().split('T')[0]);
+
+    // If navigated from Voice Entry, prefill from voice draft
+    if (isFromVoice) {
+      try {
+        const raw = sessionStorage.getItem('voice_invoice_draft');
+        if (raw) {
+          const draft = JSON.parse(raw);
+          sessionStorage.removeItem('voice_invoice_draft');
+          if (draft.customerId) {
+            setSelectedCustomerId(draft.customerId);
+          }
+          if (draft.customerName) {
+            setCustomerDraft({
+              name: draft.customerName,
+              mobile: draft.customerMobile || '',
+              email: '',
+              gstin: '',
+              billingAddress: '',
+            });
+          }
+          if (Array.isArray(draft.items) && draft.items.length > 0) {
+            setItems(
+              draft.items.map((it: any) => ({
+                productId: it.productId || undefined,
+                description: it.description || '',
+                quantity: Number(it.quantity) || 1,
+                unit: it.unit || 'Pcs',
+                rate: Number(it.rate) || 0,
+                discount: 0,
+                discountType: 'AMOUNT',
+                taxRate: 18,
+              }))
+            );
+          }
+          if (draft.cashReceived !== undefined && draft.cashReceived !== null && Number(draft.cashReceived) > 0) {
+            setPaidAmount(String(draft.cashReceived));
+          }
+        }
+      } catch (e) {
+        console.warn('Voice invoice draft load error:', e);
+      }
+    }
 
     // Fetch next sequential invoice number estimate
     fetch('/api/invoices/next-number')

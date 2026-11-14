@@ -455,8 +455,27 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
 
   // Open Full Invoice Editor with pre-filled state
   const handleOpenFullInvoice = () => {
+    try {
+      const draft = {
+        customerId: selectedParty?.partyType === 'CUSTOMER' ? selectedParty.id : undefined,
+        customerName: selectedParty?.name || editPartyName.trim(),
+        customerMobile: selectedParty?.phone || undefined,
+        items: matchedItems.map((it) => ({
+          productId: it.productId,
+          description: it.name,
+          quantity: it.quantity,
+          unit: it.unit,
+          rate: it.rate,
+        })),
+        cashReceived: paidVal,
+        discount: currentDiscount,
+      };
+      sessionStorage.setItem('voice_invoice_draft', JSON.stringify(draft));
+    } catch (e) {
+      console.warn('Draft save notice:', e);
+    }
     handleClose();
-    router.push('/invoices/new');
+    router.push('/invoices/new?fromVoice=true');
   };
 
   const handleClose = () => {
