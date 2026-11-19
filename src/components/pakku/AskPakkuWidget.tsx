@@ -12,6 +12,13 @@ import {
   ChevronDown,
   ArrowRight,
   ExternalLink,
+  ThumbsUp,
+  ThumbsDown,
+  Brain,
+  TrendingUp,
+  AlertCircle,
+  HelpCircle,
+  Check,
 } from 'lucide-react';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
@@ -20,26 +27,30 @@ interface Message {
   sender: 'user' | 'pakku';
   text: string;
   timestamp: string;
+  feedbackGiven?: 'up' | 'down';
 }
 
-const QUICK_QUESTIONS = [
-  '📄 नया GST बिल कैसे बनाएं?',
-  '🎙️ बोलकर बिल (Voice Entry) कैसे करें?',
-  '💰 ग्राहक की उधारी कैसे दर्ज करें?',
-  '🏠 घर खर्चा (Ghar Kharcha) कैसे सेट करें?',
-  '📊 GSTR-1 रिपोर्ट कैसे डाउनलोड करें?',
-  '📱 व्हाट्सएप रिमाइंडर कैसे भेजें?',
-];
+interface PatternSummary {
+  todaySales?: number;
+  totalReceivables?: number;
+  lowStockCount?: number;
+  budgetRemaining?: number;
+}
 
 export function AskPakkuWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputQuery, setInputQuery] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [upgradeLevel, setUpgradeLevel] = useState<number>(2);
+  const [levelTitle, setLevelTitle] = useState<string>('सक्रिय मुनीम जी (Active Munim Ji)');
+  const [patternSummary, setPatternSummary] = useState<PatternSummary | null>(null);
+  const [learningNotification, setLearningNotification] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       sender: 'pakku',
-      text: 'नमस्ते जी! मैं **पक्कू (Pakku)** हूँ — पक्का चिट्ठा का AI साथी। 🧾✨\n\nआप मुझसे बिलिंग, जीएसटी, उधारी खाता, स्टॉक, घर खर्चा या वेबसाइट के किसी भी सवाल के लिए हिंदी या इंग्लिश में कभी भी पूछ सकते हैं!\n\nनीचे दिए गए किसी भी टॉपिक पर क्लिक करें या अपना सवाल लिखकर/बोलकर पूछें:',
+      text: 'नमस्ते जी! 🙏 मैं **पक्कू (Pakku)** हूँ — आपका निजी AI बिजनेस पार्टनर व मुनीम जी!\n\nमैं आपकी दुकान की बिक्री, उधारी खाता, स्टॉक, घर खर्चा और किसी भी विषय पर बिल्कुल एक अनुभवी साथी की तरह सलाह दे सकता हूँ।\n\nआप मुझसे कुछ भी पूछ सकते हैं या बोलकर सवाल कर सकते हैं:',
       timestamp: 'Just now',
     },
   ]);
@@ -47,7 +58,7 @@ export function AskPakkuWidget() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Voice speech-to-text for asking Pakku
+  // Voice speech-to-text
   const {
     isListening,
     transcript,
@@ -56,14 +67,12 @@ export function AskPakkuWidget() {
     resetTranscript,
   } = useVoiceRecognition();
 
-  // Sync voice transcript to input
   useEffect(() => {
     if (transcript) {
       setInputQuery(transcript);
     }
   }, [transcript]);
 
-  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,7 +109,17 @@ export function AskPakkuWidget() {
       const data = await res.json();
       const replyText =
         data.reply ||
-        'माफ़ कीजिये, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया दोबारा प्रयास करें या [हेल्प सेंटर](/knowledge) देखें।';
+        'माफ़ कीजिये, मैं अभी जवाब नहीं दे पा रहा हूँ। कृपया पुनः प्रयास करें।';
+
+      if (data.upgradeLevel) {
+        setUpgradeLevel(data.upgradeLevel);
+      }
+      if (data.levelTitle) {
+        setLevelTitle(data.levelTitle);
+      }
+      if (data.patternSummary) {
+        setPatternSummary(data.patternSummary);
+      }
 
       const pakkuMsg: Message = {
         id: String(Date.now() + 1),
@@ -126,12 +145,42 @@ export function AskPakkuWidget() {
     }
   };
 
+  const handleFeedback = async (messageId: string, isPositive: boolean) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId ? { ...m, feedbackGiven: isPositive ? 'up' : 'down' } : m
+      )
+    );
+
+    try {
+      const res = await fetch('/api/pakku/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'feedback', isPositive }),
+      });
+      const data = await res.json();
+      if (data.upgradeLevel) {
+        setUpgradeLevel(data.upgradeLevel);
+        setLevelTitle(data.levelTitle);
+      }
+
+      setLearningNotification(
+        isPositive
+          ? 'पक्कू ने आपकी रेटिंग से सीखा और खुद को अपग्रेड किया! ⭐'
+          : 'धन्यवाद! पक्कू भविष्य में इस तरह की गलती सुधारने की कोशिश करेगा।'
+      );
+      setTimeout(() => setLearningNotification(null), 3500);
+    } catch (err) {
+      console.warn('Feedback err:', err);
+    }
+  };
+
   const handleResetChat = () => {
     setMessages([
       {
         id: 'welcome',
         sender: 'pakku',
-        text: 'नमस्ते जी! चैट रीसेट हो गई है। आप मुझसे पक्का चिट्ठा से जुड़ा कोई भी सवाल कभी भी पूछ सकते हैं!',
+        text: 'नमस्ते जी! बातचीत रीसेट हो गई है। आप अपनी दुकान, उधारी, बिलिंग या किसी भी विषय पर मुझसे कभी भी पूछ सकते हैं!',
         timestamp: 'Just now',
       },
     ]);
@@ -139,7 +188,6 @@ export function AskPakkuWidget() {
 
   // Simple Markdown parser for bold and clickable links
   const renderFormattedText = (raw: string) => {
-    // Split into paragraphs
     const lines = raw.split('\n');
 
     return lines.map((line, lIdx) => {
@@ -147,11 +195,9 @@ export function AskPakkuWidget() {
         return <div key={lIdx} className="h-2" />;
       }
 
-      // Check for bullet points
-      const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ');
+      const isBullet = line.trim().startsWith('• ') || line.trim().startsWith('- ') || line.trim().startsWith('* ');
       const cleanLine = isBullet ? line.trim().substring(2) : line;
 
-      // Parse markdown links [text](url) and **bold**
       const parts: React.ReactNode[] = [];
       const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
       let lastIdx = 0;
@@ -182,7 +228,7 @@ export function AskPakkuWidget() {
       }
 
       return (
-        <div key={lIdx} className={isBullet ? 'flex items-start gap-1.5 ml-2 my-1' : 'my-1'}>
+        <div key={lIdx} className={isBullet ? 'flex items-start gap-1.5 ml-1.5 my-1' : 'my-1'}>
           {isBullet && <span className="text-emerald-600 font-black">•</span>}
           <div className="flex-1 leading-relaxed">{parts}</div>
         </div>
@@ -202,7 +248,7 @@ export function AskPakkuWidget() {
 
   return (
     <>
-      {/* Floating Trigger Button (Bottom-Right, above bottom nav on mobile) */}
+      {/* Floating Trigger Button (Bottom-Right) */}
       <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-[60] print:hidden">
         {!isOpen && (
           <button
@@ -211,10 +257,9 @@ export function AskPakkuWidget() {
               setIsOpen(true);
               setTimeout(() => inputRef.current?.focus(), 150);
             }}
-            className="group flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 p-1.5 pr-3.5 rounded-full shadow-2xl border-2 border-emerald-500 hover:border-emerald-600 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
-            title="Ask Pakku - 24/7 AI Guide"
+            className="group flex items-center gap-2.5 bg-white hover:bg-slate-50 text-slate-800 p-1.5 pr-4 rounded-full shadow-2xl border-2 border-emerald-500 hover:border-emerald-600 transition-all duration-200 cursor-pointer hover:scale-105 active:scale-95"
+            title="Ask Pakku - AI Business Advisor"
           >
-            {/* Mascot Image Thumbnail */}
             <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-orange-50 border-2 border-orange-400 shrink-0 shadow-sm">
               <img
                 src="/pakku.png"
@@ -232,16 +277,16 @@ export function AskPakkuWidget() {
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin" style={{ animationDuration: '4s' }} />
               </div>
               <p className="text-[10px] font-bold text-emerald-700">
-                पक्कू से पूछें • AI Guide
+                AI मुनीम जी • 24/7 Live
               </p>
             </div>
           </button>
         )}
       </div>
 
-      {/* Expandable Chat Drawer / Modal */}
+      {/* Expandable Chat Drawer */}
       {isOpen && (
-        <div className="fixed bottom-2 sm:bottom-6 right-2 sm:right-6 z-[70] w-[calc(100vw-16px)] sm:w-[410px] max-w-full h-[580px] max-h-[88vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 print:hidden">
+        <div className="fixed bottom-2 sm:bottom-6 right-2 sm:right-6 z-[70] w-[calc(100vw-16px)] sm:w-[420px] max-w-full h-[610px] max-h-[88vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 print:hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#071D35] to-[#103E6A] text-white p-3.5 sm:p-4 flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
@@ -257,13 +302,15 @@ export function AskPakkuWidget() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <h3 className="text-sm font-black text-white tracking-tight">Pakku (पक्कू)</h3>
-                  <span className="text-[9px] font-extrabold uppercase bg-emerald-500 text-white px-1.5 py-0.2 rounded-full tracking-wider">
-                    AI Online
+                  <span className="text-[9px] font-extrabold uppercase bg-emerald-500 text-white px-1.5 py-0.2 rounded-full tracking-wider flex items-center gap-0.5">
+                    <Sparkles className="w-2.5 h-2.5 inline" /> AI Online
                   </span>
                 </div>
-                <p className="text-[10.5px] text-slate-300 font-medium">
-                  Pakka Chittha Smart Assistant • हिंदी / EN
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[10px] bg-white/15 text-amber-300 font-bold px-1.5 py-0.2 rounded flex items-center gap-1">
+                    <Brain className="w-2.5 h-2.5" /> Lv.{upgradeLevel}: {levelTitle.split(' ')[0]}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -288,6 +335,49 @@ export function AskPakkuWidget() {
             </div>
           </div>
 
+          {/* Quick Smart Pattern Chips Strip */}
+          <div className="bg-slate-100/90 border-b border-slate-200/80 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto text-[10.5px] font-bold text-slate-700 shrink-0 scrollbar-none">
+            <span className="text-[9px] text-slate-400 uppercase tracking-wider shrink-0">Live Pulse:</span>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('आज का लाइव बिक्री हिसाब बताओ')}
+              className="px-2 py-0.5 rounded-full bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 shrink-0 flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <TrendingUp className="w-3 h-3 text-emerald-600" />
+              <span>आज की बिक्री</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('बाजार में कुल कितना उधार बकाया है?')}
+              className="px-2 py-0.5 rounded-full bg-white hover:bg-rose-50 text-rose-800 border border-slate-200 hover:border-rose-300 shrink-0 flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <AlertCircle className="w-3 h-3 text-rose-600" />
+              <span>उधारी हिसाब</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('स्टॉक चेक करो, क्या कोई माल खत्म होने वाला है?')}
+              className="px-2 py-0.5 rounded-full bg-white hover:bg-amber-50 text-amber-800 border border-slate-200 hover:border-amber-300 shrink-0 flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <span>📦 लो-स्टॉक</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('घर खर्चा का क्या हाल है? कितना बजट बचा है?')}
+              className="px-2 py-0.5 rounded-full bg-white hover:bg-blue-50 text-blue-800 border border-slate-200 hover:border-blue-300 shrink-0 flex items-center gap-1 shadow-2xs transition-colors"
+            >
+              <span>🏠 घर बजट</span>
+            </button>
+          </div>
+
+          {/* Learning Feedback Notification Toast */}
+          {learningNotification && (
+            <div className="bg-emerald-600 text-white text-[10.5px] font-bold px-3 py-1.5 text-center flex items-center justify-center gap-1.5 animate-in fade-in duration-200 shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>{learningNotification}</span>
+            </div>
+          )}
+
           {/* Messages Body */}
           <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3 bg-slate-50/70 text-xs">
             {messages.map((m) => {
@@ -298,7 +388,7 @@ export function AskPakkuWidget() {
                   className={`flex gap-2.5 ${isPakku ? 'justify-start' : 'justify-end'}`}
                 >
                   {isPakku && (
-                    <div className="w-7 h-7 rounded-full overflow-hidden bg-orange-100 border border-orange-300 shrink-0 mt-0.5">
+                    <div className="w-7 h-7 rounded-full overflow-hidden bg-orange-100 border border-orange-300 shrink-0 mt-0.5 shadow-2xs">
                       <img src="/pakku.png" alt="Pakku" className="w-full h-full object-cover object-top" />
                     </div>
                   )}
@@ -313,26 +403,62 @@ export function AskPakkuWidget() {
                     <div className="text-[12px] leading-relaxed">
                       {isPakku ? renderFormattedText(m.text) : m.text}
                     </div>
-                    <div
-                      className={`text-[9px] mt-1.5 font-semibold text-right ${
-                        isPakku ? 'text-slate-400' : 'text-emerald-100'
-                      }`}
-                    >
-                      {m.timestamp}
+
+                    <div className="mt-2 flex items-center justify-between text-[9px] font-semibold">
+                      {isPakku && m.id !== 'welcome' ? (
+                        <div className="flex items-center gap-1 text-slate-400">
+                          <span>सटीक लगा?</span>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(m.id, true)}
+                            disabled={Boolean(m.feedbackGiven)}
+                            title="सही जवाब (Good Answer)"
+                            className={`p-1 rounded hover:bg-slate-100 transition-colors ${
+                              m.feedbackGiven === 'up' ? 'text-emerald-600 font-black' : 'hover:text-emerald-600'
+                            }`}
+                          >
+                            <ThumbsUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleFeedback(m.id, false)}
+                            disabled={Boolean(m.feedbackGiven)}
+                            title="सुधार की ज़रूरत (Needs Improvement)"
+                            className={`p-1 rounded hover:bg-slate-100 transition-colors ${
+                              m.feedbackGiven === 'down' ? 'text-rose-600 font-black' : 'hover:text-rose-600'
+                            }`}
+                          >
+                            <ThumbsDown className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div />
+                      )}
+
+                      <span className={isPakku ? 'text-slate-400' : 'text-emerald-100'}>
+                        {m.timestamp}
+                      </span>
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            {/* Quick Questions Pills (Visible when chat has few messages) */}
+            {/* Quick Questions Pills */}
             {messages.length <= 2 && (
               <div className="pt-2">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                  Frequently Asked Questions (अक्सर पूछे जाने वाले सवाल):
+                  अक्सर पूछे जाने वाले सवाल (Quick Guides):
                 </div>
                 <div className="grid grid-cols-1 gap-1.5">
-                  {QUICK_QUESTIONS.map((q, idx) => (
+                  {[
+                    '📄 नया GST बिल कैसे बनाएं?',
+                    '🎙️ बोलकर बिल (Smart Voice Entry) कैसे करें?',
+                    '💰 ग्राहक की उधारी कैसे दर्ज व रिकवर करें?',
+                    '🏠 घर खर्चा (Ghar Kharcha) कैसे सेट करें?',
+                    '📊 GSTR-1 रिपोर्ट कैसे डाउनलोड करें?',
+                    '💡 उधारी जल्दी वसूल करने के तरीके बताओ',
+                  ].map((q, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -357,7 +483,7 @@ export function AskPakkuWidget() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="ml-1 text-[10px] text-slate-500">पक्कू सोच रहा है...</span>
+                  <span className="ml-1 text-[10px] text-slate-500 font-semibold">पक्कू सोच रहा है...</span>
                 </div>
               </div>
             )}
@@ -376,7 +502,7 @@ export function AskPakkuWidget() {
                 <button
                   type="button"
                   onClick={() => stopListening()}
-                  className="text-[10px] underline font-bold"
+                  className="text-[10px] underline font-bold cursor-pointer"
                 >
                   Done
                 </button>
@@ -395,7 +521,7 @@ export function AskPakkuWidget() {
                 type="text"
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
-                placeholder="Ask Pakku anything... (पक्कू से कुछ भी पूछें)"
+                placeholder="पक्कू से कुछ भी पूछें (हिंदी या English)..."
                 disabled={isTyping}
                 className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 text-xs font-medium focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
               />

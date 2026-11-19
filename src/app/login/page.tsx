@@ -634,7 +634,7 @@ function LoginForm() {
               onClick={() => {
                 try {
                   sessionStorage.removeItem('pc_intro_v4_seen');
-                } catch {}
+                } catch { }
                 window.location.href = '/login?intro=true';
               }}
               className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 text-[#EA580C] text-xs font-semibold transition-all cursor-pointer border border-[#EA580C]/25 shadow-2xs"
@@ -894,8 +894,8 @@ function LoginForm() {
                 {modeParam === 'household'
                   ? 'Sign in to access your Household expenses & family budget'
                   : modeParam === 'business'
-                  ? 'Sign in to access your billing, inventory & business khata'
-                  : 'Please enter your details to sign in'}
+                    ? 'Sign in to access your billing, inventory & business khata'
+                    : 'Please enter your details to sign in'}
               </p>
 
               {/* Error Banner */}
@@ -911,22 +911,20 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => { setLoginMode('PASSWORD'); setError(null); }}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    loginMode === 'PASSWORD'
-                      ? 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${loginMode === 'PASSWORD'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   Password Login
                 </button>
                 <button
                   type="button"
                   onClick={() => { setLoginMode('PIN'); setError(null); }}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    loginMode === 'PIN'
-                      ? 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${loginMode === 'PIN'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   <Lock className="w-3 h-3 text-[#EA580C]" />
                   <span>Fast 6-Digit PIN</span>

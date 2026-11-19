@@ -166,7 +166,7 @@ export default function GharKharchaDashboardPage() {
       .then((json) => {
         if (json.categories) setCategories(json.categories);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Month navigation helpers
@@ -448,9 +448,8 @@ export default function GharKharchaDashboardPage() {
                 <Wallet className="w-4 h-4" />
               </div>
             </div>
-            <div className={`text-lg sm:text-2xl font-black tracking-tight mt-0.5 tabular-nums ${
-              (kpis?.netCashFlow || 0) >= 0 ? 'text-[#008A36]' : 'text-[#E00016]'
-            }`}>
+            <div className={`text-lg sm:text-2xl font-black tracking-tight mt-0.5 tabular-nums ${(kpis?.netCashFlow || 0) >= 0 ? 'text-[#008A36]' : 'text-[#E00016]'
+              }`}>
               {formatInr(kpis?.netCashFlow || 0)}
             </div>
           </div>
@@ -485,9 +484,8 @@ export default function GharKharchaDashboardPage() {
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${
-                      kpis.isBudgetExceeded ? 'bg-[#E00016]' : 'bg-[#008A36]'
-                    }`}
+                    className={`h-full rounded-full transition-all ${kpis.isBudgetExceeded ? 'bg-[#E00016]' : 'bg-[#008A36]'
+                      }`}
                     style={{ width: `${Math.min(100, kpis.budgetUtilization)}%` }}
                   />
                 </div>
@@ -537,11 +535,10 @@ export default function GharKharchaDashboardPage() {
                         Day {d.day}: {formatInr(d.expense)}
                       </div>
                       <div
-                        className={`w-full rounded-t-sm transition-all ${
-                          d.expense > 0
-                            ? 'bg-emerald-500 hover:bg-emerald-600'
-                            : 'bg-slate-100'
-                        }`}
+                        className={`w-full rounded-t-sm transition-all ${d.expense > 0
+                          ? 'bg-emerald-500 hover:bg-emerald-600'
+                          : 'bg-slate-100'
+                          }`}
                         style={{ height: `${heightPercent}%` }}
                       />
                     </div>
@@ -669,9 +666,8 @@ export default function GharKharchaDashboardPage() {
                     <td className="py-2.5 px-3 text-[#64748B]">{tx.createdByName}</td>
                     <td className="py-2.5 px-3 text-right whitespace-nowrap">
                       <span
-                        className={`font-black text-sm tabular-nums ${
-                          tx.type === 'INCOME' ? 'text-[#008A36]' : 'text-[#E00016]'
-                        }`}
+                        className={`font-black text-sm tabular-nums ${tx.type === 'INCOME' ? 'text-[#008A36]' : 'text-[#E00016]'
+                          }`}
                       >
                         {tx.type === 'INCOME' ? '+ ' : '- '}
                         {formatInr(tx.amount)}
@@ -742,22 +738,20 @@ export default function GharKharchaDashboardPage() {
                 <button
                   type="button"
                   onClick={() => setTxType('EXPENSE')}
-                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    txType === 'EXPENSE'
-                      ? 'bg-[#E00016] text-white shadow-xs'
-                      : 'text-[#64748B] hover:text-[#172B4D]'
-                  }`}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${txType === 'EXPENSE'
+                    ? 'bg-[#E00016] text-white shadow-xs'
+                    : 'text-[#64748B] hover:text-[#172B4D]'
+                    }`}
                 >
                   Expense (Kharcha)
                 </button>
                 <button
                   type="button"
                   onClick={() => setTxType('INCOME')}
-                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    txType === 'INCOME'
-                      ? 'bg-[#008A36] text-white shadow-xs'
-                      : 'text-[#64748B] hover:text-[#172B4D]'
-                  }`}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${txType === 'INCOME'
+                    ? 'bg-[#008A36] text-white shadow-xs'
+                    : 'text-[#64748B] hover:text-[#172B4D]'
+                    }`}
                 >
                   Income (Aamad)
                 </button>

@@ -193,9 +193,8 @@ export default function HouseholdBudgetPage() {
             Remaining Allowance
           </span>
           <div
-            className={`text-2xl font-black mt-1 ${
-              data?.isBudgetExceeded ? 'text-rose-600' : 'text-emerald-600'
-            }`}
+            className={`text-2xl font-black mt-1 ${data?.isBudgetExceeded ? 'text-rose-600' : 'text-emerald-600'
+              }`}
           >
             {data?.isBudgetExceeded ? 'Over Budget' : formatInr(data?.remainingBudget || 0)}
           </div>
