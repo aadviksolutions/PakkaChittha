@@ -1,21 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Check, X } from 'lucide-react';
+import { Mic, Check, X } from 'lucide-react';
 import { transliterateDevanagariToEnglish } from '@/lib/voice/transliterate';
 
 /**
  * GlobalVoiceInputHelper
  *
- * Provides a universal voice-to-text dictation button for ANY focused typing field (<input>, <textarea>)
- * across the entire PakkaChittha platform.
+ * Universal voice-to-text dictation helper for text inputs and textareas.
  *
- * Features:
- * - Speaks in Hindi, English, or any tone -> instantly typed in English alphabets (Latin characters).
- * - Safe React-controlled input updating using native value setter + synthetic input/change events.
- * - Auto-positions alongside the active focused field without breaking responsive layout.
- * - Skips password, hidden, and disabled inputs.
- * - Zero layout shift, error-resilient, touch-friendly.
+ * Rules:
+ * - NEVER attaches to calendar/date inputs, number spinners, passwords, or selects.
+ * - NEVER overlays or covers inside text, clear buttons, or calendar icons.
+ * - Floats non-intrusively outside above the input top-right edge.
+ * - Works reliably on both mobile touch devices and desktop browsers.
  */
 export function GlobalVoiceInputHelper() {
   const [activeElement, setActiveElement] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -51,7 +49,7 @@ export function GlobalVoiceInputHelper() {
         el.value = finalVal;
       }
 
-      // Dispatch standard bubbles events so React state hooks trigger
+      // Dispatch standard bubbles events so React controlled state hooks trigger
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     } catch (err) {
@@ -59,7 +57,7 @@ export function GlobalVoiceInputHelper() {
     }
   }, []);
 
-  // Update button position relative to focused input
+  // Update button position safely above the top-right edge of the input (NEVER inside or overlaying)
   const updatePosition = useCallback((el: HTMLElement | null) => {
     if (!el || !document.body.contains(el)) {
       setButtonPos((prev) => ({ ...prev, visible: false }));
@@ -67,22 +65,23 @@ export function GlobalVoiceInputHelper() {
     }
 
     const rect = el.getBoundingClientRect();
-    // Verify element is visible on screen
     if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) {
       setButtonPos((prev) => ({ ...prev, visible: false }));
       return;
     }
 
-    // Position the floating microphone button right at the top-right inner edge of the input
-    // or just floating slightly inside so it doesn't spill out or cover text
-    const btnWidth = 28;
-    const btnHeight = 28;
-    const top = window.scrollY + rect.top + Math.max(2, (rect.height - btnHeight) / 2);
-    const left = window.scrollX + rect.right - btnWidth - 4;
+    // Position floating outside just above the top-right corner of the input
+    // If input is near the very top of viewport (rect.top < 36), place it just below
+    const badgeHeight = 24;
+    const top = rect.top >= 34
+      ? window.scrollY + rect.top - badgeHeight - 4
+      : window.scrollY + rect.bottom + 4;
+
+    const left = Math.max(8, window.scrollX + rect.right - 68);
 
     setButtonPos({
       top,
-      left: Math.max(8, left),
+      left,
       visible: true,
     });
   }, []);
@@ -92,9 +91,7 @@ export function GlobalVoiceInputHelper() {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
-      } catch (e) {
-        // ignore
-      }
+      } catch {}
       recognitionRef.current = null;
     }
     setIsListening(false);
@@ -102,32 +99,43 @@ export function GlobalVoiceInputHelper() {
   }, []);
 
   // Start listening on speech recognition
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or an Android browser.');
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome, Edge, or an Android browser.');
       return;
     }
 
     const targetEl = activeInputRef.current;
     if (!targetEl) return;
 
-    // Cache existing text to append cleanly
+    // Cache existing text
     initialValueRef.current = targetEl.value || '';
 
     try {
+      // Explicit mic permission check on mobile browsers
+      if (navigator?.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach((track) => track.stop());
+        } catch (micErr) {
+          console.warn('[GlobalVoiceInputHelper] Microphone permission check:', micErr);
+        }
+      }
+
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch {}
       }
 
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
 
-      // hi-IN recognizes Indian English, Hindi, and Hinglish accents accurately
       recognition.lang = 'hi-IN';
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -138,13 +146,12 @@ export function GlobalVoiceInputHelper() {
       };
 
       recognition.onresult = (event: any) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          interim += event.results[i][0].transcript;
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
         }
 
-        // Transliterate speech to English alphabets
-        const transliterated = transliterateDevanagariToEnglish(interim);
+        const transliterated = transliterateDevanagariToEnglish(fullTranscript);
         setTranscriptPreview(transliterated);
 
         if (activeInputRef.current) {
@@ -177,7 +184,6 @@ export function GlobalVoiceInputHelper() {
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // Don't shift focus away if clicking the helper itself
       if (helperBoxRef.current && helperBoxRef.current.contains(target)) {
         return;
       }
@@ -196,11 +202,27 @@ export function GlobalVoiceInputHelper() {
 
       const inputEl = target as HTMLInputElement | HTMLTextAreaElement;
 
-      // Ignore passwords, hidden, file inputs
+      // STRICT ALLOW-LIST: Only text and search inputs or textareas.
+      // NEVER attach to date, time, number, calendar, password, tel, email.
       if (isInput) {
         const inp = inputEl as HTMLInputElement;
-        const ignoredTypes = ['password', 'hidden', 'file', 'checkbox', 'radio', 'submit', 'button', 'reset', 'color', 'range'];
-        if (ignoredTypes.includes(inp.type?.toLowerCase())) {
+        const type = (inp.type || 'text').toLowerCase();
+        if (type !== 'text' && type !== 'search') {
+          return;
+        }
+
+        // Exclude date/calendar/picker pickers or explicit no-voice inputs
+        const cls = (inp.className || '').toLowerCase();
+        const name = (inp.name || '').toLowerCase();
+        const id = (inp.id || '').toLowerCase();
+        if (
+          inp.getAttribute('data-no-voice') === 'true' ||
+          cls.includes('date') ||
+          cls.includes('calendar') ||
+          cls.includes('picker') ||
+          name.includes('date') ||
+          id.includes('date')
+        ) {
           return;
         }
       }
@@ -216,19 +238,17 @@ export function GlobalVoiceInputHelper() {
 
     const handleFocusOut = (e: FocusEvent) => {
       const related = e.relatedTarget as HTMLElement | null;
-      // If moving focus to the helper button, do not hide
       if (helperBoxRef.current && related && helperBoxRef.current.contains(related)) {
         return;
       }
 
-      // Give a tiny grace period so click events on the mic button register
       setTimeout(() => {
         if (!isListening && document.activeElement !== activeInputRef.current) {
           setActiveElement(null);
           activeInputRef.current = null;
           setButtonPos((prev) => ({ ...prev, visible: false }));
         }
-      }, 200);
+      }, 350);
     };
 
     const handleScrollOrResize = () => {
@@ -264,14 +284,23 @@ export function GlobalVoiceInputHelper() {
         left: `${buttonPos.left}px`,
         zIndex: 9999,
       }}
-      className="pointer-events-auto transition-all"
+      className="pointer-events-auto transition-all select-none"
     >
       <div className="relative flex items-center">
         <button
           type="button"
           onMouseDown={(e) => {
-            // Prevent input blur when clicking mic button
             e.preventDefault();
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isListening) {
+              stopListening();
+            } else {
+              startListening();
+            }
           }}
           onClick={(e) => {
             e.preventDefault();
@@ -282,33 +311,31 @@ export function GlobalVoiceInputHelper() {
               startListening();
             }
           }}
-          title={isListening ? 'Stop Voice Typing' : 'Voice Type in English (बोलकर लिखें)'}
-          className={`w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer ${
+          title={isListening ? 'Stop Voice Typing' : 'Voice Type (बोलकर लिखें)'}
+          className={`h-6 px-2 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer font-bold text-[10px] ${
             isListening
               ? 'bg-rose-600 text-white animate-pulse ring-2 ring-rose-400 ring-offset-1'
-              : 'bg-white/95 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200/90 hover:border-emerald-300'
+              : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/90 hover:border-emerald-300'
           }`}
         >
-          {isListening ? (
-            <Mic className="w-3.5 h-3.5 animate-bounce" />
-          ) : (
-            <Mic className="w-3.5 h-3.5" />
-          )}
+          <Mic className={`w-3 h-3 ${isListening ? 'animate-bounce text-white' : 'text-emerald-600'}`} />
+          <span>{isListening ? 'Listening...' : 'Voice'}</span>
         </button>
 
         {isListening && (
           <div
             onMouseDown={(e) => e.preventDefault()}
-            className="absolute right-8 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1.5 border border-slate-700 pointer-events-auto"
+            onTouchStart={(e) => e.preventDefault()}
+            className="absolute right-20 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1.5 border border-slate-700 pointer-events-auto"
           >
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
             <span className="max-w-[160px] truncate">
-              {transcriptPreview || 'Listening... speak in Hindi or English'}
+              {transcriptPreview || 'Listening... speak now'}
             </span>
             <button
               type="button"
               onClick={() => stopListening()}
-              className="ml-1 p-0.5 text-slate-400 hover:text-white rounded"
+              className="ml-1 p-0.5 text-slate-400 hover:text-white rounded cursor-pointer"
             >
               <Check className="w-3 h-3 text-emerald-400" />
             </button>

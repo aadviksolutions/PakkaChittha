@@ -346,6 +346,37 @@ export async function updateHouseholdSettings(
   });
 }
 
+/**
+ * Permanently deletes a household / home unit and cascades to all its members, transactions, categories, and budgets.
+ * Requires that the requesting user is the OWNER of the household.
+ */
+export async function deleteHousehold(householdId: string, userId: string) {
+  // Verify user is OWNER
+  const membership = await prisma.householdMember.findFirst({
+    where: {
+      householdId,
+      userId,
+      role: HouseholdRole.OWNER,
+    },
+  });
+
+  if (!membership) {
+    throw new Error('Only the owner can delete this home/unit (केवल मालिक ही इस होम/यूनिट को हटा सकता है).');
+  }
+
+  // Delete the household (Prisma schema cascades all relations: members, transactions, budgets, categories, settlements)
+  await prisma.household.delete({
+    where: { id: householdId },
+  });
+
+  // Fetch remaining households for the user
+  const remaining = await getUserHouseholds(userId);
+  return {
+    deletedId: householdId,
+    remainingHouseholds: remaining,
+  };
+}
+
 // ============================================================================
 // MODULE 1: EXPENSE CATEGORIES & CATEGORY MANAGEMENT
 // ============================================================================
@@ -1812,6 +1843,21 @@ export async function getHouseholdReports(householdId: string, params: ReportFil
       outstandingBalancesAndSettlements: outstandingBalances,
       billsAndRechargeSummary,
       customDateRangeReport,
+      itemizedTransactions: allTransactions.map((tx) => ({
+        id: tx.id,
+        date: tx.date.toISOString().slice(0, 10),
+        dateTime: tx.date.toISOString(),
+        type: tx.type,
+        categoryName: tx.categoryName || tx.category?.name || 'General',
+        subcategory: tx.subcategory || null,
+        amount: Math.round(tx.amount * 100) / 100,
+        paymentMethod: tx.paymentMethod,
+        description: tx.description || null,
+        payeeMerchant: tx.payeeMerchant || null,
+        notes: tx.notes || null,
+        paidByName: tx.paidByName || tx.paidByMember?.user?.name || tx.paidByMember?.name || 'Self',
+        isShared: tx.isShared,
+      })),
     },
   };
 }
@@ -2533,6 +2579,47 @@ export async function exportReportsExcelCompatible(householdId: string, params: 
     <Cell><Data ss:Type="String">${escapeXml(b.label)}</Data></Cell>
     <Cell ss:StyleID="Currency"><Data ss:Type="Number">${b.amount}</Data></Cell>
     <Cell><Data ss:Type="Number">${b.count}</Data></Cell>
+   </Row>`
+     )
+     .join('\n   ')}
+  </Table>
+ </Worksheet>
+
+ <!-- SHEET 5: DATE-WISE TRANSACTIONS (ALL EXPENSES & INCOME) -->
+ <Worksheet ss:Name="Date-wise Transactions">
+  <Table ss:DefaultColumnWidth="130">
+   <Column ss:Width="85"/>
+   <Column ss:Width="75"/>
+   <Column ss:Width="130"/>
+   <Column ss:Width="110"/>
+   <Column ss:Width="140"/>
+   <Column ss:Width="110"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="100"/>
+   <Column ss:Width="160"/>
+   <Row>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Date</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Type</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Category</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Subcategory</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Payee / Merchant</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Paid By</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Payment Mode</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Amount (INR)</Data></Cell>
+    <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Notes / Description</Data></Cell>
+   </Row>
+   ${(reportData.reports.itemizedTransactions || [])
+     .map(
+       (t) => `<Row>
+    <Cell><Data ss:Type="String">${escapeXml(t.date)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.type)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.categoryName)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.subcategory || '-')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.payeeMerchant || '-')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.paidByName)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.paymentMethod)}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${t.amount}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(t.description || t.notes || '-')}</Data></Cell>
    </Row>`
      )
      .join('\n   ')}

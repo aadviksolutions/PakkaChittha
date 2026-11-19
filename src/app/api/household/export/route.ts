@@ -219,6 +219,36 @@ export async function GET(req: NextRequest) {
   </table>
   ` : ''}
 
+  ${(reportData.reports.itemizedTransactions && reportData.reports.itemizedTransactions.length > 0) ? `
+  <div class="section-title">4. Date-wise Detailed Expenses &amp; Income (${reportData.reports.itemizedTransactions.length} Entries)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Category</th>
+        <th>Paid By</th>
+        <th>Description / Notes</th>
+        <th>Mode</th>
+        <th class="text-right">Amount (INR)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${reportData.reports.itemizedTransactions.map((tx: any) => `
+        <tr>
+          <td>${tx.date}</td>
+          <td><span class="badge ${tx.type === 'INCOME' ? 'badge-green' : 'badge-red'}">${tx.type}</span></td>
+          <td><strong>${tx.categoryName}</strong>${tx.subcategory ? ` <span style="color:#64748b;">(${tx.subcategory})</span>` : ''}</td>
+          <td>${tx.paidByName}</td>
+          <td>${tx.description || tx.notes || tx.payeeMerchant || '-'}</td>
+          <td>${tx.paymentMethod}</td>
+          <td class="text-right"><strong>₹${tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  ` : ''}
+
   <div class="footer">
     PakkaChittha Mera Ghar • Complete Household Ledger &amp; Settlement System • Generated on ${new Date().toISOString()}
   </div>

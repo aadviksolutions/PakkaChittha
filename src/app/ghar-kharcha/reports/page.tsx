@@ -20,6 +20,10 @@ import {
   CheckCircle2,
   RefreshCw,
   Info,
+  Receipt,
+  ArrowUpRight,
+  ArrowDownRight,
+  Tag,
 } from 'lucide-react';
 import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
@@ -101,6 +105,21 @@ interface ReportData {
       totalIncome: number;
       dailyAverageExpense: number;
     };
+    itemizedTransactions?: Array<{
+      id: string;
+      date: string;
+      dateTime: string;
+      type: 'EXPENSE' | 'INCOME';
+      categoryName: string;
+      subcategory: string | null;
+      amount: number;
+      paymentMethod: string;
+      description: string | null;
+      payeeMerchant: string | null;
+      notes: string | null;
+      paidByName: string;
+      isShared: boolean;
+    }>;
   };
 }
 
@@ -116,6 +135,10 @@ export default function HouseholdReportsPage() {
   const [memberId, setMemberId] = useState('');
   const [isSharedFilter, setIsSharedFilter] = useState<'ALL' | 'SHARED' | 'PERSONAL'>('ALL');
   const [billTypeFilter, setBillTypeFilter] = useState('');
+
+  // Date-wise local filters
+  const [dateWiseSearch, setDateWiseSearch] = useState('');
+  const [dateWiseTypeFilter, setDateWiseTypeFilter] = useState<'ALL' | 'EXPENSE' | 'INCOME'>('ALL');
 
   // Dropdown options
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -481,6 +504,7 @@ export default function HouseholdReportsPage() {
       {/* 8 REPORT TABS */}
       <div className="flex flex-wrap border-b border-slate-200 gap-2 sm:gap-4 text-xs font-bold">
         {[
+          { id: 9, label: '📅 9. Date-wise All Entries (तारीख अनुसार सभी खर्चे)', highlight: true },
           { id: 1, label: '1. Monthly Summary' },
           { id: 2, label: '2. Category Breakdown' },
           { id: 3, label: '3. Spending Trend' },
@@ -493,11 +517,11 @@ export default function HouseholdReportsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveReportTab(tab.id)}
-            className={`pb-2.5 px-1 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            className={`pb-2.5 px-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
               activeReportTab === tab.id
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+                ? 'border-emerald-600 text-emerald-700 font-black'
+                : 'border-transparent text-slate-500 hover:text-slate-900 font-semibold'
+            } ${tab.highlight && activeReportTab !== tab.id ? 'text-emerald-800 bg-emerald-50/70 rounded-t-lg' : ''}`}
           >
             {tab.label}
           </button>
@@ -950,6 +974,194 @@ export default function HouseholdReportsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* REPORT 9: DATE-WISE DETAILED LEDGER (ALL EXPENSES & INCOME) */}
+          {activeReportTab === 9 && (
+            <div className="space-y-4">
+              <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-600" />
+                    <span>9. Date-wise All Entries (तारीख अनुसार सभी खर्चे व आय)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Complete itemized record of all individual transactions for the selected period. Fuel, grocery, bills, salary — all entries shown date-wise.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={buildExportUrl('csv')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>CSV</span>
+                  </a>
+                  <a
+                    href={buildExportUrl('excel')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 transition-all cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Excel (.xls)</span>
+                  </a>
+                  <a
+                    href={buildExportUrl('pdf')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>PDF</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Local Search & Type Filter Bar */}
+              <div className="flex flex-col sm:flex-row gap-2 items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={dateWiseSearch}
+                    onChange={(e) => setDateWiseSearch(e.target.value)}
+                    placeholder="Search e.g. petrol, fuel, milk, rent..."
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-600"
+                  />
+                  {dateWiseSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDateWiseSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                  {(['ALL', 'EXPENSE', 'INCOME'] as const).map((tFilter) => (
+                    <button
+                      key={tFilter}
+                      type="button"
+                      onClick={() => setDateWiseTypeFilter(tFilter)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        dateWiseTypeFilter === tFilter
+                          ? tFilter === 'EXPENSE'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : tFilter === 'INCOME'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}
+                    >
+                      {tFilter === 'ALL' ? 'All Entries' : tFilter === 'EXPENSE' ? 'Expenses Only' : 'Income Only'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtered Transactions List */}
+              {(() => {
+                const list = (data.reports.itemizedTransactions || []).filter((tx) => {
+                  if (dateWiseTypeFilter !== 'ALL' && tx.type !== dateWiseTypeFilter) return false;
+                  if (dateWiseSearch) {
+                    const q = dateWiseSearch.toLowerCase();
+                    const matchCat = tx.categoryName.toLowerCase().includes(q);
+                    const matchSub = (tx.subcategory || '').toLowerCase().includes(q);
+                    const matchDesc = (tx.description || '').toLowerCase().includes(q);
+                    const matchNotes = (tx.notes || '').toLowerCase().includes(q);
+                    const matchMerchant = (tx.payeeMerchant || '').toLowerCase().includes(q);
+                    const matchPayer = tx.paidByName.toLowerCase().includes(q);
+                    if (!matchCat && !matchSub && !matchDesc && !matchNotes && !matchMerchant && !matchPayer) {
+                      return false;
+                    }
+                  }
+                  return true;
+                });
+
+                const totalExpInList = list.filter((x) => x.type === 'EXPENSE').reduce((sum, x) => sum + x.amount, 0);
+                const totalIncInList = list.filter((x) => x.type === 'INCOME').reduce((sum, x) => sum + x.amount, 0);
+
+                if (list.length === 0) {
+                  return (
+                    <div className="py-12 text-center text-slate-400 text-xs">
+                      No matching transactions found for this period or search query.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-600 px-1">
+                      <span>Showing {list.length} itemized transaction{list.length > 1 ? 's' : ''}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-rose-600">Total Expense: ₹{totalExpInList.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        {totalIncInList > 0 && (
+                          <span className="text-emerald-700">Total Income: ₹{totalIncInList.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
+                            <th className="py-2.5 px-3">Date</th>
+                            <th className="py-2.5 px-3">Type</th>
+                            <th className="py-2.5 px-3">Category &amp; Item</th>
+                            <th className="py-2.5 px-3">Description / Merchant</th>
+                            <th className="py-2.5 px-3">Paid By</th>
+                            <th className="py-2.5 px-3">Mode</th>
+                            <th className="py-2.5 px-3 text-right">Amount (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                          {list.map((tx) => (
+                            <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-2.5 px-3 font-semibold text-slate-600 whitespace-nowrap">
+                                {new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                  tx.type === 'INCOME' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                }`}>
+                                  {tx.type === 'INCOME' ? '+' : '-'} {tx.type}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900">{tx.categoryName}</div>
+                                {tx.subcategory && (
+                                  <div className="text-[10.5px] text-slate-400">{tx.subcategory}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 max-w-[200px] truncate text-slate-600">
+                                {tx.payeeMerchant || tx.description || tx.notes || '-'}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                                {tx.paidByName}
+                              </td>
+                              <td className="py-2.5 px-3 text-[11px] text-slate-500 whitespace-nowrap">
+                                {tx.paymentMethod}
+                              </td>
+                              <td className={`py-2.5 px-3 text-right font-black whitespace-nowrap ${
+                                tx.type === 'INCOME' ? 'text-emerald-700' : 'text-slate-900'
+                              }`}>
+                                {tx.type === 'INCOME' ? '+' : ''}₹{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

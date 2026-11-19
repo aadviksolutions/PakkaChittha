@@ -5,6 +5,7 @@ import {
   getUserHouseholds,
   createHousehold,
   updateHouseholdSettings,
+  deleteHousehold,
   getHouseholdDetail,
 } from '@/lib/household/householdService';
 import { HouseholdRole } from '@prisma/client';
@@ -81,6 +82,39 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update household settings.';
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await requireAuth();
+    const { searchParams } = new URL(req.url);
+    const paramId = searchParams.get('householdId');
+    let targetHouseholdId = paramId;
+
+    if (!targetHouseholdId) {
+      try {
+        const body = await req.json();
+        targetHouseholdId = body.householdId;
+      } catch {
+        // empty body
+      }
+    }
+
+    if (!targetHouseholdId) {
+      return NextResponse.json({ success: false, error: 'householdId is required.' }, { status: 400 });
+    }
+
+    const result = await deleteHousehold(targetHouseholdId, session.user.id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Home/Unit deleted successfully.',
+      ...result,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete home/unit.';
     return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
