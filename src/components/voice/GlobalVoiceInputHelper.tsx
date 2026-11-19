@@ -81,11 +81,10 @@ export function GlobalVoiceInputHelper() {
       return;
     }
 
-    // Position floating outside just above the top-right corner of the input
-    const badgeHeight = 24;
-    const top = rect.top >= 28 ? rect.top - badgeHeight - 4 : rect.bottom + 4;
-    // Ensure badge never overflows the viewport on mobile
-    const left = Math.min(window.innerWidth - 76, Math.max(8, rect.right - 68));
+    // Position cleanly inside the right edge of the input so it NEVER overlays on outside labels or calendar controls
+    const isTextArea = el instanceof HTMLTextAreaElement;
+    const top = isTextArea ? rect.top + 6 : rect.top + (rect.height - 22) / 2;
+    const left = rect.right - 26;
 
     setButtonPos({
       top,
@@ -358,15 +357,14 @@ export function GlobalVoiceInputHelper() {
               startListening();
             }
           }}
-          title={isListening ? 'Stop Voice Typing' : 'Voice Type (बोलकर लिखें)'}
-          className={`h-6 px-2.5 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer font-bold text-[10px] ${
+          title={isListening ? 'Stop Voice Typing' : 'बोलकर टाइप करें (Voice Input)'}
+          className={`w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer ${
             isListening
-              ? 'bg-rose-600 text-white animate-pulse ring-2 ring-rose-400 ring-offset-1'
-              : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-300 hover:border-emerald-400 shadow-sm'
+              ? 'bg-rose-600 text-white animate-pulse shadow-sm'
+              : 'bg-transparent text-slate-400 hover:text-emerald-600 hover:bg-slate-200/60'
           }`}
         >
-          <Mic className={`w-3 h-3 ${isListening ? 'animate-bounce text-white' : 'text-emerald-600'}`} />
-          <span>{isListening ? 'Listening...' : 'Voice'}</span>
+          <Mic className={`w-3.5 h-3.5 ${isListening ? 'animate-bounce text-white' : ''}`} />
         </button>
 
         {isListening && (

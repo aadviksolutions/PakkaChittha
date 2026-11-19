@@ -497,18 +497,18 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-orange-50/50 via-white to-emerald-50/50">
+        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-orange-600 text-white flex items-center justify-center shadow-sm">
-              <Sparkles className="w-5 h-5 text-amber-200" />
+            <div className="w-8 h-8 rounded-lg bg-[#173653] text-white flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-emerald-300" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 leading-tight">
+              <h3 className="text-sm font-semibold text-slate-900 leading-tight">
                 Smart Voice Entry
               </h3>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 font-normal">
                 Hindi • English • Hinglish • Voice Invoices
               </p>
             </div>
@@ -1214,9 +1214,9 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
                   type="button"
                   onClick={handleOpenFullInvoice}
                   disabled={isSaving}
-                  className="px-3.5 py-2 rounded-xl border border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 bg-slate-50 hover:bg-slate-100 font-semibold text-xs transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5 text-slate-500" />
                   <span>बिल एडिटर में खोलें</span>
                 </button>
 
@@ -1225,7 +1225,7 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
                   disabled={isSaving || grandTotal <= 0 || Boolean(missingRateItem)}
                   onClick={handleCreateVoiceInvoice}
                   title={missingRateItem ? `Please enter rate for ${missingRateItem.name}` : undefined}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#008A36] hover:bg-[#006B2B] text-white font-semibold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {isSaving ? (
                     <>
@@ -1245,7 +1245,7 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
                 type="button"
                 disabled={isSaving || !parsed || !activeAmount}
                 onClick={handleConfirmAndSave}
-                className="px-5 py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#D94E00] text-white font-bold text-xs shadow-md shadow-orange-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#173653] hover:bg-[#071D35] text-white font-semibold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 {isSaving ? (
                   <>

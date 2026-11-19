@@ -117,7 +117,7 @@ export function Header({
   };
 
   return (
-    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-[#E1E7EF] px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
+    <header className="print:hidden sticky top-0 z-[45] h-14 sm:h-16 bg-white border-b border-slate-200/80 px-2 sm:px-6 flex items-center justify-between gap-1.5 sm:gap-4">
       {/* Left: Mobile Toggle & Business Name with Logo */}
       <div className="flex items-center gap-1.5 sm:gap-3 flex-1 min-w-0">
         <button
@@ -279,7 +279,7 @@ export function Header({
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-2xl border border-[#DCE4EF] p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
+            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 p-3 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                 <span className="font-semibold text-slate-900">{t('common.notifications')}</span>
                 <span className="text-[10px] text-[#1761A0] bg-[#EBF3FA] px-1.5 py-0.5 rounded font-bold">
@@ -336,7 +336,7 @@ export function Header({
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-2xl border border-slate-200/90 p-2 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
+            <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-lg border border-slate-200 p-2 text-xs z-[70] animate-in fade-in slide-in-from-top-1">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
                   <p className="font-semibold text-slate-900 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
