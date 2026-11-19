@@ -72,11 +72,16 @@ export async function POST(req: NextRequest) {
       userQuery
     );
 
-    // 5. Try live autonomous human-brain for live data, business stats, math, or known guides
-    const offlineResult = getAutonomousHumanAnswer(userQuery, pattern, memory);
+    // 5. Try live autonomous human-brain for live data, business stats, math, platform features, or knowledge hub
+    const offlineResult = await getAutonomousHumanAnswer(userQuery, pattern, memory);
 
-    // If live_data or math_engine matched, return immediately with highest precision
-    if (offlineResult.source === 'live_data' || offlineResult.source === 'math_engine') {
+    // If live_data, math_engine, exact feature guide, or knowledge hub matched, return immediately with highest precision!
+    if (
+      offlineResult.source === 'live_data' ||
+      offlineResult.source === 'math_engine' ||
+      offlineResult.source === 'pakku_human_brain' ||
+      offlineResult.source === 'knowledge_hub'
+    ) {
       let finalReply = offlineResult.reply;
       if (learnedNewFact) {
         finalReply = `📝 **मैंने याद रख लिया:** "${learnedNewFact}"। अगली बार से मैं इसका ध्यान रखूँगा!\n\n` + finalReply;

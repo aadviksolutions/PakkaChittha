@@ -1,9 +1,10 @@
 import { ClientPatternProfile } from './pakkuPatternAnalyzer';
 import { PakkuLearnedMemory } from './pakkuMemory';
+import { globalKnowledgeSearch } from '@/lib/services/knowledgeService';
 
 export interface PakkuResponse {
   reply: string;
-  source: 'live_data' | 'math_engine' | 'gemini_ai' | 'openai_ai' | 'pakku_human_brain';
+  source: 'live_data' | 'math_engine' | 'knowledge_hub' | 'gemini_ai' | 'openai_ai' | 'pakku_human_brain';
   actionableLink?: { label: string; url: string };
   learnedNewFact?: string;
 }
@@ -79,7 +80,7 @@ function solveNaturalMath(query: string): string | null {
 }
 
 /**
- * Answers questions about the client's own business or household data
+ * Answers questions about the client's live business or household data
  */
 function answerFromClientPattern(query: string, pattern: ClientPatternProfile, memory: PakkuLearnedMemory): string | null {
   const q = query.toLowerCase().trim();
@@ -105,7 +106,7 @@ function answerFromClientPattern(query: string, pattern: ClientPatternProfile, m
 
   // 2. Udhaar / Pending Receivables
   if (
-    q.includes('udhaar') || q.includes('udhari') || q.includes('baki paisa') ||
+    q.includes('udhaar kitna') || q.includes('baki paisa') || q.includes('udhari') ||
     q.includes('kisko kitna lena') || q.includes('lena hai') || q.includes('pending payment') ||
     q.includes('receivables') || q.includes('kis kis ka baki') || q.includes('total udhaar')
   ) {
@@ -187,6 +188,222 @@ function answerFromClientPattern(query: string, pattern: ClientPatternProfile, m
 }
 
 /**
+ * Comprehensive Platform Knowledge Base covering every function & module in Pakka Chittha
+ */
+function answerPlatformFeature(query: string, name: string): string | null {
+  const q = query.toLowerCase().trim();
+
+  // 1. Quotations / Estimates (कच्चा बिल / कोटेशन / एस्टीमेट)
+  if (
+    q.includes('quotation') || q.includes('कोटेशन') || q.includes('estimate') ||
+    q.includes('एस्टीमेट') || q.includes('kachha bill') || q.includes('kaccha bill') ||
+    q.includes('कच्चा बिल') || q.includes('proforma') || q.includes('kotation')
+  ) {
+    return `नमस्ते ${name}! 😊 पक्का चिट्ठा में नया **कोटेशन / एस्टीमेट (Quotation / Estimate)** बनाने का आसान तरीका यह रहा:\n\n` +
+      `1. यहाँ क्लिक करें: [👉 नया कोटेशन बनाएं (Create Quotation)](/quotations/new)\n` +
+      `2. **ग्राहक (Customer)** का नाम व मोबाइल नंबर चुनें या दर्ज करें।\n` +
+      `3. **सामान (Products)**, मात्रा (Qty), और दर (Rate) जोड़ें। आवश्यकतानुसार GST या छूट भरें।\n` +
+      `4. **'कोटेशन बनाएं'** पर क्लिक करें। इसे आप सीधे WhatsApp या PDF में ग्राहक को भेज सकते हैं।\n\n` +
+      `💡 **जादुई फ़ीचर:** जैसे ही ग्राहक कोटेशन पास कर दे, कोटेशन व्यू में जाकर सिर्फ 1 बटन दबाएं — **"Convert to GST Invoice"**। बिना दोबारा टाइप किए तुरंत पक्का GST बिल बन जाएगा!\n\n` +
+      `सारे पुराने कोटेशन देखने के लिए [कोटेशन सूची (Quotations)](/quotations) पर जाएं।`;
+  }
+
+  // 2. GST Billing & Invoices (बिल बनाना / इनवॉइस / चालान)
+  if (
+    q.includes('bill banana') || q.includes('invoice banana') || q.includes('naya bill') ||
+    q.includes('gst bill') || q.includes('challan') || q.includes('पक्का बिल') ||
+    q.includes('bill kaise banaye') || q.includes('create invoice') || q.includes('make bill') ||
+    q.includes('invoice kaise') || q.includes('naya invoice') || q.includes('bill generator')
+  ) {
+    return `नमस्ते ${name}! 🧾 **नया GST बिल / चालान बनाने की आसान विधि:**\n\n` +
+      `1. सीधे यहाँ क्लिक करें: [👉 नया बिल बनाएं (Create Invoice)](/invoices/new)\n` +
+      `2. **ग्राहक (Customer)** चुनें। यदि B2B पार्टी है तो उसका GSTIN डालें — नाम व पता अपने आप भर जाएगा!\n` +
+      `3. **उत्पाद (Items)** जोड़ें, दर व GST दर (0%, 5%, 12%, 18%, 28%) चुनें।\n` +
+      `4. नकद या ऑनलाइन पेमेंट दर्ज करें।\n` +
+      `5. नीचे **"चालान / बिल बनाएं"** पर क्लिक करें!\n\n` +
+      `🎙️ **सुपर फास्ट टिप:** टाइप करने की जगह ऊपर **[🎙️ Smart Voice Entry]** (या Ctrl+K) पर टैप करके बोलकर 2 सेकंड में बिल बनाएं!\n\n` +
+      `सभी पिछले बिल देखने के लिए: [सभी इनवॉइस देखें (Invoices)](/invoices)`;
+  }
+
+  // 3. Purchase & AI Bill Scanner (खरीद / सप्लायर बिल / पर्ची स्कैनर)
+  if (
+    q.includes('purchase') || q.includes('kharid') || q.includes('supplier bill') ||
+    q.includes('bill scan') || q.includes('scan bill') || q.includes('सप्लायर बिल') ||
+    q.includes('खरीद दर्ज') || q.includes('खरीद बिल') || q.includes('parchi')
+  ) {
+    return `नमस्ते ${name}! 🛒 **खरीद (Purchase) दर्ज करने और बिल स्कैन करने के 2 तरीके:**\n\n` +
+      `• **मैन्युअल खरीद दर्ज करें:** [👉 नई खरीद दर्ज करें (Add Purchase)](/purchases/new) पर जाकर सप्लायर चुनें, इनवॉइस नंबर व खरीदे गए आइटम डालें।\n` +
+      `• **AI बिल स्कैनर (जादुई तरीका):** [📸 बिल स्कैन करें (AI Bill Scanner)](/purchases/scan) पर जाएं। सप्लायर के पेपर बिल का फोटो खींचें या अपलोड करें — पक्कू AI अपने आप सभी उत्पाद, दरें और टैक्स पढ़कर खरीद इनवॉइस बना देगा!\n\n` +
+      `सप्लायरों का हिसाब देखने के लिए [सप्लायर सूची (Suppliers)](/suppliers) पर जाएं।`;
+  }
+
+  // 4. Smart Voice Entry & Voice Billing (बोलकर बिल बनाना)
+  if (
+    q.includes('voice') || q.includes('bolkar') || q.includes('smart voice') ||
+    q.includes('awaz') || q.includes('mic') || q.includes('speak') || q.includes('बोलकर बिल') ||
+    q.includes('teddy bear') || q.includes('voice entry')
+  ) {
+    return `नमस्ते ${name}! 🎙️ **स्मार्ट वॉयस एंट्री (Smart Voice Entry):**\n\n` +
+      `बिना कुछ टाइप किए सिर्फ बोलकर बिल बनाने का तरीका:\n\n` +
+      `1. ऊपर हेडर में **[🎙️ Smart Voice Entry]** बटन पर क्लिक करें या कीबोर्ड पर \`Ctrl+K\` दबाएं।\n` +
+      `2. माइक शुरू होने पर अपनी भाषा में स्वाभाविक रूप से बोलें, जैसे:\n` +
+      `   - *"एक बिल बनाओ Teddy Bear 2000"* ➔ तुरंत Teddy Bear ₹2000 का बिल बन जाएगा।\n` +
+      `   - *"रमेश को 500 दिए"* ➔ रमेश के खाते में पेमेंट दर्ज हो जाएगी।\n` +
+      `   - *"मोहन से 1200 नकद मिला"* ➔ मोहन से कैश जमा रिकॉर्ड हो जाएगा।\n` +
+      `3. स्क्रीन पर प्रीव्यू देखकर **"चालान / बिल बनाएं"** पर क्लिक करें!`;
+  }
+
+  // 5. Customer Udhaar & WhatsApp Reminders (उधारी खाता व व्हाट्सएप तकादा)
+  if (
+    q.includes('customer') || q.includes('grahak') || q.includes('udhaar') ||
+    q.includes('udhari') || q.includes('khata') || q.includes('jama') ||
+    q.includes('reminder') || q.includes('whatsapp') || q.includes('takada') ||
+    q.includes('उधार') || q.includes('बकाया')
+  ) {
+    return `नमस्ते ${name}! 💰 **ग्राहक उधारी खाता व व्हाट्सएप पेमेंट रिमाइंडर:**\n\n` +
+      `1. [👉 ग्राहक सूची (Customers)](/customers) पर जाएं।\n` +
+      `2. **नया ग्राहक:** "नया ग्राहक जोड़ें" पर क्लिक करके नाम व फोन नंबर सेव करें।\n` +
+      `3. **लेना-देना:** जब भी माल उधार दें, 'उधार दिया (Gave)' और जब पैसे मिलें 'प्राप्त हुआ (Got)' दर्ज करें।\n` +
+      `4. **व्हाट्सएप तकादा (Reminders):** ग्राहक के नाम के पास व्हाट्सएप आइकन दबाकर 1-क्लिक में बकाए की पर्ची, कुल राशि और आपका UPI QR कोड सीधे उसके फोन पर भेजें!\n\n` +
+      `इससे उधारी 3 गुना तेजी से वापस आती है!`;
+  }
+
+  // 6. Inventory & Stock (स्टॉक / माल / बारकोड / CSV इंपोर्ट)
+  if (
+    q.includes('inventory') || q.includes('stock') || q.includes('product') ||
+    q.includes('saman') || q.includes('maal') || q.includes('barcode') ||
+    q.includes('csv') || q.includes('लो-स्टॉक') || q.includes('स्टॉक')
+  ) {
+    return `नमस्ते ${name}! 📦 **स्टॉक व इन्वेंट्री प्रबंधन:**\n\n` +
+      `1. [👉 इन्वेंट्री सूची (Inventory)](/inventory) पर जाएं।\n` +
+      `2. **नया आइटम जोड़ना:** 'नया उत्पाद जोड़ें' पर क्लिक करके नाम, SKU, सेलिंग रेट, खरीद भाव, HSN कोड और मिनिमम स्टॉक अलर्ट सेट करें।\n` +
+      `3. **थोक इंपोर्ट (Bulk CSV):** अगर बहुत सारे आइटम हैं, तो 'Import CSV' बटन से एक्सेल शीट सीधे अपलोड करें।\n` +
+      `4. जब भी बिल बनेगा, स्टॉक अपने आप घटता जाएगा। कम होने पर पक्कू आपको अलर्ट देगा!`;
+  }
+
+  // 7. Ghar Kharcha / Household Budget (घर खर्चा / पारिवारिक बजट)
+  if (
+    q.includes('ghar kharcha') || q.includes('household') || q.includes('ghar ka kharcha') ||
+    q.includes('parivar') || q.includes('family') || q.includes('split') ||
+    q.includes('rashan') || q.includes('bijli bill') || q.includes('ghar budget')
+  ) {
+    return `नमस्ते ${name}! 🏠 **घर खर्चा (Household Budget & Ledger):**\n\n` +
+      `पक्का चिट्ठा में घर खर्चा 100% फ्री है:\n\n` +
+      `• [🏠 घर खर्चा डैशबोर्ड](/ghar-kharcha): कुल महीने का खर्च, बचत और शुद्ध स्थिति देखें।\n` +
+      `• [📝 खर्चा रजिस्टर](/ghar-kharcha/transactions): राशन, दूध, बिजली बिल आदि तारीख-वार दर्ज करें।\n` +
+      `• [📊 माहवार बजट](/ghar-kharcha/budget): हर महीने का बजट सेट करें (जैसे ₹25,000)।\n` +
+      `• [👥 सदस्य व खर्च विभाजन (Splits)](/ghar-kharcha/splits): परिवार के सदस्यों में खर्च बराबर या कस्टम बांटें।\n` +
+      `• [📅 रिपोर्ट्स व एक्सेल डाउनलोड](/ghar-kharcha/reports): पूरे महीने का खर्च पीडीएफ या एक्सेल में निकालें।\n\n` +
+      `💡 आप अधिकतम 3 घर या ऑफिस यूनिट्स (Homes/Units) एक साथ मैनेज कर सकते हैं!`;
+  }
+
+  // 8. Free Khata (फ्री पर्सनल खाता)
+  if (q.includes('free khata') || q.includes('personal khata') || q.includes('फ्री खाता')) {
+    return `नमस्ते ${name}! 📒 **फ्री खाता (Personal Khata):**\n\n` +
+      `यदि आपको बिना किसी GST या इनवॉइस के सिर्फ दोस्तों, पड़ोसियों या रिश्तेदारों का पर्सनल लेन-देन ट्रैक करना है:\n\n` +
+      `• [👉 फ्री खाता डैशबोर्ड](/free-khata) पर जाएं।\n` +
+      `• [👉 संपर्क सूची (Contacts)](/free-khata/contacts) में किसी का भी नाम जोड़ें और सीधे 'दिया' या 'लिया' दर्ज करें।\n` +
+      `• यह 100% फ्री और सुपर फास्ट है!`;
+  }
+
+  // 9. Accountant ERP & CA Mode (अकाउंटेंट मोड / डे-बुक / लेजर / वाउचर / GSTR)
+  if (
+    q.includes('accountant') || q.includes('ca mode') || q.includes('voucher') ||
+    q.includes('day book') || q.includes('trial balance') || q.includes('balance sheet') ||
+    q.includes('profit loss') || q.includes('p&l') || q.includes('gstr') || q.includes('सीए')
+  ) {
+    return `नमस्ते ${name}! 💼 **अकाउंटेंट ERP व CA टूल्स:**\n\n` +
+      `• [👉 अकाउंटेंट मोड (Accountant ERP)](/accountant) से आपका CA सीधे डे-बुक, लेजर बैलेंस, ट्रायल बैलेंस और बैलेंस शीट देख सकता है।\n` +
+      `• [👉 फाइनेंशियल रिपोर्ट्स (Reports)](/reports) में आपको मिलेंगी:\n` +
+      `  ↳ **GSTR-1:** सेल्स इनवॉइस की समरी व JSON फाइल (सीधे GST पोर्टल पर अपलोड के लिए)\n` +
+      `  ↳ **GSTR-2B:** इनपुट टैक्स क्रेडिट (ITC) मिलान\n` +
+      `  ↳ **Sales & Purchase Register:** एक्सेल व पीडीएफ में विस्तृत विवरण\n` +
+      `  ↳ **Day Book व P&L:** दैनिक रोकड़ व लाभ-हानि खाता।`;
+  }
+
+  // 10. Security PIN & Screen Lock (6-Digit PIN / स्क्रीन लॉक)
+  if (
+    q.includes('pin') || q.includes('security pin') || q.includes('screen lock') ||
+    q.includes('lock') || q.includes('सिक्योरिटी') || q.includes('पासवर्ड')
+  ) {
+    return `नमस्ते ${name}! 🔐 **6-अंकीय फास्ट सिक्योरिटी PIN:**\n\n` +
+      `1. [👉 प्लेटफॉर्म सेटिंग्स (Settings)](/settings) या [सुपर एडमिन सेटिंग्स](/platform-admin/settings) में जाएं।\n` +
+      `2. **"Security PIN"** विकल्प में 6 अंकों का सुरक्षित पिन सेट या बदलें।\n` +
+      `3. पिन सेट होने के बाद आप बिना लंबा पासवर्ड डाले सिर्फ 6 अंकों से तुरंत लॉगिन कर सकेंगे और स्क्रीन कुछ देर खाली रहने पर अपने आप सुरक्षित लॉक हो जाएगी!`;
+  }
+
+  // 11. Printer & Thermal Printing (प्रिंटर सेटिंग्स / थर्मल प्रिंट / 3-इंच / A4)
+  if (
+    q.includes('printer') || q.includes('thermal') || q.includes('print setting') ||
+    q.includes('3 inch') || q.includes('2 inch') || q.includes('प्रिंटर') || q.includes('प्रिंट')
+  ) {
+    return `नमस्ते ${name}! 🖨️ **प्रिंटर व प्रिंटिंग सेटिंग्स:**\n\n` +
+      `• [👉 प्रिंटर सेटिंग्स](/settings/printer) पर जाएं।\n` +
+      `• यहाँ आप चुन सकते हैं:\n` +
+      `  ↳ **3-इंच / 2-इंच POS थर्मल प्रिंटर:** छोटी पर्ची निकालने के लिए (ब्लूटूथ / USB)\n` +
+      `  ↳ **A4 स्टैंडर्ड इनवॉइस:** फुल साइज कलर या ब्लैक & व्हाइट PDF बिल\n` +
+      `• बिल पर अपनी दुकान का लोगो, बैंक डिटेल्स और UPI QR कोड भी यहीं से सेट होते हैं!`;
+  }
+
+  // 12. Staff Management (स्टाफ व कर्मचारी)
+  if (q.includes('staff') || q.includes('employee') || q.includes('karmchari') || q.includes('permission')) {
+    return `नमस्ते ${name}! 👥 **स्टाफ व कर्मचारी प्रबंधन:**\n\n` +
+      `• [👉 स्टाफ प्रबंधन (Staff)](/staff) पर जाएं।\n` +
+      `• आप अपने बिलिंग ऑपरेटर, कैशियर या अकाउंटेंट को अलग लॉगिन दे सकते हैं।\n` +
+      `• स्टाफ केवल वही देख पाएगा जिसकी आपने अनुमति दी है (जैसे केवल बिल बनाना, स्टॉक न बदलना)। आपकी व्यावसायिक गोपनीयता 100% सुरक्षित रहेगी!`;
+  }
+
+  // 13. Help Center & Knowledge Hub
+  if (q.includes('help') || q.includes('knowledge') || q.includes('tutorial') || q.includes('मदद') || q.includes('सिखाओ')) {
+    return `नमस्ते ${name}! 📚 **पक्का चिट्ठा सहायता केंद्र (Knowledge Hub):**\n\n` +
+      `• [👉 नॉलेज हब होम](/knowledge): सभी गाइड्स, आर्टिकल्स और वीडियो ट्यूटोरियल्स।\n` +
+      `• [👉 अक्सर पूछे जाने वाले सवाल (FAQs)](/knowledge/questions): व्यापार और टैक्स से जुड़े सामान्य प्रश्न।\n` +
+      `• या फिर आप मुझसे (पक्कू से) यहाँ चैट में सीधे कोई भी सवाल पूछ सकते हैं — मैं 24/7 तैयार हूँ! 😊`;
+  }
+
+  return null;
+}
+
+/**
+ * Searches the Knowledge Hub in the database for relevant published answers
+ */
+async function searchKnowledgeHub(query: string, name: string): Promise<string | null> {
+  try {
+    const results = await globalKnowledgeSearch({ query, limit: 3 });
+
+    // 1. Check questions first
+    if (results.questions && results.questions.length > 0) {
+      const topQ = results.questions[0];
+      const answer = topQ.shortAnswerHi || topQ.shortAnswerEn;
+      const title = topQ.titleHi || topQ.titleEn;
+
+      if (answer && answer.trim().length > 10) {
+        return `नमस्ते ${name}! 📖 आपके सवाल **"${title}"** के संदर्भ में नॉलेज हब से जानकारी:\n\n` +
+          `${answer.trim()}\n\n` +
+          `विस्तृत जानकारी के लिए नॉलेज हब देखें: [👉 सवाल का पूरा उत्तर पढ़ें](/knowledge/questions/${topQ.slug})`;
+      }
+    }
+
+    // 2. Check articles
+    if (results.articles && results.articles.length > 0) {
+      const topA = results.articles[0];
+      const excerpt = topA.summaryHi || topA.summaryEn || topA.contentHi?.substring(0, 200) || topA.contentEn?.substring(0, 200);
+      const title = topA.titleHi || topA.titleEn;
+
+      if (excerpt && excerpt.trim().length > 10) {
+        return `नमस्ते ${name}! 📚 **${title}**:\n\n` +
+          `${excerpt.trim()}...\n\n` +
+          `पूरा आर्टिकल पढ़ने के लिए यहाँ क्लिक करें: [👉 ${title} पढ़ें](/knowledge/articles/${topA.slug})`;
+      }
+    }
+  } catch (err) {
+    console.warn('[Pakku Brain] Knowledge Hub search error:', err);
+  }
+
+  return null;
+}
+
+/**
  * Builds the comprehensive prompt for frontier LLM (Gemini/OpenAI) with client context
  */
 export function buildPakkuSystemPrompt(
@@ -218,50 +435,64 @@ Facts you have learned about this client over time:
 ${learnedFactsStr}
 
 Pakka Chittha Page Links (Always provide exact markdown links when relevant):
-- Create GST Invoice: [नया बिल बनाएं](/invoices/new)
+- Create Quotation / Estimate: [👉 नया कोटेशन बनाएं](/quotations/new)
+- View Quotations: [कोटेशन सूची](/quotations)
+- Create GST Invoice: [👉 नया बिल बनाएं](/invoices/new)
 - View Invoices: [सभी बिल देखें](/invoices)
 - Smart Voice Billing: [🎙️ Smart Voice Entry] (Click top mic or Ctrl+K)
 - Customer Udhaar Ledger: [ग्राहक सूची](/customers)
-- Supplier & Purchase: [सप्लायर सूची](/suppliers) | [खरीद दर्ज करें](/purchases/new)
+- Supplier & Purchase: [सप्लायर सूची](/suppliers) | [खरीद दर्ज करें](/purchases/new) | [बिल स्कैन करें](/purchases/scan)
 - Inventory / Stock: [इन्वेंट्री स्टॉक](/inventory)
 - Ghar Kharcha (Household Budget): [घर खर्चा डैशबोर्ड](/ghar-kharcha) | [खर्चा रजिस्टर](/ghar-kharcha/transactions)
 - Tax & Financial Reports: [फाइनेंशियल रिपोर्ट्स](/reports)
 - Security PIN Settings: [सेटिंग्स](/settings)
+- Printer Settings: [प्रिंटर सेटिंग्स](/settings/printer)
 
 Persona & Tone Rules:
-1. Speak in warm, conversational, sharp Indian business tone. Use respectful address like "${memory.preferredName}".
-2. You can answer ANY topic accurately: Pakka Chittha features, GST rules, commercial negotiations, retail growth, inventory rotation, debt recovery, household budgeting, math calculations, science, life, or general queries.
-3. If the user asks in Hindi or Hinglish, answer in fluent, respectful Hindi/Hinglish. If in English, answer in English.
-4. If the user tells you to remember something ("याद रखना", "नोट कर लो"), confirm enthusiastically that you have committed it to memory.
-5. Keep answers practical, actionable, and under 150 words unless detail is requested.
+1. Speak in warm, conversational, sharp Indian business tone. Address user respectfully as "${memory.preferredName}".
+2. Directly answer what the user asked! If user asks about quotation, answer about quotation! If about purchase, answer about purchase! Never provide irrelevant links.
+3. If the user asks in Hindi or Hinglish, answer in fluent, natural Hindi/Hinglish. If in English, answer in English.
+4. Keep answers practical, actionable, and under 150 words.
 `;
 }
 
 /**
- * High-IQ Autonomous Human-Brain Engine when no external LLM key is configured
- * Covers broad general knowledge, GST rules, business advice, and platform features.
+ * Master High-IQ Autonomous Human-Brain Engine
+ * Combines Math, Live Pattern, Exhaustive Platform Knowledge, and Knowledge Hub Search.
  */
-export function getAutonomousHumanAnswer(
+export async function getAutonomousHumanAnswer(
   query: string,
   pattern: ClientPatternProfile,
   memory: PakkuLearnedMemory
-): PakkuResponse {
+): Promise<PakkuResponse> {
   const q = query.toLowerCase().trim();
   const name = memory.preferredName || pattern.userName.split(' ')[0] + ' जी';
 
-  // 1. Math solver
+  // 1. Math solver (e.g. 50000 ka 18% gst)
   const mathAnswer = solveNaturalMath(query);
   if (mathAnswer) {
     return { reply: mathAnswer, source: 'math_engine' };
   }
 
-  // 2. Client Pattern & Live Data
+  // 2. Client Live Business & Household Pattern (e.g. aaj ka sale, udhaar kitna hai, stock)
   const patternAnswer = answerFromClientPattern(query, pattern, memory);
   if (patternAnswer) {
     return { reply: patternAnswer, source: 'live_data' };
   }
 
-  // 3. GST & Tax Knowledge
+  // 3. Exhaustive Platform Feature Engine (Quotations, Invoices, Purchases, Voice, Printers, etc.)
+  const featureAnswer = answerPlatformFeature(query, name);
+  if (featureAnswer) {
+    return { reply: featureAnswer, source: 'pakku_human_brain' };
+  }
+
+  // 4. Live Knowledge Hub Search in Database (Articles & FAQs)
+  const khAnswer = await searchKnowledgeHub(query, name);
+  if (khAnswer) {
+    return { reply: khAnswer, source: 'knowledge_hub' };
+  }
+
+  // 5. GST Rules & Regulations
   if (q.includes('gst rate') || q.includes('gst slab') || q.includes('kitna gst')) {
     return {
       reply: `नमस्ते ${name}! भारत में GST के 4 मुख्य स्लैब हैं:\n\n` +
@@ -296,44 +527,26 @@ export function getAutonomousHumanAnswer(
     };
   }
 
-  // 4. Retail & Business Growth Advice
-  if (
-    q.includes('udhaar kaise recover') || q.includes('paisa kaise nikale') ||
-    q.includes('udhari recovery') || q.includes('recovery tips')
-  ) {
+  // 6. Who is Pakku?
+  if (q.includes('who are you') || q.includes('kaun ho') || q.includes('tum kaun') || q.includes('aap kaun') || q.includes('pakku kaun')) {
     return {
-      reply: `अरे ${name}, उधारी रिकवर करने के ये 4 आज़माए हुए प्रैक्टिकल तरीके अपनाइए:\n\n` +
-        `1. **नियमित जेंटल रिमाइंडर:** उधार देने के 15वें दिन और 25वें दिन पक्का चिट्ठा से [ग्राहक सूची](/customers) में जाकर 1-क्लिक व्हाट्सएप पर UPI QR लिंक भेजें।\n` +
-        `2. **नकद छूट (Cash Discount):** ग्राहकों को बोलें कि समय पर भुगतान करने पर 2% की नकद छूट मिलेगी। यह बहुत असरदार है!\n` +
-        `3. **किस्त का विकल्प:** बड़ा बकाया होने पर एक साथ मांगने के बजाय छोटी साप्ताहिक किस्तों में भुगतान लें।\n` +
-        `4. **क्रेडिट लिमिट तय करें:** जब तक पुराना हिसाब 50% चुकता न हो, नया माल उधार न दें।`,
+      reply: `नमस्ते ${name}! 😊 मैं **पक्कू (Pakku)** हूँ — पक्का चिट्ठा का आपका निजी AI बिजनेस पार्टनर व मुनीम जी!\n\n` +
+        `मैं बिलिंग, कोटेशन, खरीद, उधारी खाता, स्टॉक, घर खर्चा और किसी भी व्यापारिक समस्या में आपकी तुरंत मदद के लिए 24/7 हाजिर हूँ। आप मुझसे वेबसाइट या अपने कारोबार से जुड़ा कोई भी सवाल बेझिझक पूछ सकते हैं!`,
       source: 'pakku_human_brain',
     };
   }
 
-  if (q.includes('batao') || q.includes('help') || q.includes('kya kar sakte ho') || q.includes('features')) {
-    return {
-      reply: `नमस्ते ${name}! 🙏 मैं आपका अपना **पक्कू (Pakku)** हूँ — पक्का चिट्ठा का AI बिजनेस पार्टनर!\n\n` +
-        `मैं इन सभी कामों में आपकी तुरंत सहायता कर सकता हूँ:\n` +
-        `• **लाइव दुकान हिसाब:** आज की बिक्री, कुल उधारी, स्टॉक की स्थिति बताना\n` +
-        `• **बोलकर बिलिंग:** ऊपर मौजूद [🎙️ Smart Voice Entry] से 2 सेकंड में इनवॉइस बनाना\n` +
-        `• **उधारी व तकादा:** [ग्राहक सूची](/customers) से व्हाट्सएप रिमाइंडर व क्यूआर भेजना\n` +
-        `• **घर खर्चा व बजट:** [घर खर्चा डैशबोर्ड](/ghar-kharcha) से पारिवारिक बचत ट्रैक करना\n` +
-        `• **गणित व टैक्स:** किसी भी राशि का GST निकालना, मार्जिन गणना या बिज़नेस सलाह देना!\n\n` +
-        `आप मुझसे जो चाहें बेझिझक पूछिए!`,
-      source: 'pakku_human_brain',
-    };
-  }
-
-  // 5. Default intelligent conversational response
+  // 7. Relatable, genuine fallback tailored to the question
   return {
     reply: `नमस्ते ${name}! 😊 आपके सवाल **"${query}"** के बारे में:\n\n` +
-      `मैं पक्का चिट्ठा का आपका साथी हूँ। यदि यह बिलिंग, उधारी, स्टॉक या घर खर्चा से जुड़ा है:\n` +
-      `• नया बिल बनाने के लिए: [👉 नया बिल बनाएं](/invoices/new)\n` +
-      `• ग्राहकों का हिसाब देखने के लिए: [👉 ग्राहक सूची](/customers)\n` +
-      `• घर के खर्चे के लिए: [👉 घर खर्चा](/ghar-kharcha)\n` +
-      `• टैक्स व CA ऑडिट के लिए: [👉 फाइनेंशियल रिपोर्ट्स](/reports)\n\n` +
-      `यदि आपका कोई विशेष सवाल या हिसाब है, तो सीधे पूछें — मैं तुरंत हल कर दूँगा!`,
+      `मैं पक्का चिट्ठा में आपके व्यापार और हिसाब को आसान बनाने के लिए हमेशा उपस्थित हूँ।\n\n` +
+      `आप मुझसे निम्न में से कुछ भी पूछ सकते हैं:\n` +
+      `• **बिल या कोटेशन बनाना:** [👉 नया बिल बनाएं](/invoices/new) | [👉 नया कोटेशन](/quotations/new)\n` +
+      `• **खरीद व सप्लायर:** [👉 खरीद दर्ज करें](/purchases/new) | [👉 बिल स्कैन करें](/purchases/scan)\n` +
+      `• **उधारी व ग्राहक:** [👉 ग्राहक सूची](/customers)\n` +
+      `• **स्टॉक व सामान:** [👉 इन्वेंट्री](/inventory)\n` +
+      `• **घर खर्चा व पारिवारिक बजट:** [👉 घर खर्चा](/ghar-kharcha)\n\n` +
+      `यदि आपका कोई विशेष सवाल, दर, हिसाब या परेशानी है, तो सीधे विस्तार से पूछिए — मैं तुरंत हल बताऊँगा!`,
     source: 'pakku_human_brain',
   };
 }
