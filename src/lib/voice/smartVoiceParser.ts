@@ -1,3 +1,5 @@
+import { normalizeWithPakkuAI, stripVoiceCommandPreamble } from '@/lib/voice/pakkuVoiceAI';
+
 /**
  * PakkaChittha - Smart Voice Entry & Voice Accounting Natural Language Parser
  * Supports: Hindi, English, Hinglish, Devanagari numerals, and Indian spoken terminology.
@@ -302,9 +304,11 @@ function cleanPartyName(raw: string): string {
  * Strips trailing action verbs and clutter from product line item names
  */
 function cleanProductSpokenName(raw: string): string {
-  return raw
+  let cleaned = stripVoiceCommandPreamble(raw);
+  cleaned = normalizeWithPakkuAI(cleaned);
+  return cleaned
     .replace(
-      /\b(?:ka\s+maal\s+diya|maal\s+diya|saman\s+diya|diya|diye|becha|bechi|de\s+do|bill\s+banao|invoice\s+banao|दिए|दिया|बेचा|बेची|बेचा\s+गया)\b/gi,
+      /\b(?:ka\s+maal\s+diya|maal\s+diya|saman\s+diya|diya|diye|becha|bechi|de\s+do|bill\s+banao|invoice\s+banao|bill\s+banana\s+hai|challan\s+banana\s+hai|दिए|दिया|बेचा|बेची|बेचा\s+गया)\b/gi,
       ''
     )
     .replace(/^[,\s]+|[,\s]+$/g, '')
@@ -323,7 +327,8 @@ function cleanProductSpokenName(raw: string): string {
 export function extractVoiceLineItems(text: string, knownPartyName?: string | null): ParsedVoiceItem[] {
   if (!text) return [];
 
-  const norm = normalizeSpeechTranscript(text);
+  let norm = normalizeSpeechTranscript(text);
+  norm = stripVoiceCommandPreamble(norm);
 
   // If text is a pure payment or loan without product names, skip item extraction
   if (
@@ -348,7 +353,7 @@ export function extractVoiceLineItems(text: string, knownPartyName?: string | nu
   // 2. Amount-Based Sale Pattern with monetary prepositions (ka / ki / ke / rupaye):
   // e.g. "10000 ki website becha", "5000 ka bill banao", "500 ki chini", "5000 ka saman diya"
   const amountSaleMatch = norm.match(
-    /(?:₹\s*)?(\d+(?:\.\d+)?)\s*(?:rupaye)?\s*(?:ki|ka|ke|की|का|के)\s+([a-zA-Z\u0900-\u097F\s]{2,30})/i
+    /(?:₹\s*)?(\d+(?:\.\d+)?)\s*(?:rupaye)?\s*(?:ki|ka|ke|की|का|के)\s+([a-zA-Z\u0900-\u097F\s]{2,40})/i
   );
 
   if (amountSaleMatch) {
@@ -387,14 +392,14 @@ export function extractVoiceLineItems(text: string, knownPartyName?: string | nu
     ];
   }
 
-  // 3. Inverse: [Product] [Amount] e.g. "chini 500", "petrol 1000", "tel 500 rupaye"
+  // 3. Inverse: [Product] [Amount] e.g. "chini 500", "petrol 1000", "teddy bear 2000", "tel 500 rupaye"
   const prodAmountMatch = norm.match(
-    /([a-zA-Z\u0900-\u097F]{2,20})\s+(?:ka|ki|ke|का|की|के)?\s*(\d+(?:\.\d+)?)\s*(?:rupaye)?$/i
+    /((?:[a-zA-Z\u0900-\u097F]+\s*){1,4})\s+(?:ka|ki|ke|का|की|के)?\s*(\d+(?:\.\d+)?)\s*(?:rupaye)?$/i
   );
   if (prodAmountMatch) {
-    const candProd = cleanProductSpokenName(prodAmountMatch[1]).toLowerCase();
+    const candProd = cleanProductSpokenName(prodAmountMatch[1]);
     const candAmt = parseFloat(prodAmountMatch[2]);
-    if (COMMODITY_WORDS.has(candProd) || candAmt >= 100) {
+    if (COMMODITY_WORDS.has(candProd.toLowerCase()) || candAmt >= 100 || candProd.length >= 3) {
       return [
         {
           spokenName: candProd,

@@ -15,6 +15,7 @@ import { CinematicIntro } from '../welcome/CinematicIntro';
 import { I18nProvider } from '@/i18n/context';
 import { InactivityLockProvider } from '../security/InactivityLockProvider';
 import { GlobalVoiceInputHelper } from '../voice/GlobalVoiceInputHelper';
+import { AskPakkuWidget } from '../pakku/AskPakkuWidget';
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -139,6 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ToastProvider>
             <InactivityLockProvider>
               <GlobalVoiceInputHelper />
+              <AskPakkuWidget />
               <React.Suspense
                 fallback={
                   <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
