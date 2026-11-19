@@ -1,19 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, Check, X } from 'lucide-react';
+import { Mic, Check } from 'lucide-react';
 import { transliterateDevanagariToEnglish } from '@/lib/voice/transliterate';
 
 /**
  * GlobalVoiceInputHelper
  *
- * Universal voice-to-text dictation helper for text inputs and textareas.
+ * Universal, non-intrusive voice-to-text helper for text inputs and textareas.
  *
- * Rules:
- * - NEVER attaches to calendar/date inputs, number spinners, passwords, or selects.
- * - NEVER overlays or covers inside text, clear buttons, or calendar icons.
- * - Floats non-intrusively outside above the input top-right edge.
- * - Works reliably on both mobile touch devices and desktop browsers.
+ * Design & Behavior Rules:
+ * - Attaches ONLY to valid typing fields (input[type="text"], input[type="search"], textarea).
+ * - NEVER attaches to calendar, date, time, password, or numeric stepper fields.
+ * - Floats outside above the top-right corner using viewport-fixed positioning.
+ * - Survives blur/tap on touch devices without losing target input reference.
+ * - Uses Web Speech API directly without disruptive getUserMedia conflicts.
  */
 export function GlobalVoiceInputHelper() {
   const [activeElement, setActiveElement] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -27,8 +28,13 @@ export function GlobalVoiceInputHelper() {
 
   const recognitionRef = useRef<any>(null);
   const initialValueRef = useRef<string>('');
-  const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const targetInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const helperBoxRef = useRef<HTMLDivElement | null>(null);
+
+  // Synchronous lifecycle refs to avoid async state race conditions
+  const isListeningRef = useRef(false);
+  const isStartingRef = useRef(false);
+  const hideTimeoutRef = useRef<any>(null);
 
   // Safely update input / textarea value in React
   const updateInputValue = useCallback((el: HTMLInputElement | HTMLTextAreaElement, textToAppend: string) => {
@@ -39,7 +45,7 @@ export function GlobalVoiceInputHelper() {
       const prototype = isInput ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
       const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
 
-      const base = initialValueRef.current;
+      const base = initialValueRef.current || '';
       const separator = base && !base.endsWith(' ') ? ' ' : '';
       const finalVal = base ? `${base}${separator}${textToAppend}` : textToAppend;
 
@@ -49,15 +55,20 @@ export function GlobalVoiceInputHelper() {
         el.value = finalVal;
       }
 
-      // Dispatch standard bubbles events so React controlled state hooks trigger
+      // Dispatch input & change events for React state bindings
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // Keep cursor at end of input
+      if (typeof el.setSelectionRange === 'function') {
+        el.setSelectionRange(finalVal.length, finalVal.length);
+      }
     } catch (err) {
       console.warn('[GlobalVoiceInputHelper] Failed to update input value:', err);
     }
   }, []);
 
-  // Update button position safely above the top-right edge of the input (NEVER inside or overlaying)
+  // Compute fixed position above input's top-right corner
   const updatePosition = useCallback((el: HTMLElement | null) => {
     if (!el || !document.body.contains(el)) {
       setButtonPos((prev) => ({ ...prev, visible: false }));
@@ -71,13 +82,10 @@ export function GlobalVoiceInputHelper() {
     }
 
     // Position floating outside just above the top-right corner of the input
-    // If input is near the very top of viewport (rect.top < 36), place it just below
     const badgeHeight = 24;
-    const top = rect.top >= 34
-      ? window.scrollY + rect.top - badgeHeight - 4
-      : window.scrollY + rect.bottom + 4;
-
-    const left = Math.max(8, window.scrollX + rect.right - 68);
+    const top = rect.top >= 28 ? rect.top - badgeHeight - 4 : rect.bottom + 4;
+    // Ensure badge never overflows the viewport on mobile
+    const left = Math.min(window.innerWidth - 76, Math.max(8, rect.right - 68));
 
     setButtonPos({
       top,
@@ -88,45 +96,51 @@ export function GlobalVoiceInputHelper() {
 
   // Stop listening cleanly
   const stopListening = useCallback(() => {
+    isStartingRef.current = false;
+    isListeningRef.current = false;
+    setIsListening(false);
+    setTranscriptPreview('');
+
     if (recognitionRef.current) {
       try {
-        recognitionRef.current.abort();
+        recognitionRef.current.stop();
       } catch {}
       recognitionRef.current = null;
     }
-    setIsListening(false);
-    setTranscriptPreview('');
+
+    // Re-focus target element if still connected
+    if (targetInputRef.current && document.body.contains(targetInputRef.current)) {
+      try {
+        targetInputRef.current.focus();
+      } catch {}
+    }
   }, []);
 
-  // Start listening on speech recognition
-  const startListening = useCallback(async () => {
+  // Start speech recognition
+  const startListening = useCallback(() => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Google Chrome, Edge, or an Android browser.');
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome, Microsoft Edge, or an Android browser.');
       return;
     }
 
-    const targetEl = activeInputRef.current;
+    const targetEl = targetInputRef.current;
     if (!targetEl) return;
 
-    // Cache existing text
+    // Clear any scheduled hide
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+
+    isStartingRef.current = true;
     initialValueRef.current = targetEl.value || '';
 
     try {
-      // Explicit mic permission check on mobile browsers
-      if (navigator?.mediaDevices?.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach((track) => track.stop());
-        } catch (micErr) {
-          console.warn('[GlobalVoiceInputHelper] Microphone permission check:', micErr);
-        }
-      }
-
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -136,49 +150,74 @@ export function GlobalVoiceInputHelper() {
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
 
-      recognition.lang = 'hi-IN';
-      recognition.continuous = true;
+      recognition.lang = 'hi-IN'; // Robust support for Indian accent English & Hindi
+      recognition.continuous = false; // Mobile-safe pattern
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        isStartingRef.current = false;
+        isListeningRef.current = true;
         setIsListening(true);
       };
 
       recognition.onresult = (event: any) => {
-        let fullTranscript = '';
+        let sessionTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
-          fullTranscript += event.results[i][0].transcript;
+          sessionTranscript += event.results[i][0].transcript;
         }
 
-        const transliterated = transliterateDevanagariToEnglish(fullTranscript);
-        setTranscriptPreview(transliterated);
+        if (!sessionTranscript) return;
 
-        if (activeInputRef.current) {
-          updateInputValue(activeInputRef.current, transliterated);
+        // Transliterate Devanagari to Romanized text & digits
+        const transliterated = transliterateDevanagariToEnglish(sessionTranscript);
+        const textToUse = transliterated || sessionTranscript;
+
+        setTranscriptPreview(textToUse);
+
+        const currentTarget = targetInputRef.current;
+        if (currentTarget) {
+          updateInputValue(currentTarget, textToUse);
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('[GlobalVoiceInputHelper] speech error:', event.error);
+        console.warn('[GlobalVoiceInputHelper] Speech error:', event.error);
         if (event.error === 'not-allowed') {
-          alert('Microphone access was denied. Please allow microphone permissions in your browser to use voice typing.');
+          alert('Microphone access was denied. Please allow microphone permissions in browser settings.');
         }
-        stopListening();
-      };
-
-      recognition.onend = () => {
+        isStartingRef.current = false;
+        isListeningRef.current = false;
         setIsListening(false);
       };
 
+      recognition.onend = () => {
+        // If user is still in listening mode (e.g. paused between phrases on Android)
+        if (isListeningRef.current) {
+          if (targetInputRef.current) {
+            initialValueRef.current = targetInputRef.current.value || '';
+          }
+          try {
+            recognition.start();
+          } catch {
+            isListeningRef.current = false;
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
+      };
+
       recognition.start();
-    } catch (err) {
-      console.error('[GlobalVoiceInputHelper] start error:', err);
+    } catch (err: any) {
+      console.error('[GlobalVoiceInputHelper] Failed to start:', err);
+      isStartingRef.current = false;
+      isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [stopListening, updateInputValue]);
+  }, [updateInputValue]);
 
-  // Handle focus changes globally
+  // Global focus listener
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement | null;
@@ -192,18 +231,23 @@ export function GlobalVoiceInputHelper() {
       const isTextArea = target instanceof HTMLTextAreaElement;
 
       if (!isInput && !isTextArea) {
-        if (!isListening) {
-          setActiveElement(null);
-          activeInputRef.current = null;
-          setButtonPos((prev) => ({ ...prev, visible: false }));
+        if (!isListeningRef.current && !isStartingRef.current) {
+          if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+          hideTimeoutRef.current = setTimeout(() => {
+            if (!isListeningRef.current && !isStartingRef.current) {
+              setActiveElement(null);
+              targetInputRef.current = null;
+              setButtonPos((prev) => ({ ...prev, visible: false }));
+            }
+          }, 350);
         }
         return;
       }
 
       const inputEl = target as HTMLInputElement | HTMLTextAreaElement;
 
-      // STRICT ALLOW-LIST: Only text and search inputs or textareas.
-      // NEVER attach to date, time, number, calendar, password, tel, email.
+      // STRICT ALLOW-LIST: Only text & search inputs or textareas
+      // NEVER attach to date, time, number, calendar, password, tel, email
       if (isInput) {
         const inp = inputEl as HTMLInputElement;
         const type = (inp.type || 'text').toLowerCase();
@@ -211,7 +255,7 @@ export function GlobalVoiceInputHelper() {
           return;
         }
 
-        // Exclude date/calendar/picker pickers or explicit no-voice inputs
+        // Exclude date/calendar pickers or explicit no-voice inputs
         const cls = (inp.className || '').toLowerCase();
         const name = (inp.name || '').toLowerCase();
         const id = (inp.id || '').toLowerCase();
@@ -231,29 +275,36 @@ export function GlobalVoiceInputHelper() {
         return;
       }
 
+      // Valid typing field focused
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+
+      targetInputRef.current = inputEl;
       setActiveElement(inputEl);
-      activeInputRef.current = inputEl;
       updatePosition(inputEl);
     };
 
-    const handleFocusOut = (e: FocusEvent) => {
-      const related = e.relatedTarget as HTMLElement | null;
-      if (helperBoxRef.current && related && helperBoxRef.current.contains(related)) {
+    const handleFocusOut = () => {
+      // Never dismiss while speech recognition is active or starting
+      if (isListeningRef.current || isStartingRef.current) {
         return;
       }
 
-      setTimeout(() => {
-        if (!isListening && document.activeElement !== activeInputRef.current) {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = setTimeout(() => {
+        if (!isListeningRef.current && !isStartingRef.current && document.activeElement !== targetInputRef.current) {
           setActiveElement(null);
-          activeInputRef.current = null;
+          targetInputRef.current = null;
           setButtonPos((prev) => ({ ...prev, visible: false }));
         }
-      }, 350);
+      }, 400);
     };
 
     const handleScrollOrResize = () => {
-      if (activeInputRef.current) {
-        updatePosition(activeInputRef.current);
+      if (targetInputRef.current) {
+        updatePosition(targetInputRef.current);
       }
     };
 
@@ -267,9 +318,10 @@ export function GlobalVoiceInputHelper() {
       window.removeEventListener('focusout', handleFocusOut, true);
       window.removeEventListener('scroll', handleScrollOrResize, true);
       window.removeEventListener('resize', handleScrollOrResize);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
       stopListening();
     };
-  }, [isListening, stopListening, updatePosition]);
+  }, [stopListening, updatePosition]);
 
   if (!buttonPos.visible || !activeElement) {
     return null;
@@ -279,10 +331,10 @@ export function GlobalVoiceInputHelper() {
     <div
       ref={helperBoxRef}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         top: `${buttonPos.top}px`,
         left: `${buttonPos.left}px`,
-        zIndex: 9999,
+        zIndex: 99999,
       }}
       className="pointer-events-auto transition-all select-none"
     >
@@ -293,14 +345,9 @@ export function GlobalVoiceInputHelper() {
             e.preventDefault();
             e.stopPropagation();
           }}
-          onTouchStart={(e) => {
+          onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (isListening) {
-              stopListening();
-            } else {
-              startListening();
-            }
           }}
           onClick={(e) => {
             e.preventDefault();
@@ -312,10 +359,10 @@ export function GlobalVoiceInputHelper() {
             }
           }}
           title={isListening ? 'Stop Voice Typing' : 'Voice Type (बोलकर लिखें)'}
-          className={`h-6 px-2 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer font-bold text-[10px] ${
+          className={`h-6 px-2.5 rounded-full flex items-center gap-1 shadow-md transition-all cursor-pointer font-bold text-[10px] ${
             isListening
               ? 'bg-rose-600 text-white animate-pulse ring-2 ring-rose-400 ring-offset-1'
-              : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/90 hover:border-emerald-300'
+              : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-300 hover:border-emerald-400 shadow-sm'
           }`}
         >
           <Mic className={`w-3 h-3 ${isListening ? 'animate-bounce text-white' : 'text-emerald-600'}`} />
@@ -324,20 +371,39 @@ export function GlobalVoiceInputHelper() {
 
         {isListening && (
           <div
-            onMouseDown={(e) => e.preventDefault()}
-            onTouchStart={(e) => e.preventDefault()}
-            className="absolute right-20 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1.5 border border-slate-700 pointer-events-auto"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className="absolute right-24 top-1/2 -translate-y-1/2 whitespace-nowrap bg-slate-900/95 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg shadow-xl flex items-center gap-1.5 border border-slate-700 pointer-events-auto"
           >
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-            <span className="max-w-[160px] truncate">
-              {transcriptPreview || 'Listening... speak now'}
+            <span className="max-w-[180px] truncate">
+              {transcriptPreview || 'Listening... बोलिए'}
             </span>
             <button
               type="button"
-              onClick={() => stopListening()}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                stopListening();
+              }}
               className="ml-1 p-0.5 text-slate-400 hover:text-white rounded cursor-pointer"
+              title="Done (हो गया)"
             >
-              <Check className="w-3 h-3 text-emerald-400" />
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
             </button>
           </div>
         )}

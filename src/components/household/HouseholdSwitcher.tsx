@@ -278,7 +278,7 @@ export function HouseholdSwitcher({
         </button>
 
         {isOpen && (
-          <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-1.5 z-50 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="absolute left-0 top-full mt-1.5 z-40 w-72 sm:w-80 max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-xl border border-slate-200 p-2 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="px-2.5 py-1.5 border-b border-slate-100 flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 My Homes &amp; Units
