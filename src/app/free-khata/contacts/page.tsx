@@ -11,7 +11,6 @@ import {
   Phone,
   MessageSquare,
   ChevronRight,
-  Sparkles,
   UserPlus,
   Trash2,
   Edit2,

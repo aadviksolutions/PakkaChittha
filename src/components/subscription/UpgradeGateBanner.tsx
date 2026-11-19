@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, ArrowRight, Check } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { OFFICIAL_PLANS, PlanKey } from '@/lib/subscription/plans';
@@ -48,8 +48,8 @@ export function UpgradeGateBanner({
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-orange-500/30 shadow-lg text-slate-800 space-y-4 my-4">
       <div className="flex items-center gap-2">
-        <span className="px-3 py-1 rounded-full bg-orange-50 text-[#EA580C] border border-orange-200 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5" />
+        <span className="px-3 py-1 rounded-full bg-slate-100 text-[#173653] border border-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#173653]" />
           <span>{planConfig.name} Feature</span>
         </span>
       </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import {
-  Sparkles,
+  ShieldCheck,
   RotateCcw,
   LogOut,
   ChevronRight,
@@ -99,8 +99,8 @@ export function DemoBanner() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
           {/* Left: Banner Title & Plan Indicator */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 font-black uppercase tracking-wider text-[11px] text-amber-300">
-              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] text-amber-300">
+              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
               <span>YOU ARE EXPLORING PAKKA CHITTHA {planKey} DEMO</span>
             </div>
 

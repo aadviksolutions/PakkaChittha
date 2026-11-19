@@ -1,7 +1,19 @@
 'use client';
 
 import React from 'react';
-import { X, Info, Sparkles, MessageSquare, Receipt, UserPlus, CreditCard, Search } from 'lucide-react';
+import {
+  X,
+  Info,
+  Shield,
+  ShieldCheck,
+  CheckCircle2,
+  SlidersHorizontal,
+  MessageSquare,
+  Receipt,
+  UserPlus,
+  CreditCard,
+  Search,
+} from 'lucide-react';
 import { ActionMetadata } from '@/context/ActionModalContext';
 import { VoiceEntryModal } from '@/components/voice/VoiceEntryModal';
 
@@ -191,7 +203,7 @@ export function ActionModal({
             </div>
 
             <div className="mt-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Official WhatsApp Business API integration will be wired in Phase 5.</span>
             </div>
           </div>
@@ -231,7 +243,7 @@ export function ActionModal({
         return (
           <div>
             <div className="flex items-center gap-2 text-purple-950 font-semibold text-sm mb-1">
-              <Sparkles className="w-4 h-4 text-purple-600" />
+              <Shield className="w-4 h-4 text-purple-600" />
               <span>Super Admin: Manage Tenant Subscription</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
@@ -258,7 +270,7 @@ export function ActionModal({
         return (
           <div>
             <div className="flex items-center gap-2 text-purple-950 font-semibold text-sm mb-1">
-              <Sparkles className="w-4 h-4 text-purple-600" />
+              <SlidersHorizontal className="w-4 h-4 text-purple-600" />
               <span>Super Admin: Configure Plan Tiers & Quotas</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
@@ -281,7 +293,7 @@ export function ActionModal({
         return (
           <div>
             <div className="flex items-center gap-2 text-purple-950 font-semibold text-sm mb-1">
-              <Sparkles className="w-4 h-4 text-purple-600" />
+              <ShieldCheck className="w-4 h-4 text-purple-600" />
               <span>Super Admin Platform Action</span>
             </div>
             <p className="text-xs text-slate-500 mb-3">

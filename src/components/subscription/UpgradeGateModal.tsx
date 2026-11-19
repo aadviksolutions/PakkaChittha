@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Sparkles, ArrowRight, X, ShieldAlert, Check } from 'lucide-react';
+import { ShieldCheck, ArrowRight, X, ShieldAlert, Check } from 'lucide-react';
 import { OFFICIAL_PLANS, PlanKey } from '@/lib/subscription/plans';
 
 interface UpgradeGateModalProps {
@@ -70,8 +70,8 @@ export function UpgradeGateModal({
 
         {/* Top Badge & Header */}
         <div className="flex items-center gap-2 mb-3">
-          <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-[#00B887] border border-emerald-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
+          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[#173653] border border-slate-200 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-[#173653]" />
             <span>FEATURE UPGRADE PREVIEW</span>
           </span>
         </div>

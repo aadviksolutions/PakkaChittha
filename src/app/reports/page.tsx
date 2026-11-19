@@ -37,7 +37,8 @@ import {
   Search,
   ExternalLink,
   ChevronRight,
-  Sparkles,
+  Scale,
+  FileCheck2,
   Users,
 } from 'lucide-react';
 
@@ -699,7 +700,7 @@ export default function ReportsPage() {
               { id: 'sales', label: 'Sales Register & HSN', icon: TrendingUp },
               { id: 'purchases', label: 'Purchase Register & ITC', icon: ShoppingBag },
               { id: 'gst', label: 'GST Returns (GSTR-1 & 3B)', icon: ShieldCheck },
-              { id: 'reconciliation', label: 'GSTR-2B Reconciliation', icon: Sparkles },
+              { id: 'reconciliation', label: 'GSTR-2B Reconciliation', icon: Scale },
               { id: 'registers', label: 'Financial Books & P&L', icon: Landmark },
               { id: 'khata', label: 'Personal Khata Report', icon: Users },
             ].map((tab) => {
@@ -1950,8 +1951,8 @@ export default function ReportsPage() {
             {/* Upload & Reconcile Banner */}
             <div className="print:hidden bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-                  <Sparkles className="w-6 h-6" />
+                <div className="p-3 bg-slate-100 text-[#173653] rounded-xl border border-slate-200">
+                  <Scale className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">GSTR-2B Automated ITC Reconciler</h3>
@@ -1983,7 +1984,7 @@ export default function ReportsPage() {
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
                   title="Test with realistic demo GSTR-2B invoices"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <FileCheck2 className="w-3.5 h-3.5 text-slate-600" />
                   <span>Run Demo Reconcile</span>
                 </button>
                 {reconciliationData && (

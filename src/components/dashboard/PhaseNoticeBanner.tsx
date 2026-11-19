@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { ShieldCheck, X } from 'lucide-react';
 
 export function PhaseNoticeBanner() {
   const [dismissed, setDismissed] = useState(false);
@@ -16,7 +16,7 @@ export function PhaseNoticeBanner() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
         <div className="flex items-start gap-3.5">
           <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 shrink-0 mt-0.5">
-            <Sparkles className="w-5 h-5 text-blue-300" />
+            <ShieldCheck className="w-5 h-5 text-blue-300" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">

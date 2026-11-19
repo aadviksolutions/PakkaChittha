@@ -1248,7 +1248,7 @@ export default function StaffPage() {
         {isOwner && !canAccountantErp && (
           <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-start gap-2.5 max-w-2xl">
-              <Sparkles className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <ShieldCheck className="w-4 h-4 text-[#173653] shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <div className="font-bold text-amber-950">
                   Need Multi-Business CA Invitations, Branch/FY Scoping & Approvals?

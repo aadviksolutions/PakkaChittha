@@ -236,8 +236,8 @@ export default function PurchaseScanPage() {
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Scan Purchase Bill &amp; Import to Stock
             </h1>
-            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-600" />
+            <span className="text-[10px] font-semibold text-[#173653] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-[#008A36]" />
               Pakka Chittha Scale
             </span>
           </div>

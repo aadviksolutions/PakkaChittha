@@ -11,7 +11,6 @@ import {
   Users,
   Building,
   Calendar,
-  Sparkles,
   Phone,
   CheckCircle2,
   AlertCircle,

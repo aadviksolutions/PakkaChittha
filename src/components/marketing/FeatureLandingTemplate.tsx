@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   ChevronRight,
-  Sparkles,
   FileText,
   Printer,
   MessageSquare,
@@ -119,8 +118,8 @@ export function FeatureLandingTemplate({ content }: { content: FeatureLandingCon
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
               <div className="lg:col-span-7 space-y-5">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-xs font-bold text-[#EA580C]">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-[#173653]">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[#008A36]" />
                   <span>{content.badge}</span>
                 </div>
 

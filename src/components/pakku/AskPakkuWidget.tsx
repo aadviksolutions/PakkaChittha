@@ -7,13 +7,20 @@ import {
   Send,
   Mic,
   RotateCcw,
-  Sparkles,
   ArrowRight,
   ExternalLink,
   ThumbsUp,
   ThumbsDown,
   TrendingUp,
   AlertCircle,
+  MessageSquareText,
+  HelpCircle,
+  FileText,
+  Receipt,
+  Wallet,
+  Package,
+  Home,
+  CheckCircle2,
 } from 'lucide-react';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
@@ -45,7 +52,7 @@ export function AskPakkuWidget() {
     {
       id: 'welcome',
       sender: 'pakku',
-      text: 'नमस्ते जी! 🙏 मैं **पक्कू (Pakku)** हूँ — आपका AI बिजनेस पार्टनर व मुनीम जी।\n\nआप मुझसे बिलिंग, कोटेशन, खरीद, स्टॉक, उधारी खाता या घर खर्चा के बारे में कभी भी पूछ सकते हैं:',
+      text: 'नमस्ते जी! मैं **पक्कू (Pakku)** हूँ — आपका डिजिटल मुनीम व बिजनेस सलाहकार।\n\nआप मुझसे बिलिंग, कोटेशन, खरीद, स्टॉक, उधारी खाता या घर खर्चा के बारे में कभी भी पूछ सकते हैं:',
       timestamp: 'Just now',
     },
   ]);
@@ -253,14 +260,10 @@ export function AskPakkuWidget() {
               setTimeout(() => inputRef.current?.focus(), 150);
             }}
             className="group flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 px-3 py-1.5 rounded-full shadow-md hover:shadow-lg border border-slate-200/90 transition-all duration-200 cursor-pointer active:scale-95"
-            title="Ask Pakku - AI Business Advisor"
+            title="Ask Pakku - Business Advisor"
           >
-            <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-              <img
-                src="/pakku.png"
-                alt="Pakku AI"
-                className="w-full h-full object-cover object-top"
-              />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#173653] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+              <MessageSquareText className="w-4 h-4 text-emerald-300" />
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -288,12 +291,8 @@ export function AskPakkuWidget() {
           {/* Header */}
           <div className="bg-[#173653] text-white px-3.5 sm:px-4 py-3 flex items-center justify-between shrink-0 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/20 shrink-0">
-                <img
-                  src="/pakku.png"
-                  alt="Pakku"
-                  className="w-full h-full object-cover object-top"
-                />
+              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                <MessageSquareText className="w-4 h-4 text-emerald-300" />
               </div>
 
               <div>
@@ -304,7 +303,7 @@ export function AskPakkuWidget() {
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-300 font-normal">
-                  AI मुनीम जी • {levelTitle.split(' ')[0]}
+                  बिजनेस मुनीम • {levelTitle.split(' ')[0]}
                 </p>
               </div>
             </div>
@@ -354,21 +353,23 @@ export function AskPakkuWidget() {
               onClick={() => handleSendMessage('स्टॉक चेक करो, क्या कोई माल खत्म होने वाला है?')}
               className="px-2 py-0.5 rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shrink-0 flex items-center gap-1 transition-colors text-[11px]"
             >
-              <span>📦 लो-स्टॉक</span>
+              <Package className="w-3 h-3 text-slate-600" />
+              <span>लो-स्टॉक रिपोर्ट</span>
             </button>
             <button
               type="button"
               onClick={() => handleSendMessage('घर खर्चा का क्या हाल है? कितना बजट बचा है?')}
               className="px-2 py-0.5 rounded-md bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shrink-0 flex items-center gap-1 transition-colors text-[11px]"
             >
-              <span>🏠 घर बजट</span>
+              <Home className="w-3 h-3 text-slate-600" />
+              <span>घर बजट</span>
             </button>
           </div>
 
           {/* Learning Feedback Notification Toast */}
           {learningNotification && (
             <div className="bg-[#173653] text-white text-[11px] font-medium px-3 py-1.5 text-center flex items-center justify-center gap-1.5 animate-in fade-in duration-200 shrink-0">
-              <Sparkles className="w-3 h-3 text-amber-300" />
+              <CheckCircle2 className="w-3 h-3 text-emerald-300" />
               <span>{learningNotification}</span>
             </div>
           )}
@@ -383,8 +384,8 @@ export function AskPakkuWidget() {
                   className={`flex gap-2.5 ${isPakku ? 'justify-start' : 'justify-end'}`}
                 >
                   {isPakku && (
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0 mt-0.5">
-                      <img src="/pakku.png" alt="Pakku" className="w-full h-full object-cover object-top" />
+                    <div className="w-6 h-6 rounded-md bg-[#173653] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      P
                     </div>
                   )}
 
@@ -442,17 +443,17 @@ export function AskPakkuWidget() {
             {/* Quick Questions Pills */}
             {messages.length <= 2 && (
               <div className="pt-2">
-                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1.5">
-                  अक्सर पूछे जाने वाले सवाल:
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                  त्वरित सवाल (Frequently Asked):
                 </div>
                 <div className="grid grid-cols-1 gap-1">
                   {[
-                    '📄 नया कोटेशन कैसे बनाएं?',
-                    '🧾 नया GST बिल कैसे बनाएं?',
-                    '🎙️ बोलकर बिल (Smart Voice Entry) कैसे करें?',
-                    '💰 ग्राहक की उधारी कैसे दर्ज व रिकवर करें?',
-                    '📸 खरीद बिल स्कैन (AI Bill Scanner) कैसे करें?',
-                    '🏠 घर खर्चा (Ghar Kharcha) कैसे सेट करें?',
+                    'नया कोटेशन कैसे बनाएं?',
+                    'नया GST बिल कैसे बनाएं?',
+                    'बोलकर बिल (Smart Voice Entry) कैसे करें?',
+                    'ग्राहक की उधारी कैसे दर्ज व रिकवर करें?',
+                    'खरीद बिल कैसे दर्ज करें?',
+                    'घर खर्चा (Ghar Kharcha) कैसे सेट करें?',
                   ].map((q, idx) => (
                     <button
                       key={idx}
@@ -471,14 +472,14 @@ export function AskPakkuWidget() {
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex items-center gap-2 text-slate-500 text-[11px] py-1">
-                <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
-                  <img src="/pakku.png" alt="Pakku" className="w-full h-full object-cover object-top" />
+                <div className="w-5 h-5 rounded-md bg-[#173653] text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                  P
                 </div>
                 <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                  <span className="ml-1 text-[10px] text-slate-500">पक्कू सोच रहा है...</span>
+                  <span className="ml-1 text-[10px] text-slate-500">पक्कू जवाब तैयार कर रहा है...</span>
                 </div>
               </div>
             )}

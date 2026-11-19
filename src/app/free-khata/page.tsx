@@ -445,7 +445,7 @@ function PersonalKhataDashboardContent() {
               Personal Khata
             </h1>
             <span className="text-[10px] sm:text-[11px] font-bold text-[#006B2B] bg-[#E8F7ED] border border-[#B8E6C7] px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-              <Sparkles className="w-3 h-3 text-[#008A36]" />
+              <CheckCircle2 className="w-3 h-3 text-[#008A36]" />
               <span>100% Free Forever</span>
             </span>
           </div>

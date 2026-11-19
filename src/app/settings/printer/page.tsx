@@ -12,7 +12,6 @@ import {
   AlertTriangle,
   FileText,
   RotateCw,
-  Sparkles,
   Settings2,
   Sliders,
   Smartphone,

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Home, Sparkles, ArrowRight, ShieldCheck, DollarSign, Wallet } from 'lucide-react';
+import { Home, CheckCircle2, ArrowRight, ShieldCheck, DollarSign, Wallet } from 'lucide-react';
 
 export default function HouseholdSetupPage() {
   const router = useRouter();
@@ -132,7 +132,7 @@ export default function HouseholdSetupPage() {
 
           <div className="pt-2">
             <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-start gap-2.5 mb-5">
-              <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div className="text-xs text-emerald-900 leading-relaxed font-medium">
                 <strong>What happens next?</strong> We will set up your household dashboard with standard Indian grocery, utilities, medical, and school fee categories. You can invite your spouse or family members right after.
               </div>

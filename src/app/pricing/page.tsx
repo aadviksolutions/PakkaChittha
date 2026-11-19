@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Check,
   X,
-  Sparkles,
+  Star,
   ArrowRight,
   ShieldCheck,
   Layers,
@@ -92,8 +92,8 @@ export default function PricingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
         {/* Page Hero */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-xs font-bold text-[#EA580C] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-[#EA580C]" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-[#173653] uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#173653]" />
             <span>Honest & Transparent Subscription Plans</span>
           </div>
 
@@ -152,9 +152,9 @@ export default function PricingPage() {
               >
                 {/* Recommended Badge on Growth */}
                 {isGrowth && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#EA580C] text-white px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>RECOMMENDED BY PAKKA CHITTHA</span>
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#173653] text-white px-4 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 fill-current text-amber-300" />
+                    <span>RECOMMENDED FOR BUSINESSES</span>
                   </div>
                 )}
 

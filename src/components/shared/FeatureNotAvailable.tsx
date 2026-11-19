@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShieldAlert, ArrowLeft, Sparkles, Crown } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Crown, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface FeatureNotAvailableProps {
@@ -64,7 +64,7 @@ export function FeatureNotAvailable({
               href="/free-khata"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#008F91] border border-emerald-200 text-xs font-bold transition-all cursor-pointer min-h-[44px]"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#00B887]" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#008A36]" />
               <span>Open Free Khata</span>
             </Link>
           ) : (

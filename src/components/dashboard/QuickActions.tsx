@@ -6,7 +6,7 @@ import {
   CreditCard,
   UserPlus,
   MessageSquare,
-  Sparkles,
+  Zap,
   BarChart3,
   BookOpen,
   Truck,
@@ -124,7 +124,7 @@ export function QuickActions({ onTriggerAction }: QuickActionsProps) {
     <div className="mb-4 sm:mb-6 bg-white rounded-2xl p-3 sm:p-4.5 border border-[#DCE4EF] shadow-2xs">
       <div className="flex items-center justify-between mb-2.5 px-0.5">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#1761A0]" />
+          <Zap className="w-3.5 h-3.5 text-[#1761A0]" />
           <h2 className="text-xs font-bold uppercase tracking-wider text-[#102A43]">
             {t('dashboard.quickActions')}
           </h2>

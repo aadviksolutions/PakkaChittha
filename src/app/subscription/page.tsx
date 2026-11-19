@@ -9,7 +9,8 @@ import {
   Check,
   ShieldCheck,
   Zap,
-  Sparkles,
+  ShieldAlert,
+  Receipt,
   CreditCard,
   Clock,
   ArrowRight,
@@ -347,7 +348,7 @@ export default function SubscriptionPage() {
         {isDemo && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs">
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
               <div>
                 <strong>DEMO MODE WORKSPACE:</strong> You are testing the sample{' '}
                 <span className="font-bold uppercase underline">{activePlanKey}</span> workspace. Real
@@ -416,7 +417,7 @@ export default function SubscriptionPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#071F38] text-white">
-                <Sparkles className="w-5 h-5 text-[#EA580C]" />
+                <Crown className="w-5 h-5 text-amber-300" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -882,7 +883,7 @@ export default function SubscriptionPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-[#071F38] text-white">
-                  <Sparkles className="w-4 h-4 text-[#EA580C]" />
+                  <Receipt className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-[#071F38]">Official Payment Receipt</h4>

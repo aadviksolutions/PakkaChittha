@@ -1969,7 +1969,7 @@ function InvoiceCreationForm() {
                       <span>Saving...</span>
                     ) : (
                       <>
-                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                        <Plus className="w-3.5 h-3.5 text-white" />
                         <span>Add &amp; Save Item</span>
                       </>
                     )}

@@ -502,7 +502,7 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-white">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#173653] text-white flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-emerald-300" />
+              <Mic className="w-4 h-4 text-emerald-300" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-slate-900 leading-tight">

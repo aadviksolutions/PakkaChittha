@@ -7,7 +7,6 @@ import {
   MapPin,
   Phone,
   Search,
-  Sparkles,
   UserPlus,
   X,
 } from 'lucide-react';
@@ -361,8 +360,8 @@ export default function CustomerAutocompleteField({
       {showNewEntryForm && (
         <div className="p-2.5 rounded-lg bg-amber-50/40 border border-amber-200 space-y-2 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800">
-              <Sparkles className="w-3 h-3 text-amber-600" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
+              <UserPlus className="w-3.5 h-3.5 text-[#173653]" />
               New Customer Entry (auto-saved with this document)
             </span>
             {filteredCustomers.length > 0 && draft.name.trim().length > 0 && (

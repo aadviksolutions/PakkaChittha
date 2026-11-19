@@ -19,7 +19,6 @@ import {
   DollarSign,
   AlertCircle,
   Receipt,
-  Sparkles,
   PieChart,
   Home,
   CheckCircle2,

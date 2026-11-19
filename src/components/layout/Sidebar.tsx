@@ -468,7 +468,7 @@ export function Sidebar({
                 <>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
                       Personal Khata
                     </span>
                     <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded border uppercase text-emerald-300 bg-emerald-900/60 border-emerald-700">

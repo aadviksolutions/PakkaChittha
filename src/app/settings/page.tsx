@@ -11,7 +11,6 @@ import {
   Trash2,
   Image as ImageIcon,
   CheckCircle2,
-  Sparkles,
   Globe,
   Shield,
   Lock,

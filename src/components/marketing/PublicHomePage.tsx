@@ -13,7 +13,6 @@ import {
   Cloud,
   CheckCircle2,
   ShieldCheck,
-  Sparkles,
   Globe,
   ShoppingCart,
   Printer,

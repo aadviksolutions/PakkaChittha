@@ -282,7 +282,7 @@ function RegisterForm() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+            <BookOpen className="w-3.5 h-3.5 text-emerald-200" />
             <span>Free Udhaar Khata</span>
           </button>
 
@@ -445,7 +445,7 @@ function RegisterForm() {
                 <div className="mt-4 pt-3 border-t border-slate-800/80">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <ShieldCheck className="w-3.5 h-3.5" />
                       2. Select 7-Day Trial Package
                     </span>
                     <span className="text-[10px] text-slate-400">No payment required for trial</span>
