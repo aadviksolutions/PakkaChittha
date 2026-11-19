@@ -308,26 +308,25 @@ export default function HouseholdSplitsPage() {
             My Outstanding Balance
           </div>
           <div
-            className={`text-lg sm:text-xl font-black mt-1 ${
-              (myBalance?.netBalance || 0) > 0.005
+            className={`text-lg sm:text-xl font-black mt-1 ${(myBalance?.netBalance || 0) > 0.005
                 ? 'text-emerald-700'
                 : (myBalance?.netBalance || 0) < -0.005
-                ? 'text-rose-600'
-                : 'text-slate-800'
-            }`}
+                  ? 'text-rose-600'
+                  : 'text-slate-800'
+              }`}
           >
             {(myBalance?.netBalance || 0) > 0.005
               ? `+₹${(myBalance?.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
               : (myBalance?.netBalance || 0) < -0.005
-              ? `-₹${Math.abs(myBalance?.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-              : '₹0.00 (All Settled)'}
+                ? `-₹${Math.abs(myBalance?.netBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+                : '₹0.00 (All Settled)'}
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5">
             {(myBalance?.netBalance || 0) > 0.005
               ? 'Receivable from family'
               : (myBalance?.netBalance || 0) < -0.005
-              ? 'Owed toward shared expenses'
-              : 'Zero debt balance'}
+                ? 'Owed toward shared expenses'
+                : 'Zero debt balance'}
           </div>
         </div>
       </div>
@@ -397,13 +396,12 @@ export default function HouseholdSplitsPage() {
               return (
                 <div
                   key={m.memberId}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    isReceivable
+                  className={`p-4 rounded-2xl border transition-all ${isReceivable
                       ? 'border-emerald-200 bg-emerald-50/20'
                       : isPayable
-                      ? 'border-rose-200 bg-rose-50/20'
-                      : 'border-slate-200 bg-slate-50/30'
-                  }`}
+                        ? 'border-rose-200 bg-rose-50/20'
+                        : 'border-slate-200 bg-slate-50/30'
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -420,24 +418,22 @@ export default function HouseholdSplitsPage() {
 
                     <div className="text-right shrink-0">
                       <div
-                        className={`text-base font-black ${
-                          isReceivable ? 'text-emerald-700' : isPayable ? 'text-rose-600' : 'text-slate-700'
-                        }`}
+                        className={`text-base font-black ${isReceivable ? 'text-emerald-700' : isPayable ? 'text-rose-600' : 'text-slate-700'
+                          }`}
                       >
                         {isReceivable
                           ? `+₹${m.netBalance.toFixed(2)}`
                           : isPayable
-                          ? `-₹${Math.abs(m.netBalance).toFixed(2)}`
-                          : '₹0.00'}
+                            ? `-₹${Math.abs(m.netBalance).toFixed(2)}`
+                            : '₹0.00'}
                       </div>
                       <span
-                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                          isReceivable
+                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${isReceivable
                             ? 'bg-emerald-100 text-emerald-800'
                             : isPayable
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
                       >
                         {isReceivable ? 'Receivable (Owed)' : isPayable ? 'Payable (Owes)' : 'Settled'}
                       </span>
@@ -723,8 +719,8 @@ export default function HouseholdSplitsPage() {
                       ? 'Saving Changes...'
                       : 'Recording Settlement...'
                     : editingSettlementId
-                    ? 'Save Settlement Changes'
-                    : 'Confirm & Save Repayment'}
+                      ? 'Save Settlement Changes'
+                      : 'Confirm & Save Repayment'}
                 </button>
               </div>
             </form>
