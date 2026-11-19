@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Info,
 } from 'lucide-react';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface ReportData {
   household: {
@@ -151,6 +152,9 @@ export default function HouseholdReportsPage() {
       if (isSharedFilter === 'SHARED') params.set('isShared', 'true');
       if (isSharedFilter === 'PERSONAL') params.set('isShared', 'false');
 
+      const hid = typeof window !== 'undefined' ? localStorage.getItem('active_household_id') : '';
+      if (hid) params.set('householdId', hid);
+
       const res = await fetch(`/api/household/reports?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
@@ -166,6 +170,13 @@ export default function HouseholdReportsPage() {
   useEffect(() => {
     fetchFiltersMetadata();
     fetchReports();
+
+    const handleHhChange = () => {
+      fetchFiltersMetadata();
+      fetchReports();
+    };
+    window.addEventListener('householdChanged', handleHhChange);
+    return () => window.removeEventListener('householdChanged', handleHhChange);
   }, []);
 
   const handleApplyFilters = (e: React.FormEvent) => {
@@ -193,6 +204,8 @@ export default function HouseholdReportsPage() {
   const buildExportUrl = (format: 'csv' | 'excel' | 'pdf') => {
     const params = new URLSearchParams();
     params.set('format', format);
+    const hid = typeof window !== 'undefined' ? localStorage.getItem('active_household_id') : '';
+    if (hid) params.set('householdId', hid);
     if (month) params.set('month', month);
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);
@@ -225,10 +238,19 @@ export default function HouseholdReportsPage() {
           >
             ← Back to Dashboard
           </Link>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-emerald-600" />
-            <span>Household Expense Reports &amp; Analytics</span>
-          </h1>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-emerald-600" />
+              <span>Household Expense Reports &amp; Analytics</span>
+            </h1>
+            <HouseholdSwitcher
+              activeHouseholdId={data?.household.id}
+              onHouseholdChange={() => {
+                fetchFiltersMetadata();
+                fetchReports();
+              }}
+            />
+          </div>
           <p className="text-xs text-slate-500 font-medium">
             8 accurate financial reports, spending trends, bill tracking, and multi-format exports (CSV, Excel, PDF).
           </p>

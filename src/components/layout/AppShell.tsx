@@ -13,6 +13,8 @@ import { ToastProvider } from '@/context/ToastContext';
 import { MobileBottomNavigation } from './MobileBottomNavigation';
 import { CinematicIntro } from '../welcome/CinematicIntro';
 import { I18nProvider } from '@/i18n/context';
+import { InactivityLockProvider } from '../security/InactivityLockProvider';
+import { GlobalVoiceInputHelper } from '../voice/GlobalVoiceInputHelper';
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -135,15 +137,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <I18nProvider>
         <ActionModalProvider>
           <ToastProvider>
-            <React.Suspense
-              fallback={
-                <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                </div>
-              }
-            >
-              <AppShellInner>{children}</AppShellInner>
-            </React.Suspense>
+            <InactivityLockProvider>
+              <GlobalVoiceInputHelper />
+              <React.Suspense
+                fallback={
+                  <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                }
+              >
+                <AppShellInner>{children}</AppShellInner>
+              </React.Suspense>
+            </InactivityLockProvider>
           </ToastProvider>
         </ActionModalProvider>
       </I18nProvider>

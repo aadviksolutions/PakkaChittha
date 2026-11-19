@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/context';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface DashboardData {
   monthYear: string;
@@ -119,11 +120,15 @@ export default function GharKharchaDashboardPage() {
     }).format(val || 0);
   };
 
-  const fetchDashboard = useCallback(async (monthYear: string) => {
+  const fetchDashboard = useCallback(async (monthYear: string, targetHouseholdId?: string) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/household/dashboard?month=${monthYear}`);
+      const hid = targetHouseholdId || (typeof window !== 'undefined' ? localStorage.getItem('active_household_id') : '');
+      const url = hid
+        ? `/api/household/dashboard?month=${monthYear}&householdId=${encodeURIComponent(hid)}`
+        : `/api/household/dashboard?month=${monthYear}`;
+      const res = await fetch(url);
       const json = await res.json();
 
       if (!res.ok || !json.success) {
@@ -144,6 +149,14 @@ export default function GharKharchaDashboardPage() {
 
   useEffect(() => {
     fetchDashboard(selectedMonth);
+  }, [selectedMonth, fetchDashboard]);
+
+  useEffect(() => {
+    const handleHhChange = (e: any) => {
+      fetchDashboard(selectedMonth, e.detail?.householdId);
+    };
+    window.addEventListener('householdChanged', handleHhChange);
+    return () => window.removeEventListener('householdChanged', handleHhChange);
   }, [selectedMonth, fetchDashboard]);
 
   // Load categories for Quick Add
@@ -303,9 +316,15 @@ export default function GharKharchaDashboardPage() {
             </span>
             <span className="text-xs font-bold text-[#64748B]">• 100% Free Family Ledger</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#173653] tracking-tight mt-1 flex items-center gap-2">
-            <span>{data?.authContext.householdName || 'My Household'}</span>
-          </h1>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <h1 className="text-xl sm:text-2xl font-black text-[#173653] tracking-tight">
+              {data?.authContext.householdName || 'My Household'}
+            </h1>
+            <HouseholdSwitcher
+              activeHouseholdId={data?.authContext.householdId}
+              onHouseholdChange={(id) => fetchDashboard(selectedMonth, id)}
+            />
+          </div>
           <p className="text-xs text-[#64748B] font-medium">
             "{t('gharKharcha.tagline')}" • Collaborating as{' '}
             <strong className="text-[#172B4D] uppercase">{data?.authContext.role}</strong>

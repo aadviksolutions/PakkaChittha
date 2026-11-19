@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   Sparkles,
   Globe,
+  Shield,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { UpiQrCode } from '@/components/shared/UpiQrCode';
@@ -67,9 +70,69 @@ export default function SettingsPage() {
     logoUrl: null,
   });
 
+  const [hasPin, setHasPin] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+  const [pinMessage, setPinMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   useEffect(() => {
     fetchSettings();
+    fetchPinStatus();
   }, []);
+
+  const fetchPinStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/pin');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setHasPin(Boolean(data.hasPin));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSavePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(pinInput)) {
+      setPinMessage({ type: 'error', text: 'PIN must be exactly 6 numerical digits.' });
+      return;
+    }
+    if (pinInput !== pinConfirm) {
+      setPinMessage({ type: 'error', text: 'Confirmation PIN does not match.' });
+      return;
+    }
+
+    setSavingPin(true);
+    setPinMessage(null);
+
+    try {
+      const res = await fetch('/api/auth/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set', pin: pinInput }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update PIN.');
+      }
+
+      setHasPin(true);
+      setPinInput('');
+      setPinConfirm('');
+      setPinMessage({ type: 'success', text: '6-digit Security PIN updated successfully!' });
+      toast.success('Security PIN saved successfully.');
+    } catch (err: unknown) {
+      setPinMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Error setting PIN.',
+      });
+    } finally {
+      setSavingPin(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -702,6 +765,91 @@ export default function SettingsPage() {
 
             <div className="pt-1">
               <LanguageSelector variant="settings" />
+            </div>
+          </div>
+
+          {/* Security & 6-Digit PIN Protection */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[#008A36]" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">6-Digit Security PIN &amp; Screen Protection</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Fast login without passwords &amp; automatic screen lock after 5 minutes of inactivity.
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  hasPin
+                    ? 'bg-[#E8F7ED] text-[#006B2B] border border-[#B8E6C7]'
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                }`}
+              >
+                {hasPin ? 'PIN Active' : 'Not Configured'}
+              </span>
+            </div>
+
+            <div className="pt-1 max-w-lg space-y-3">
+              {pinMessage && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-semibold ${
+                    pinMessage.type === 'success'
+                      ? 'bg-[#E8F7ED] border border-[#B8E6C7] text-[#006B2B]'
+                      : 'bg-[#FFF0F0] border border-[#FFCCD2] text-[#B80012]'
+                  }`}
+                >
+                  {pinMessage.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {hasPin ? 'New 6-Digit PIN' : 'Enter 6-Digit PIN'}
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="••••••"
+                    className="w-full px-3 py-2 text-sm tracking-widest border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE]/20 focus:border-[#2878CE]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Confirm 6-Digit PIN
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={pinConfirm}
+                    onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="••••••"
+                    className="w-full px-3 py-2 text-sm tracking-widest border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2878CE]/20 focus:border-[#2878CE]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSavePin}
+                  disabled={savingPin || pinInput.length !== 6 || pinConfirm.length !== 6}
+                  className="px-4 py-2 bg-[#173653] hover:bg-[#102A43] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  {savingPin ? 'Saving PIN...' : hasPin ? 'Update 6-Digit PIN' : 'Create 6-Digit PIN'}
+                </button>
+                <span className="text-[11px] text-slate-400">
+                  Screens will auto-lock after 5 min of inactivity.
+                </span>
+              </div>
             </div>
           </div>
 

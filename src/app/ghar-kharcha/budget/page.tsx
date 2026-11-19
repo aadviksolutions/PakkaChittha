@@ -13,6 +13,7 @@ import {
   Save,
   ArrowRight,
 } from 'lucide-react';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface BudgetData {
   monthYear: string;
@@ -136,25 +137,28 @@ export default function HouseholdBudgetPage() {
           </p>
         </div>
 
-        {/* Month Selector */}
-        <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 self-start sm:self-center">
-          <button
-            onClick={handlePrevMonth}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
-            aria-label="Previous Month"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <div className="px-3 text-xs font-bold text-slate-800 min-w-[110px] text-center select-none">
-            {displayMonthLabel()}
+        <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
+          <HouseholdSwitcher onHouseholdChange={() => fetchBudget(selectedMonth)} />
+          {/* Month Selector */}
+          <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
+              aria-label="Previous Month"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 text-xs font-bold text-slate-800 min-w-[110px] text-center select-none">
+              {displayMonthLabel()}
+            </div>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
+              aria-label="Next Month"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={handleNextMonth}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors cursor-pointer"
-            aria-label="Next Month"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

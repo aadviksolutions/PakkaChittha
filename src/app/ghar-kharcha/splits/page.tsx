@@ -21,6 +21,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
 } from 'lucide-react';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface MemberBalance {
   memberId: string;
@@ -83,10 +84,12 @@ export default function HouseholdSplitsPage() {
   // Filter
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string>('ALL');
 
-  const fetchData = async () => {
+  const fetchData = async (targetId?: string) => {
     try {
       setLoading(true);
-      const res = await fetch('/api/household/balances');
+      const hid = targetId || (typeof window !== 'undefined' ? localStorage.getItem('active_household_id') : '');
+      const url = hid ? `/api/household/balances?householdId=${encodeURIComponent(hid)}` : '/api/household/balances';
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success) {
         setMembers(json.members || []);
@@ -108,6 +111,11 @@ export default function HouseholdSplitsPage() {
 
   useEffect(() => {
     fetchData();
+    const handleHhChange = (e: any) => {
+      fetchData(e.detail?.householdId);
+    };
+    window.addEventListener('householdChanged', handleHhChange);
+    return () => window.removeEventListener('householdChanged', handleHhChange);
   }, []);
 
   const myBalance = useMemo(() => {
@@ -240,7 +248,8 @@ export default function HouseholdSplitsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <HouseholdSwitcher onHouseholdChange={(id) => fetchData(id)} />
           <button
             onClick={() => handleOpenSettlementModal()}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"

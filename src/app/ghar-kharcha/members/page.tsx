@@ -18,6 +18,7 @@ import {
   Smartphone,
   Heart,
 } from 'lucide-react';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface Member {
   id: string;
@@ -255,31 +256,34 @@ export default function HouseholdMembersPage() {
           </p>
         </div>
 
-        {canInvite && (
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <button
-              onClick={() => {
-                setDirectError(null);
-                setShowDirectModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>+ Add Member Directly</span>
-            </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+          <HouseholdSwitcher onHouseholdChange={() => fetchMembers()} />
+          {canInvite && (
+            <>
+              <button
+                onClick={() => {
+                  setDirectError(null);
+                  setShowDirectModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Add Member Directly</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setGeneratedLink(null);
-                setInviteEmail('');
-                setShowInviteModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer"
-            >
-              <span>Invite via Link</span>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={() => {
+                  setGeneratedLink(null);
+                  setInviteEmail('');
+                  setShowInviteModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all cursor-pointer"
+              >
+                <span>Invite via Link</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Role Explanations Banner */}

@@ -29,6 +29,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { BILLS_AND_RECHARGE_TYPES } from '@/lib/household/defaultCategories';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface SplitItem {
   id?: string;
@@ -175,6 +176,8 @@ export default function TransactionsRegisterPage() {
       if (billTypeFilter) params.set('billType', billTypeFilter);
       if (isSharedFilter === 'SHARED') params.set('isShared', 'true');
       if (isSharedFilter === 'PERSONAL') params.set('isShared', 'false');
+      const hid = typeof window !== 'undefined' ? localStorage.getItem('active_household_id') : '';
+      if (hid) params.set('householdId', hid);
       params.set('page', String(page));
       params.set('pageSize', '25');
 
@@ -208,6 +211,11 @@ export default function TransactionsRegisterPage() {
 
   useEffect(() => {
     fetchTransactions();
+    const handleHhChange = () => {
+      fetchTransactions();
+    };
+    window.addEventListener('householdChanged', handleHhChange);
+    return () => window.removeEventListener('householdChanged', handleHhChange);
   }, [fetchTransactions]);
 
   // Load members and categories metadata
@@ -534,10 +542,13 @@ export default function TransactionsRegisterPage() {
           >
             ← Back to Dashboard
           </Link>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
-            <Receipt className="w-6 h-6 text-emerald-600" />
-            <span>Kharcha Register</span>
-          </h1>
+          <div className="flex flex-wrap items-center gap-2.5 mt-1">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <Receipt className="w-6 h-6 text-emerald-600" />
+              <span>Kharcha Register</span>
+            </h1>
+            <HouseholdSwitcher onHouseholdChange={() => fetchTransactions()} />
+          </div>
           <p className="text-xs text-slate-500 font-medium">
             Search, filter, record household expenses, utility bills, and family shared splits.
           </p>

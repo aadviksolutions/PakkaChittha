@@ -193,6 +193,17 @@ export async function createHousehold(userId: string, input: CreateHouseholdInpu
     throw new Error('Household name must be at least 2 characters long.');
   }
 
+  // Enforce maximum of 3 homes/units per user account
+  const existingCount = await prisma.householdMember.count({
+    where: {
+      userId,
+      household: { isArchived: false },
+    },
+  });
+  if (existingCount >= 3) {
+    throw new Error('A maximum of 3 homes/units can be added per account (अधिकतम 3 होम/यूनिट ही जोड़ सकते हैं).');
+  }
+
   const budget = typeof input.monthlyBudget === 'number' && input.monthlyBudget >= 0
     ? input.monthlyBudget
     : 0;

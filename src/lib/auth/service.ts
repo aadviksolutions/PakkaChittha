@@ -488,3 +488,128 @@ export async function provisionSuperAdmin(params: {
     platformRole: user.platformRole,
   };
 }
+
+/**
+ * Sets or updates the 6-digit security PIN for a user.
+ */
+export async function setSecurityPin(userId: string, pin: string) {
+  const cleanPin = pin.trim();
+  if (!/^\d{6}$/.test(cleanPin)) {
+    throw new Error('Security PIN must be exactly 6 numerical digits.');
+  }
+
+  const pinHash = await hashPassword(cleanPin);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { securityPinHash: pinHash },
+  });
+
+  return { success: true };
+}
+
+/**
+ * Verifies a 6-digit security PIN for an existing authenticated user session.
+ */
+export async function verifySecurityPin(userId: string, pin: string): Promise<boolean> {
+  const cleanPin = pin.trim();
+  if (!/^\d{6}$/.test(cleanPin)) {
+    return false;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { securityPinHash: true },
+  });
+
+  if (!user || !user.securityPinHash) {
+    return false;
+  }
+
+  return verifyPassword(cleanPin, user.securityPinHash);
+}
+
+/**
+ * Logs in a user using their email or phone and 6-digit PIN.
+ */
+export async function loginUserWithPin(identifier: string, pin: string) {
+  const cleanPin = pin.trim();
+  if (!/^\d{6}$/.test(cleanPin)) {
+    throw new Error('Security PIN must be exactly 6 numerical digits.');
+  }
+
+  const cleanIdentifier = identifier.trim().toLowerCase();
+  if (!cleanIdentifier) {
+    throw new Error('Please enter your email or registered mobile number.');
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: cleanIdentifier },
+        { phone: cleanIdentifier.replace(/\D/g, '').slice(-10) },
+      ],
+    },
+    include: {
+      memberships: {
+        where: { isActive: true },
+        include: {
+          business: {
+            include: {
+              subscriptions: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new Error('No account found with this email or mobile number.');
+  }
+
+  if (!user.securityPinHash) {
+    throw new Error('No 6-digit PIN is set for this account. Please sign in using your password first and create a PIN in Settings.');
+  }
+
+  const isPinValid = await verifyPassword(cleanPin, user.securityPinHash);
+  if (!isPinValid) {
+    throw new Error('Incorrect 6-digit PIN. Please try again.');
+  }
+
+  if ((user as any).isSuspended) {
+    const reason = (user as any).suspendedReason || 'Your account has been administratively suspended. Please contact platform support.';
+    throw new Error(`Account Suspended: ${reason}`);
+  }
+
+  const primaryBusiness = user.memberships[0]?.business || null;
+  const businessId = primaryBusiness ? primaryBusiness.id : null;
+  const latestSubscription = primaryBusiness?.subscriptions?.[0] || null;
+
+  const { sessionToken, expiresAt, sessionId } = await createSession(
+    user.id,
+    businessId
+  );
+
+  return {
+    sessionToken,
+    expiresAt,
+    sessionId,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      platformRole: user.platformRole,
+    },
+    business: primaryBusiness
+      ? {
+          id: primaryBusiness.id,
+          name: primaryBusiness.name,
+          role: user.memberships[0]?.role,
+          plan: latestSubscription?.plan || null,
+        }
+      : null,
+  };
+}

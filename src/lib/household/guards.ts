@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma';
 import { requireAuth, AuthError } from '@/lib/auth/guards';
 import { HouseholdRole, PlatformRole } from '@prisma/client';
+import { cookies } from 'next/headers';
 
 export class HouseholdAccessError extends AuthError {
   constructor(message = 'Access Denied: You do not have permission for this household') {
@@ -35,7 +36,30 @@ export async function requireHouseholdAccess(
 
   let targetHouseholdId = requestedHouseholdId?.trim();
 
-  // If no explicit household ID was passed, find user's first active household membership
+  // If no explicit household ID was passed, check cookie for user's active household
+  if (!targetHouseholdId) {
+    try {
+      const cookieStore = await cookies();
+      const cookieHouseholdId = cookieStore.get('active_household_id')?.value;
+      if (cookieHouseholdId && cookieHouseholdId.trim()) {
+        // Verify user actually belongs to this household
+        const isMember = await prisma.householdMember.findFirst({
+          where: {
+            userId,
+            householdId: cookieHouseholdId.trim(),
+            household: { isArchived: false },
+          },
+        });
+        if (isMember) {
+          targetHouseholdId = cookieHouseholdId.trim();
+        }
+      }
+    } catch {
+      // Cookies may be unavailable in certain non-request contexts
+    }
+  }
+
+  // If still no household ID, find user's first active household membership
   if (!targetHouseholdId) {
     const firstMembership = await prisma.householdMember.findFirst({
       where: { userId },

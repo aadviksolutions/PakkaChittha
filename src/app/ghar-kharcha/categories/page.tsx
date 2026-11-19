@@ -23,6 +23,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
+import { HouseholdSwitcher } from '@/components/household/HouseholdSwitcher';
 
 interface Category {
   id: string;
@@ -233,13 +234,16 @@ export default function HouseholdCategoriesPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all self-start sm:self-center cursor-pointer shrink-0"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Add Custom Category</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-center">
+          <HouseholdSwitcher onHouseholdChange={() => fetchCategories()} />
+          <button
+            onClick={handleOpenAddModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Add Custom Category</span>
+          </button>
+        </div>
       </div>
 
       {actionNotice && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { transliterateDevanagariToEnglish } from '@/lib/voice/transliterate';
 
 interface UseVoiceRecognitionOptions {
   onResult?: (transcript: string) => void;
@@ -68,9 +69,10 @@ export function useVoiceRecognition(options: UseVoiceRecognitionOptions = {}) {
           for (let i = event.resultIndex; i < event.results.length; i++) {
             currentTranscript += event.results[i][0].transcript;
           }
-          setTranscript(currentTranscript);
+          const englishTranscript = transliterateDevanagariToEnglish(currentTranscript);
+          setTranscript(englishTranscript);
           if (options.onResult) {
-            options.onResult(currentTranscript);
+            options.onResult(englishTranscript);
           }
         };
 

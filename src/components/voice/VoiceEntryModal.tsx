@@ -515,26 +515,10 @@ export function VoiceEntryModal({ isOpen, onClose, onSuccess }: VoiceEntryModalP
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Language Selector */}
-            <button
-              type="button"
-              onClick={() => {
-                const next = selectedLang === 'hi-IN' ? 'en-IN' : 'hi-IN';
-                setSelectedLang(next);
-                if (isListening) {
-                  stopListening();
-                  setTimeout(() => startListening(next), 200);
-                }
-              }}
-              className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 shadow-2xs"
-            >
-              {selectedLang === 'hi-IN' ? 'हिन्दी (Hinglish)' : 'English (India)'}
-            </button>
-
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Close voice modal"
             >
               <X className="w-5 h-5" />
