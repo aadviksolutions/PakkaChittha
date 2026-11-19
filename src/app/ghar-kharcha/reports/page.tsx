@@ -123,12 +123,32 @@ interface ReportData {
   };
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => String(CURRENT_YEAR + 1 - i));
+
+const MONTH_OPTIONS = [
+  { value: '01', label: 'Jan (जनवरी)' },
+  { value: '02', label: 'Feb (फ़रवरी)' },
+  { value: '03', label: 'Mar (मार्च)' },
+  { value: '04', label: 'Apr (अप्रैल)' },
+  { value: '05', label: 'May (मई)' },
+  { value: '06', label: 'Jun (जून)' },
+  { value: '07', label: 'Jul (जुलाई)' },
+  { value: '08', label: 'Aug (अगस्त)' },
+  { value: '09', label: 'Sep (सितंबर)' },
+  { value: '10', label: 'Oct (अक्टूबर)' },
+  { value: '11', label: 'Nov (नवंबर)' },
+  { value: '12', label: 'Dec (दिसंबर)' },
+];
+
 export default function HouseholdReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Filter State
   const [month, setMonth] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState(String(CURRENT_YEAR));
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -209,6 +229,8 @@ export default function HouseholdReportsPage() {
 
   const handleClearFilters = () => {
     setMonth('');
+    setSelectedMonth('');
+    setSelectedYear(String(CURRENT_YEAR));
     setStartDate('');
     setEndDate('');
     setCategoryId('');
@@ -339,17 +361,51 @@ export default function HouseholdReportsPage() {
 
         <form onSubmit={handleApplyFilters} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div>
-            <label className="block font-bold text-slate-600 mb-1">Select Month</label>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => {
-                setMonth(e.target.value);
-                setStartDate('');
-                setEndDate('');
-              }}
-              className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:outline-none focus:border-emerald-600"
-            />
+            <label className="block font-bold text-slate-600 mb-1">Select Month &amp; Year (माह एवं वर्ष)</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              <select
+                value={selectedMonth}
+                onChange={(e) => {
+                  const m = e.target.value;
+                  setSelectedMonth(m);
+                  if (m) {
+                    setMonth(`${selectedYear}-${m}`);
+                  } else {
+                    setMonth('');
+                  }
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="col-span-3 w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 font-semibold text-slate-800 focus:outline-none focus:border-emerald-600 cursor-pointer"
+              >
+                <option value="">All Months (सभी)</option>
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => {
+                  const y = e.target.value;
+                  setSelectedYear(y);
+                  if (selectedMonth) {
+                    setMonth(`${y}-${selectedMonth}`);
+                  }
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="col-span-2 w-full px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 font-semibold text-slate-800 focus:outline-none focus:border-emerald-600 cursor-pointer"
+              >
+                {YEAR_OPTIONS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -360,6 +416,7 @@ export default function HouseholdReportsPage() {
               onChange={(e) => {
                 setStartDate(e.target.value);
                 setMonth('');
+                setSelectedMonth('');
               }}
               className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:outline-none focus:border-emerald-600"
             />
@@ -373,6 +430,7 @@ export default function HouseholdReportsPage() {
               onChange={(e) => {
                 setEndDate(e.target.value);
                 setMonth('');
+                setSelectedMonth('');
               }}
               className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:outline-none focus:border-emerald-600"
             />

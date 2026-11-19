@@ -96,6 +96,24 @@ interface CategoryOption {
   subcategories: string[];
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 7 }, (_, i) => String(CURRENT_YEAR + 1 - i));
+
+const MONTH_OPTIONS = [
+  { value: '01', label: 'Jan (जनवरी)' },
+  { value: '02', label: 'Feb (फ़रवरी)' },
+  { value: '03', label: 'Mar (मार्च)' },
+  { value: '04', label: 'Apr (अप्रैल)' },
+  { value: '05', label: 'May (मई)' },
+  { value: '06', label: 'Jun (जून)' },
+  { value: '07', label: 'Jul (जुलाई)' },
+  { value: '08', label: 'Aug (अगस्त)' },
+  { value: '09', label: 'Sep (सितंबर)' },
+  { value: '10', label: 'Oct (अक्टूबर)' },
+  { value: '11', label: 'Nov (नवंबर)' },
+  { value: '12', label: 'Dec (दिसंबर)' },
+];
+
 export default function TransactionsRegisterPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +131,8 @@ export default function TransactionsRegisterPage() {
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'EXPENSE' | 'INCOME'>('ALL');
   const [search, setSearch] = useState('');
   const [month, setMonth] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState(String(CURRENT_YEAR));
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -496,10 +516,17 @@ export default function TransactionsRegisterPage() {
     }
   };
 
+  const handleClearMonth = () => {
+    setMonth('');
+    setSelectedMonth('');
+  };
+
   const handleClearFilters = () => {
     setTypeFilter('ALL');
     setSearch('');
     setMonth('');
+    setSelectedMonth('');
+    setSelectedYear(String(CURRENT_YEAR));
     setStartDate('');
     setEndDate('');
     setCategoryId('');
@@ -512,7 +539,7 @@ export default function TransactionsRegisterPage() {
 
   const activeFilterChips = [
     typeFilter !== 'ALL' && { label: `Type: ${typeFilter}`, clear: () => setTypeFilter('ALL') },
-    month && { label: `Month: ${month}`, clear: () => setMonth('') },
+    month && { label: `Month: ${month}`, clear: handleClearMonth },
     startDate && { label: `From: ${startDate}`, clear: () => setStartDate('') },
     endDate && { label: `To: ${endDate}`, clear: () => setEndDate('') },
     categoryId && {
@@ -647,17 +674,53 @@ export default function TransactionsRegisterPage() {
         {showFiltersDrawer && (
           <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs animate-in fade-in">
             <div>
-              <label className="block font-bold text-slate-500 mb-1">Select Month</label>
-              <input
-                type="month"
-                value={month}
-                onChange={(e) => {
-                  setMonth(e.target.value);
-                  setStartDate('');
-                  setEndDate('');
-                }}
-                className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold"
-              />
+              <label className="block font-bold text-slate-500 mb-1">Select Month &amp; Year (माह एवं वर्ष)</label>
+              <div className="grid grid-cols-5 gap-1.5">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    const m = e.target.value;
+                    setSelectedMonth(m);
+                    if (m) {
+                      setMonth(`${selectedYear}-${m}`);
+                    } else {
+                      setMonth('');
+                    }
+                    setStartDate('');
+                    setEndDate('');
+                    setPage(1);
+                  }}
+                  className="col-span-3 w-full px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer"
+                >
+                  <option value="">All Months (सभी)</option>
+                  {MONTH_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    const y = e.target.value;
+                    setSelectedYear(y);
+                    if (selectedMonth) {
+                      setMonth(`${y}-${selectedMonth}`);
+                    }
+                    setStartDate('');
+                    setEndDate('');
+                    setPage(1);
+                  }}
+                  className="col-span-2 w-full px-2 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold cursor-pointer"
+                >
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
@@ -729,6 +792,7 @@ export default function TransactionsRegisterPage() {
                 onChange={(e) => {
                   setStartDate(e.target.value);
                   setMonth('');
+                  setSelectedMonth('');
                 }}
                 className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold"
               />
@@ -742,6 +806,7 @@ export default function TransactionsRegisterPage() {
                 onChange={(e) => {
                   setEndDate(e.target.value);
                   setMonth('');
+                  setSelectedMonth('');
                 }}
                 className="w-full px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold"
               />
