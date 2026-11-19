@@ -10,8 +10,8 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+// Always retain prisma client instance on globalThis across all environments (including production serverless)
+// to reuse connection pools and avoid expensive TCP/SSL renegotiation on warm function invocations
+globalForPrisma.prisma = prisma;
 
 export default prisma;

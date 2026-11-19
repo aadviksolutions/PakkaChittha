@@ -1,4 +1,5 @@
 import { cookies, headers } from 'next/headers';
+import { cache } from 'react';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import {
@@ -353,10 +354,10 @@ export async function resolveBusinessWorkspaceForUser(
 
 /**
  * Validates a session token, checks expiration, and retrieves authenticated details.
+ * Wrapped in React cache to memoize across a single request render lifecycle.
  */
-export async function validateSessionToken(
-  sessionToken: string
-): Promise<CurrentAuthSession | null> {
+export const validateSessionToken = cache(
+  async (sessionToken: string): Promise<CurrentAuthSession | null> => {
   if (!sessionToken || typeof sessionToken !== 'string') {
     return null;
   }
@@ -482,12 +483,13 @@ export async function validateSessionToken(
     activeBusiness,
     memberships,
   };
-}
+});
 
 /**
  * Retrieves the current session using incoming HTTP cookies or Authorization Bearer header.
+ * Wrapped in React cache to eliminate duplicate database lookups in metadata and page components.
  */
-export async function getCurrentSession(): Promise<CurrentAuthSession | null> {
+export const getCurrentSession = cache(async (): Promise<CurrentAuthSession | null> => {
   let token: string | undefined;
 
   try {
@@ -512,7 +514,7 @@ export async function getCurrentSession(): Promise<CurrentAuthSession | null> {
   if (!token) return null;
 
   return validateSessionToken(token);
-}
+});
 
 /**
  * Invalidates and removes a session from PostgreSQL.

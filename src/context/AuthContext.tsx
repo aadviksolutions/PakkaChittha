@@ -117,12 +117,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.user);
           setActiveBusiness(data.activeBusiness);
           setMemberships(data.memberships || []);
+          try {
+            sessionStorage.setItem(
+              'pk_auth_cache',
+              JSON.stringify({
+                user: data.user,
+                activeBusiness: data.activeBusiness,
+                memberships: data.memberships || [],
+              })
+            );
+          } catch {}
           return;
         }
       }
       setUser(null);
       setActiveBusiness(null);
       setMemberships([]);
+      try {
+        sessionStorage.removeItem('pk_auth_cache');
+      } catch {}
     } catch {
       setUser(null);
       setActiveBusiness(null);
@@ -135,6 +148,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    // Instant optimistic hydration from sessionStorage for 0ms perceived load time
+    try {
+      const cached = sessionStorage.getItem('pk_auth_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.user) {
+          setUser(parsed.user);
+          setActiveBusiness(parsed.activeBusiness);
+          setMemberships(parsed.memberships || []);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetch('/api/auth/me', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -143,17 +170,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(data.user);
           setActiveBusiness(data.activeBusiness);
           setMemberships(data.memberships || []);
+          try {
+            sessionStorage.setItem(
+              'pk_auth_cache',
+              JSON.stringify({
+                user: data.user,
+                activeBusiness: data.activeBusiness,
+                memberships: data.memberships || [],
+              })
+            );
+          } catch {}
         } else {
           setUser(null);
           setActiveBusiness(null);
           setMemberships([]);
+          try {
+            sessionStorage.removeItem('pk_auth_cache');
+          } catch {}
         }
       })
       .catch(() => {
         if (!active) return;
-        setUser(null);
-        setActiveBusiness(null);
-        setMemberships([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -166,6 +203,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      try {
+        sessionStorage.removeItem('pk_auth_cache');
+      } catch {}
       await fetch('/api/auth/logout', { method: 'POST' });
     } finally {
       setUser(null);
