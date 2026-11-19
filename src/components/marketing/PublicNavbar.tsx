@@ -46,7 +46,7 @@ export function PublicNavbar() {
           <Link
             href="/"
             className={`text-sm font-semibold transition-colors ${
-              pathname === '/' ? 'text-[#EA580C]' : 'text-[#071F38] hover:text-[#EA580C]'
+              pathname === '/' ? 'text-[#173653]' : 'text-slate-600 hover:text-[#173653]'
             }`}
           >
             Home
@@ -60,7 +60,7 @@ export function PublicNavbar() {
               aria-haspopup="true"
               onClick={() => setFeaturesOpen((prev) => !prev)}
               className={`inline-flex items-center gap-1 text-sm font-semibold transition-colors cursor-pointer py-2 ${
-                isFeatureRoute || featuresOpen ? 'text-[#EA580C]' : 'text-[#071F38] hover:text-[#EA580C]'
+                isFeatureRoute || featuresOpen ? 'text-[#173653]' : 'text-slate-600 hover:text-[#173653]'
               }`}
             >
               <span>Features</span>
@@ -81,13 +81,13 @@ export function PublicNavbar() {
                         key={item.href}
                         href={item.href}
                         className={`block rounded-xl p-3 transition-colors ${
-                          active ? 'bg-orange-50' : 'hover:bg-slate-50'
+                          active ? 'bg-slate-50' : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className={`text-xs font-bold ${
-                              active ? 'text-[#EA580C]' : 'text-[#071F38]'
+                              active ? 'text-[#173653]' : 'text-slate-800'
                             }`}
                           >
                             {item.shortTitle}
@@ -110,7 +110,7 @@ export function PublicNavbar() {
           <Link
             href="/pricing"
             className={`text-sm font-semibold transition-colors ${
-              pathname === '/pricing' ? 'text-[#EA580C]' : 'text-[#071F38] hover:text-[#EA580C]'
+              pathname === '/pricing' ? 'text-[#173653]' : 'text-slate-600 hover:text-[#173653]'
             }`}
           >
             Pricing
@@ -120,8 +120,8 @@ export function PublicNavbar() {
             href="/ghar-kharcha-app"
             className={`text-sm font-semibold transition-colors ${
               pathname === '/ghar-kharcha-app'
-                ? 'text-[#EA580C]'
-                : 'text-[#071F38] hover:text-[#EA580C]'
+                ? 'text-[#008A36]'
+                : 'text-slate-600 hover:text-[#008A36]'
             }`}
           >
             Free Ghar Kharcha
@@ -129,16 +129,16 @@ export function PublicNavbar() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-[#071F38] hover:text-[#EA580C] transition-colors"
+            className="text-xs sm:text-sm font-semibold text-slate-700 hover:text-[#173653] transition-colors px-2 py-1.5"
           >
             Login
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#EA580C] hover:bg-[#D94E00] shadow-xs transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[#173653] hover:bg-[#071D35] shadow-xs transition-all cursor-pointer"
           >
             <span>Start Free Trial</span>
             <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />

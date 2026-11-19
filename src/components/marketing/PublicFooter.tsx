@@ -49,7 +49,7 @@ export function PublicFooter() {
             </h2>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/" className="hover:text-[#EA580C] transition-colors font-medium">
+                <Link href="/" className="hover:text-[#173653] transition-colors font-medium">
                   Pakka Chittha Home
                 </Link>
               </li>
@@ -57,7 +57,7 @@ export function PublicFooter() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="hover:text-[#EA580C] transition-colors font-medium"
+                    className="hover:text-[#173653] transition-colors font-medium"
                   >
                     {item.shortTitle}
                   </Link>
@@ -73,14 +73,14 @@ export function PublicFooter() {
             </h2>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/pricing" className="hover:text-[#EA580C] transition-colors font-medium">
+                <Link href="/pricing" className="hover:text-[#173653] transition-colors font-medium">
                   Pricing &amp; Plans
                 </Link>
               </li>
               <li>
                 <Link
                   href="/register"
-                  className="hover:text-[#EA580C] transition-colors font-medium text-[#EA580C]"
+                  className="hover:text-[#173653] transition-colors font-semibold text-[#173653]"
                 >
                   Start 7-Day Free Trial
                 </Link>
@@ -88,20 +88,20 @@ export function PublicFooter() {
               <li>
                 <Link
                   href="/register?plan=ghar_kharcha"
-                  className="hover:text-[#EA580C] transition-colors font-medium"
+                  className="hover:text-[#008A36] transition-colors font-medium text-[#008A36]"
                 >
                   Free Ghar Kharcha Signup
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-[#EA580C] transition-colors font-medium">
+                <Link href="/login" className="hover:text-[#173653] transition-colors font-medium">
                   Login to Workspace
                 </Link>
               </li>
               <li>
                 <Link
                   href="/select-mode"
-                  className="hover:text-[#EA580C] transition-colors font-medium"
+                  className="hover:text-[#173653] transition-colors font-medium"
                 >
                   Choose App Mode
                 </Link>
